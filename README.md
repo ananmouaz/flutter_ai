@@ -12,6 +12,16 @@ system, on top of un-opinionated, provider-neutral logic packages.
 See [`docs/`](docs/) for the full specs (overview, architecture, per-package
 specs, roadmap).
 
+## Demo
+
+A showcase app lives in [`demo/`](demo/) — a live chat plus a gallery of every
+element. The chat streams reasoning → a tool call → the answer → a citation,
+with the composer swapping Send for Stop mid-stream:
+
+<img src="demo/screenshots/chat.gif" width="280" alt="flutter_ai chat demo" />
+
+Browse the full [element gallery](demo/README.md#elements).
+
 ## Packages
 
 | Package | Status | Description |

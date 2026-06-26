@@ -12,3 +12,6 @@ doc/api/
 
 # OS
 .DS_Store
+
+# Regenerable capture frames (committed assets live in demo/screenshots/)
+demo/test/shots/

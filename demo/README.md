@@ -1,0 +1,45 @@
+# flutter_ai_demo
+
+A showcase app for the [`flutter_ai`](../README.md) package family — a live chat
+screen and a gallery of every element, styled with a custom `AiThemeExtension`
+(no stock-Material chrome, no ripples).
+
+## Chat in action
+
+A scripted provider streams reasoning → a tool call → the answer → a citation,
+with the composer swapping Send for Stop while streaming:
+
+<img src="screenshots/chat.gif" width="300" alt="flutter_ai chat demo" />
+
+## Run it
+
+```bash
+flutter run            # from demo/, on a simulator or device
+```
+
+The chat uses an in-app scripted provider — **no API key required**. To talk to
+a real model, swap in `OpenAiProvider` (from `flutter_ai_provider_openai`) and
+pass your key via `--dart-define`.
+
+## Regenerate the screenshots
+
+Screenshots and the GIF are produced headlessly via a golden-capture test (real
+fonts loaded from the SDK), then assembled with ffmpeg:
+
+```bash
+flutter test test/capture_test.dart --update-goldens
+ffmpeg -y -framerate 8 -i test/shots/chat_%03d.png \
+  -vf "scale=380:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse" \
+  screenshots/chat.gif
+```
+
+## Elements
+
+| | | |
+|:--:|:--:|:--:|
+| <img src="screenshots/element_message_user.png" width="220"/><br/>**AiMessageBubble** (user) | <img src="screenshots/element_message_assistant.png" width="220"/><br/>**AiMessageBubble** (rich) | <img src="screenshots/element_tool_invocation.png" width="220"/><br/>**AiToolInvocation** |
+| <img src="screenshots/element_tool_group.png" width="220"/><br/>**AiToolGroup** | <img src="screenshots/element_reasoning.png" width="220"/><br/>**AiReasoning** | <img src="screenshots/element_sources.png" width="220"/><br/>**AiSources** |
+| <img src="screenshots/element_code_block.png" width="220"/><br/>**AiCodeBlock** | <img src="screenshots/element_attachment.png" width="220"/><br/>**AiAttachment** | <img src="screenshots/element_suggestions.png" width="220"/><br/>**AiSuggestions** |
+| <img src="screenshots/element_composer_idle.png" width="220"/><br/>**AiComposer** (idle) | <img src="screenshots/element_composer_busy.png" width="220"/><br/>**AiComposer** (streaming) | <img src="screenshots/element_message_actions.png" width="220"/><br/>**AiMessageActions** |
+| <img src="screenshots/element_avatars.png" width="220"/><br/>**AiAvatar** | <img src="screenshots/element_loader.png" width="220"/><br/>**AiLoader** | <img src="screenshots/element_error_banner.png" width="220"/><br/>**AiErrorBanner** |
+| <img src="screenshots/element_empty_state.png" width="220"/><br/>**AiEmptyState** | | |

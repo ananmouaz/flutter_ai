@@ -7,8 +7,10 @@ import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 /// A presentational message composer with a Send button that swaps to a Stop
 /// button while a response is streaming.
 ///
-/// It owns no chat logic — it reports text via [onSend] and cancellation via
-/// [onStop]. Bind it to a controller with `AiPromptInput`, or drive it directly.
+/// Styled as a clean rounded "pill" field with a ripple-free circular action
+/// button, so it reads as a premium, platform-neutral surface rather than a
+/// stock Material input. It owns no chat logic — it reports text via [onSend]
+/// and cancellation via [onStop].
 class AiComposer extends StatefulWidget {
   /// Creates a composer.
   const AiComposer({
@@ -78,6 +80,8 @@ class _AiComposerState extends State<AiComposer> {
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
     final showStop = widget.isBusy && widget.onStop != null;
+    final hairline =
+        theme.assistantTextColor.withValues(alpha: 0.12);
 
     return Padding(
       padding: theme.composerPadding,
@@ -85,22 +89,33 @@ class _AiComposerState extends State<AiComposer> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: TextField(
-              controller: _controller,
-              enabled: widget.enabled,
-              minLines: 1,
-              maxLines: 5,
-              textInputAction: TextInputAction.send,
-              onSubmitted: widget.enabled ? (_) => _handleSend() : null,
-              decoration: InputDecoration(
-                hintText: widget.hintText,
-                border: OutlineInputBorder(
-                  borderRadius: theme.bubbleRadius,
-                  borderSide: BorderSide.none,
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.assistantBubbleColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: hairline),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _controller,
+                enabled: widget.enabled,
+                minLines: 1,
+                maxLines: 5,
+                cursorColor: theme.userBubbleColor,
+                style: theme.textStyle.copyWith(
+                  color: theme.assistantTextColor,
                 ),
-                filled: true,
-                fillColor: theme.assistantBubbleColor,
-                contentPadding: theme.bubblePadding,
+                textInputAction: TextInputAction.send,
+                onSubmitted: widget.enabled ? (_) => _handleSend() : null,
+                decoration: InputDecoration(
+                  hintText: widget.hintText,
+                  hintStyle: theme.textStyle.copyWith(
+                    color: theme.assistantTextColor.withValues(alpha: 0.45),
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                ),
               ),
             ),
           ),
@@ -110,8 +125,9 @@ class _AiComposerState extends State<AiComposer> {
             iconColor: theme.userTextColor,
             icon: showStop ? Icons.stop_rounded : Icons.arrow_upward_rounded,
             tooltip: showStop ? 'Stop' : 'Send',
-            onPressed:
-                !widget.enabled ? null : (showStop ? _handleStop : _handleSend),
+            onPressed: !widget.enabled
+                ? null
+                : (showStop ? _handleStop : _handleSend),
           ),
         ],
       ),
@@ -119,7 +135,8 @@ class _AiComposerState extends State<AiComposer> {
   }
 }
 
-class _ActionButton extends StatelessWidget {
+/// A circular action button with a subtle press scale instead of a ripple.
+class _ActionButton extends StatefulWidget {
   const _ActionButton({
     required this.color,
     required this.iconColor,
@@ -135,19 +152,36 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
 
   @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final enabled = widget.onPressed != null;
     return Semantics(
       button: true,
-      label: tooltip,
-      child: Material(
-        color: onPressed == null ? color.withValues(alpha: 0.4) : color,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Icon(icon, color: iconColor, size: 22),
+      label: widget.tooltip,
+      child: GestureDetector(
+        onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
+        onTap: widget.onPressed,
+        child: AnimatedScale(
+          scale: _pressed ? 0.9 : 1,
+          duration: const Duration(milliseconds: 100),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: enabled
+                  ? widget.color
+                  : widget.color.withValues(alpha: 0.4),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(widget.icon, color: widget.iconColor, size: 22),
           ),
         ),
       ),

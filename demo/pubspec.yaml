@@ -1,0 +1,28 @@
+name: flutter_ai_demo
+description: "Showcase app for the flutter_ai package family."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.3
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_ai_elements:
+    path: ../packages/flutter_ai_elements
+  flutter_ai_provider_openai:
+    path: ../packages/flutter_ai_provider_openai
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

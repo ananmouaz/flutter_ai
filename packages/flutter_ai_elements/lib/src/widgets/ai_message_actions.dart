@@ -88,6 +88,10 @@ Future<void> showAiMessageActions(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
     builder: (sheetContext) => SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
