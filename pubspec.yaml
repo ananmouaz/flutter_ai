@@ -11,3 +11,4 @@ environment:
 
 workspace:
   - packages/flutter_ai_core
+  - packages/flutter_ai_client
