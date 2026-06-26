@@ -1,0 +1,25 @@
+name: flutter_ai_tools
+description: >-
+  Provider-neutral tool calling for flutter_ai: declare tools with executors,
+  run tool calls into results, and expose web search as a tool — all in pure
+  Dart with no Flutter dependency.
+version: 0.1.0
+repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_tools
+issue_tracker: https://github.com/ananmouaz/flutter_ai/issues
+
+# Not publishable yet: depends on flutter_ai_core via a local path. Switch to a
+# hosted version constraint once that package is on pub.dev.
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  flutter_ai_core:
+    path: ../flutter_ai_core
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0

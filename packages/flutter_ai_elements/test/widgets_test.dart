@@ -141,6 +141,89 @@ void main() {
     });
   });
 
+  group('AiToolInvocation', () {
+    const call = ToolCallPart(
+      toolCallId: 'c1',
+      toolName: 'get_weather',
+      args: {'city': 'London'},
+      state: ToolCallState.outputAvailable,
+    );
+
+    testWidgets('shows the tool name and is collapsed by default',
+        (tester) async {
+      await tester.pumpWidget(_wrap(const AiToolInvocation(call: call)));
+      expect(find.text('get_weather'), findsOneWidget);
+      expect(find.text('Arguments'), findsNothing);
+    });
+
+    testWidgets('reveals arguments and result when expanded', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AiToolInvocation(
+            call: call,
+            result: ToolResultPart(toolCallId: 'c1', result: {'tempC': 21}),
+            initiallyExpanded: true,
+          ),
+        ),
+      );
+      expect(find.text('Arguments'), findsOneWidget);
+      expect(find.text('Result'), findsOneWidget);
+      expect(find.textContaining('London'), findsOneWidget);
+    });
+
+    testWidgets('expands on tap', (tester) async {
+      await tester.pumpWidget(_wrap(const AiToolInvocation(call: call)));
+      await tester.tap(find.text('get_weather'));
+      await tester.pumpAndSettle();
+      expect(find.text('Arguments'), findsOneWidget);
+    });
+  });
+
+  group('AiReasoning', () {
+    testWidgets('hides text until expanded', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const AiReasoning(text: 'step by step')),
+      );
+      expect(find.text('Reasoning'), findsOneWidget);
+      expect(find.text('step by step'), findsNothing);
+
+      await tester.tap(find.text('Reasoning'));
+      await tester.pumpAndSettle();
+      expect(find.text('step by step'), findsOneWidget);
+    });
+  });
+
+  group('AiAttachment', () {
+    testWidgets('renders a file chip for non-images', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AiAttachment(
+            file: FilePart(mediaType: 'application/pdf', name: 'report.pdf'),
+          ),
+        ),
+      );
+      expect(find.text('report.pdf'), findsOneWidget);
+    });
+  });
+
+  group('AiToolGroup', () {
+    testWidgets('stacks one card per call', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AiToolGroup(
+            calls: [
+              ToolCallPart(toolCallId: 'c1', toolName: 'alpha'),
+              ToolCallPart(toolCallId: 'c2', toolName: 'beta'),
+            ],
+          ),
+        ),
+      );
+      expect(find.byType(AiToolInvocation), findsNWidgets(2));
+      expect(find.text('alpha'), findsOneWidget);
+      expect(find.text('beta'), findsOneWidget);
+    });
+  });
+
   group('AiConversationView', () {
     testWidgets('renders a bubble per message plus a loader', (tester) async {
       await tester.pumpWidget(

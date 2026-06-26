@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_attachment.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_reasoning.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_tool_invocation.dart';
 
 /// A single chat bubble that renders one [AiMessage]'s parts.
 ///
 /// Purely presentational — it takes data, not a controller — so it is trivially
 /// testable and reusable. Styling comes entirely from [AiThemeExtension].
+///
+/// Each part type gets an appropriate widget: prose via the [textRenderer],
+/// reasoning via `AiReasoning`, tool calls via `AiToolInvocation` (paired with
+/// their results), files via `AiAttachment`, and sources as link chips.
 ///
 /// ### Accessibility while streaming
 ///
@@ -45,7 +52,7 @@ class AiMessageBubble extends StatelessWidget {
         style: theme.textStyle.copyWith(
           color: isUser ? theme.userTextColor : theme.assistantTextColor,
         ),
-        child: _content(context, theme, isStreaming),
+        child: _content(context, isStreaming),
       ),
     );
 
@@ -68,60 +75,33 @@ class AiMessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _content(
-    BuildContext context,
-    AiThemeExtension theme,
-    bool isStreaming,
-  ) {
+  Widget _content(BuildContext context, bool isStreaming) {
+    // Pair tool results with their calls so each renders inside one card.
+    final results = <String, ToolResultPart>{
+      for (final part in message.parts)
+        if (part is ToolResultPart) part.toolCallId: part,
+    };
+
     final children = <Widget>[];
     for (final part in message.parts) {
       switch (part) {
         case TextPart(:final text):
           children.add(textRenderer.render(text, isStreaming: isStreaming));
         case ReasoningPart(:final text):
-          children.add(_ReasoningBlock(text: text));
-        case ToolCallPart(:final toolName, :final state):
+          children.add(AiReasoning(text: text));
+        case ToolCallPart():
           children.add(
-            _ToolLine(
-              icon: Icons.build_outlined,
-              label: state == ToolCallState.outputAvailable
-                  ? '$toolName · done'
-                  : '$toolName · ${state.name}',
-              theme: theme,
-            ),
+            AiToolInvocation(call: part, result: results[part.toolCallId]),
           );
-        case ToolResultPart(:final isError):
-          children.add(
-            _ToolLine(
-              icon: isError ? Icons.error_outline : Icons.check_circle_outline,
-              label: isError ? 'Tool error' : 'Tool result',
-              theme: theme,
-            ),
-          );
-        case FilePart(:final name, :final mediaType):
-          children.add(
-            _ToolLine(
-              icon: Icons.attach_file,
-              label: name ?? mediaType,
-              theme: theme,
-            ),
-          );
+        case ToolResultPart():
+          // Rendered within its AiToolInvocation; skip the standalone part.
+          break;
+        case FilePart():
+          children.add(AiAttachment(file: part));
         case SourcePart(:final url, :final title):
-          children.add(
-            _ToolLine(
-              icon: Icons.link,
-              label: title ?? url.toString(),
-              theme: theme,
-            ),
-          );
+          children.add(_SourceChip(url: url, title: title));
         case DataPart(:final dataType):
-          children.add(
-            _ToolLine(
-              icon: Icons.widgets_outlined,
-              label: dataType,
-              theme: theme,
-            ),
-          );
+          children.add(_DataChip(label: dataType));
       }
     }
 
@@ -132,7 +112,7 @@ class AiMessageBubble extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var i = 0; i < children.length; i++) ...[
-          if (i > 0) const SizedBox(height: 6),
+          if (i > 0) const SizedBox(height: 8),
           children[i],
         ],
       ],
@@ -140,33 +120,11 @@ class AiMessageBubble extends StatelessWidget {
   }
 }
 
-class _ReasoningBlock extends StatelessWidget {
-  const _ReasoningBlock({required this.text});
+class _SourceChip extends StatelessWidget {
+  const _SourceChip({required this.url, this.title});
 
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = DefaultTextStyle.of(context).style.color?.withValues(
-          alpha: 0.6,
-        );
-    return Text(
-      text,
-      style: TextStyle(fontStyle: FontStyle.italic, color: color),
-    );
-  }
-}
-
-class _ToolLine extends StatelessWidget {
-  const _ToolLine({
-    required this.icon,
-    required this.label,
-    required this.theme,
-  });
-
-  final IconData icon;
-  final String label;
-  final AiThemeExtension theme;
+  final Uri url;
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
@@ -174,13 +132,41 @@ class _ToolLine extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: color),
+        Icon(Icons.link, size: 16, color: color),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            title ?? url.toString(),
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DataChip extends StatelessWidget {
+  const _DataChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = DefaultTextStyle.of(context).style.color;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.widgets_outlined, size: 16, color: color),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
             label,
-            style: theme.codeStyle.copyWith(color: color),
             overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: color),
           ),
         ),
       ],
