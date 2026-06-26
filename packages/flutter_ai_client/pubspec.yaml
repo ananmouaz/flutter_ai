@@ -4,8 +4,8 @@ description: >-
   Listenable UseChatController with optimistic send, cancellation, regeneration,
   and frame-batched streaming — without imposing a state-management library.
 version: 0.1.0
-# TODO(flutter_ai): set before first publish.
-# repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_client
+repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_client
+issue_tracker: https://github.com/ananmouaz/flutter_ai/issues
 
 # Not publishable yet: it depends on flutter_ai_core via a local path. Switch to
 # a hosted version constraint and remove this line once flutter_ai_core is on
