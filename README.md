@@ -17,8 +17,8 @@ specs, roadmap).
 | Package | Status | Description |
 |---|---|---|
 | [`flutter_ai_core`](packages/flutter_ai_core) | ✅ 0.1.0 | Dependency-free models, streaming `MessageProcessor`, provider/renderer contracts |
-| `flutter_ai_client` | ⏳ planned | Provider abstraction + `UseChatController` (Listenable) |
-| `flutter_ai_elements` | ⏳ planned | UI components + `AiThemeExtension` |
+| [`flutter_ai_client`](packages/flutter_ai_client) | ✅ 0.1.0 | Provider abstraction + `UseChatController` (Listenable) |
+| [`flutter_ai_elements`](packages/flutter_ai_elements) | ✅ 0.1.0 | UI components + `AiThemeExtension` (`AiChat`, `AiPromptInput`, `AiMessageBubble`, …) |
 | `flutter_ai_tools` | ⏳ planned | Tool calling, web search, structured actions |
 | `flutter_ai_voice` | ⏳ planned | Speech-to-text / voice input (optional) |
 | `flutter_ai_provider_local` | ⏳ planned | On-device inference (optional, FFI) |
@@ -35,7 +35,9 @@ flutter_ai/
 ├── pubspec.yaml            # workspace root
 ├── docs/                   # specs & roadmap
 └── packages/
-    └── flutter_ai_core/    # the foundation
+    ├── flutter_ai_core/      # the foundation (pure Dart)
+    ├── flutter_ai_client/    # UseChatController
+    └── flutter_ai_elements/  # UI + AiThemeExtension
 ```
 
 ## Development

@@ -1,0 +1,31 @@
+name: flutter_ai_elements
+description: >-
+  Composable, themeable Flutter UI for AI chat — conversation, message bubbles,
+  a streaming-aware composer, and a loader — styled entirely through a
+  mobile-first AiThemeExtension. No shadcn/forui dependency.
+version: 0.1.0
+repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_elements
+issue_tracker: https://github.com/ananmouaz/flutter_ai/issues
+
+# Not publishable yet: depends on sibling packages via local paths. Switch to
+# hosted version constraints once they are on pub.dev.
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+  flutter: ">=3.27.0"
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_ai_client:
+    path: ../flutter_ai_client
+  flutter_ai_core:
+    path: ../flutter_ai_core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^5.0.0

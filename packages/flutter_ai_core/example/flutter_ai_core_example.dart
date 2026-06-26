@@ -26,7 +26,10 @@ class ScriptedProvider implements LlmProvider {
       toolName: 'get_weather',
     );
     yield const ToolCallDelta(toolCallId: 'call-1', argumentsDelta: '{"city":');
-    yield const ToolCallDelta(toolCallId: 'call-1', argumentsDelta: '"London"}');
+    yield const ToolCallDelta(
+      toolCallId: 'call-1',
+      argumentsDelta: '"London"}',
+    );
     yield const ToolCallReady(toolCallId: 'call-1');
 
     // The tool result, then the model's final answer.
@@ -80,10 +83,7 @@ String _describe(AiMessage message) {
         buffer.write('[tool $toolName($args) ${state.name}] ');
       case ToolResultPart(:final result):
         buffer.write('[result $result] ');
-      case ReasoningPart() ||
-            FilePart() ||
-            SourcePart() ||
-            DataPart():
+      case ReasoningPart() || FilePart() || SourcePart() || DataPart():
         buffer.write('[${part.runtimeType}] ');
     }
   }
