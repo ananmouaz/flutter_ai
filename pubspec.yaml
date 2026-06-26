@@ -1,0 +1,13 @@
+# Workspace root for the flutter_ai package family.
+#
+# Uses Dart's native pub workspaces (Dart >= 3.6) so every package shares a
+# single resolved dependency set and one `dart pub get`. This is intentionally
+# not a publishable package.
+name: _flutter_ai_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+workspace:
+  - packages/flutter_ai_core

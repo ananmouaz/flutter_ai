@@ -1,0 +1,59 @@
+# Shared, strict analysis configuration for the entire flutter_ai workspace.
+#
+# Mirrors the rigor the Dart/Flutter team applies to first-party packages:
+# the strongest type-safety modes plus a curated lint set focused on
+# correctness, immutability, and public-API hygiene. Individual packages
+# `include:` this file and add only what is specific to them.
+include: package:lints/recommended.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # Public API documentation is required, not advisory.
+    public_member_api_docs: error
+    # Treat dangling/dead code and TODO-free smells as errors to keep the tree clean.
+    dead_code: error
+    unused_import: error
+    unused_element: error
+    unused_local_variable: error
+
+linter:
+  rules:
+    # Correctness
+    - always_use_package_imports
+    - avoid_dynamic_calls
+    - avoid_slow_async_io
+    - cancel_subscriptions
+    - close_sinks
+    - comment_references
+    - discarded_futures
+    - literal_only_boolean_expressions
+    - no_adjacent_strings_in_list
+    - throw_in_finally
+    - unnecessary_statements
+    # Immutability & value semantics
+    # (Note: avoid_equals_and_hash_code_on_mutable_classes is intentionally
+    # omitted — it keys off @immutable from package:meta, which core forbids.
+    # Our value types are immutable by construction and documented as such.)
+    - prefer_const_constructors
+    - prefer_const_constructors_in_immutables
+    - prefer_const_declarations
+    - prefer_final_fields
+    - prefer_final_in_for_each
+    - prefer_final_locals
+    # API design & style
+    - always_declare_return_types
+    - avoid_positional_boolean_parameters
+    - public_member_api_docs
+    - require_trailing_commas
+    - sort_constructors_first
+    - sort_pub_dependencies
+    - sort_unnamed_constructors_first
+    - type_annotate_public_apis
+    - unawaited_futures
+    - use_super_parameters
+    - directives_ordering
+    - flutter_style_todos

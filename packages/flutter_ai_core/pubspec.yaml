@@ -1,0 +1,23 @@
+name: flutter_ai_core
+description: >-
+  Dependency-free Dart foundation for AI chat: message and conversation models,
+  a streaming MessageProcessor with granular mutations, and the provider and
+  renderer contracts the rest of the flutter_ai family builds on.
+version: 0.1.0
+# TODO(flutter_ai): set before first publish.
+# repository: https://github.com/<org>/flutter_ai/tree/main/packages/flutter_ai_core
+# issue_tracker: https://github.com/<org>/flutter_ai/issues
+
+environment:
+  sdk: ^3.6.0
+
+# Part of the flutter_ai workspace; dependencies resolve from the workspace root.
+resolution: workspace
+
+# Intentionally no runtime dependencies. flutter_ai_core relies solely on
+# dart:core and dart:convert so downstream apps never face version conflicts
+# with build_runner, codegen, or a UI framework.
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0
