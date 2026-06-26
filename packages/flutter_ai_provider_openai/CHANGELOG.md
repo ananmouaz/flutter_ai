@@ -1,0 +1,17 @@
+# Changelog
+
+## 0.1.0
+
+Initial release.
+
+- `OpenAiProvider` — an `LlmProvider` for the OpenAI Chat Completions API (or any
+  OpenAI-compatible endpoint via a custom base URL), with an injectable HTTP
+  client and a configurable default model.
+- Maps conversations (system/user/assistant/tool messages, assistant tool calls,
+  tool results) into the request, and streams text, tool calls, and finish
+  reasons back as `AiStreamEvent`s.
+- `OpenAiChunkParser` — the chunk→event mapping, unit-tested against recorded SSE.
+- Re-exports `flutter_ai_core`.
+
+> The mapping is unit-tested against recorded SSE chunks; it has not been run
+> against the live OpenAI API in this release.

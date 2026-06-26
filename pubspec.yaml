@@ -14,3 +14,4 @@ workspace:
   - packages/flutter_ai_client
   - packages/flutter_ai_elements
   - packages/flutter_ai_tools
+  - packages/flutter_ai_provider_openai
