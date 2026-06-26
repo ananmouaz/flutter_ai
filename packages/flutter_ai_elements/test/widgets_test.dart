@@ -224,6 +224,107 @@ void main() {
     });
   });
 
+  group('expanded elements', () {
+    testWidgets('AiAvatar shows a role icon', (tester) async {
+      await tester.pumpWidget(_wrap(const AiAvatar(role: AiRole.assistant)));
+      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
+    });
+
+    testWidgets('AiEmptyState shows title and subtitle', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const AiEmptyState(title: 'Hello', subtitle: 'Ask me anything')),
+      );
+      expect(find.text('Hello'), findsOneWidget);
+      expect(find.text('Ask me anything'), findsOneWidget);
+    });
+
+    testWidgets('AiErrorBanner shows message and fires retry', (tester) async {
+      var retried = false;
+      await tester.pumpWidget(
+        _wrap(
+          AiErrorBanner(message: 'boom', onRetry: () => retried = true),
+        ),
+      );
+      expect(find.text('boom'), findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      expect(retried, isTrue);
+    });
+
+    testWidgets('AiSuggestions reports the chosen suggestion', (tester) async {
+      String? chosen;
+      await tester.pumpWidget(
+        _wrap(
+          AiSuggestions(
+            suggestions: const ['Summarize', 'Translate'],
+            onSelected: (s) => chosen = s,
+          ),
+        ),
+      );
+      await tester.tap(find.text('Translate'));
+      expect(chosen, 'Translate');
+    });
+
+    testWidgets('AiSources renders a chip per source', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          AiSources(
+            sources: [
+              SourcePart(
+                url: Uri.parse('https://flutter.dev'),
+                title: 'Flutter',
+              ),
+              SourcePart(url: Uri.parse('https://dart.dev')),
+            ],
+          ),
+        ),
+      );
+      expect(find.text('Flutter'), findsOneWidget);
+      expect(find.text('dart.dev'), findsOneWidget); // falls back to host
+    });
+
+    testWidgets('AiCodeBlock shows code and a copy button', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const AiCodeBlock(code: 'print("hi");', language: 'dart')),
+      );
+      expect(find.text('dart'), findsOneWidget);
+      expect(find.text('print("hi");'), findsOneWidget);
+      expect(find.byIcon(Icons.copy), findsOneWidget);
+    });
+
+    testWidgets('AiMessageActions fires regenerate', (tester) async {
+      var regenerated = false;
+      await tester.pumpWidget(
+        _wrap(
+          AiMessageActions(
+            message: const AiMessage(
+              id: 'm1',
+              role: AiRole.assistant,
+              parts: [TextPart('hi')],
+            ),
+            onRegenerate: () => regenerated = true,
+          ),
+        ),
+      );
+      await tester.tap(find.byIcon(Icons.refresh));
+      expect(regenerated, isTrue);
+    });
+
+    testWidgets('AiChat shows the empty state when idle and empty',
+        (tester) async {
+      final controller = UseChatController(provider: _EchoProvider());
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _wrap(
+          AiChat(
+            controller: controller,
+            emptyState: const AiEmptyState(title: 'Nothing yet'),
+          ),
+        ),
+      );
+      expect(find.text('Nothing yet'), findsOneWidget);
+    });
+  });
+
   group('AiConversationView', () {
     testWidgets('renders a bubble per message plus a loader', (tester) async {
       await tester.pumpWidget(

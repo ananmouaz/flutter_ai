@@ -20,10 +20,14 @@ class AiChat extends StatefulWidget {
     this.messageBuilder,
     this.padding = const EdgeInsets.all(16),
     this.autoScroll = true,
+    this.emptyState,
   });
 
   /// The chat controller to observe.
   final UseChatController controller;
+
+  /// Shown in place of the list while the conversation is empty and idle.
+  final Widget? emptyState;
 
   /// Renderer for message text.
   final AiTextRenderer textRenderer;
@@ -84,15 +88,22 @@ class _AiChatState extends State<AiChat> {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: widget.controller,
-      builder: (context, _) => AiConversationView(
-        messages: widget.controller.messages,
-        scrollController: _scrollController,
-        textRenderer: widget.textRenderer,
-        messageBuilder: widget.messageBuilder,
-        padding: widget.padding,
-        // Show the loader only while awaiting the first streamed token.
-        showLoader: widget.controller.status == ChatStatus.submitted,
-      ),
+      builder: (context, _) {
+        if (widget.emptyState != null &&
+            widget.controller.messages.isEmpty &&
+            !widget.controller.status.isBusy) {
+          return widget.emptyState!;
+        }
+        return AiConversationView(
+          messages: widget.controller.messages,
+          scrollController: _scrollController,
+          textRenderer: widget.textRenderer,
+          messageBuilder: widget.messageBuilder,
+          padding: widget.padding,
+          // Show the loader only while awaiting the first streamed token.
+          showLoader: widget.controller.status == ChatStatus.submitted,
+        );
+      },
     );
   }
 }

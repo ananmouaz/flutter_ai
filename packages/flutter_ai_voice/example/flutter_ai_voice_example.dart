@@ -14,7 +14,8 @@ Future<void> main() async {
   );
 
   final recorded = Uint8List.fromList(List<int>.filled(1024, 0));
-  final transcript = await stt.transcribeBytes(recorded, mediaType: 'audio/wav');
+  final transcript =
+      await stt.transcribeBytes(recorded, mediaType: 'audio/wav');
 
   // Feed transcript.text into a UseChatController in a real app.
   print(transcript.text);
