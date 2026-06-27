@@ -57,9 +57,9 @@ class _LiveDemoScreenState extends State<LiveDemoScreen> {
   }
 
   void _tickAmp(Timer _) {
-    final active = !_muted &&
-        (_status == AiLiveStatus.listening ||
-            _status == AiLiveStatus.speaking);
+    final active =
+        !_muted &&
+        (_status == AiLiveStatus.listening || _status == AiLiveStatus.speaking);
     final target = active ? 0.3 + _random.nextDouble() * 0.6 : 0.04;
     setState(() => _amplitude += (target - _amplitude) * 0.4);
   }
@@ -79,7 +79,6 @@ class _LiveDemoScreenState extends State<LiveDemoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
       body: SafeArea(
         child: AiLiveSession(
           status: _status,

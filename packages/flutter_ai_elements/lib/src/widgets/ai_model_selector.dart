@@ -7,7 +7,11 @@ import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 @immutable
 class AiModelOption {
   /// Creates a model option.
-  const AiModelOption({required this.id, required this.label, this.description});
+  const AiModelOption({
+    required this.id,
+    required this.label,
+    this.description,
+  });
 
   /// The stable identifier passed to the provider.
   final String id;

@@ -37,19 +37,19 @@ void main() {
 }
 
 Widget _frame(Widget child) => MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF6D28D9),
-        scaffoldBackgroundColor: Colors.white,
-        extensions: [demoTheme],
+  debugShowCheckedModeBanner: false,
+  theme: ThemeData(
+    useMaterial3: true,
+    colorSchemeSeed: const Color(0xFF6D28D9),
+    scaffoldBackgroundColor: Colors.white,
+    extensions: [demoTheme],
+  ),
+  home: Scaffold(
+    body: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Center(child: SingleChildScrollView(child: child)),
       ),
-      home: Scaffold(
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Center(child: SingleChildScrollView(child: child)),
-          ),
-        ),
-      ),
-    );
+    ),
+  ),
+);

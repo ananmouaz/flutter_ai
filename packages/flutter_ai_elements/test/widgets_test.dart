@@ -342,8 +342,7 @@ void main() {
       expect(find.text('one'), findsOneWidget);
     });
 
-    testWidgets('AiChainOfThought reveals steps when expanded',
-        (tester) async {
+    testWidgets('AiChainOfThought reveals steps when expanded', (tester) async {
       await tester.pumpWidget(
         _wrap(
           const AiChainOfThought(
@@ -381,7 +380,8 @@ void main() {
       expect(find.text('3'), findsOneWidget);
     });
 
-    testWidgets('AiBranch shows position and hides when single', (tester) async {
+    testWidgets('AiBranch shows position and hides when single',
+        (tester) async {
       await tester.pumpWidget(_wrap(const AiBranch(index: 1, total: 3)));
       expect(find.text('2/3'), findsOneWidget);
 

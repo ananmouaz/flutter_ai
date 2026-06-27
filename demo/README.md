@@ -11,6 +11,13 @@ with the composer swapping Send for Stop while streaming:
 
 <img src="screenshots/chat.gif" width="300" alt="flutter_ai chat demo" />
 
+## Dark mode
+
+Every element is theme-driven, so dark mode is just `AiThemeExtension.dark()` on
+a dark `ThemeData` (toggle it with the header icon):
+
+<img src="screenshots/dark_preview.png" width="300" alt="flutter_ai dark mode" />
+
 ## Run it
 
 ```bash

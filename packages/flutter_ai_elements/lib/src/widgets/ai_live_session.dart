@@ -92,77 +92,76 @@ class _AiLiveSessionState extends State<AiLiveSession>
     final theme = AiThemeExtension.of(context);
     final textColor = theme.assistantTextColor;
 
-    return ColoredBox(
-      color: const Color(0xFFFAFAFA),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
-        child: Column(
-          children: [
-            Text(
-              _label,
-              style: theme.textStyle.copyWith(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: textColor.withValues(alpha: 0.55),
-              ),
+    // Transparent: the host surface (scaffold) provides the background, so the
+    // session adapts to light/dark automatically.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+      child: Column(
+        children: [
+          Text(
+            _label,
+            style: theme.textStyle.copyWith(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: textColor.withValues(alpha: 0.55),
             ),
-            Expanded(
-              child: Center(
-                child: AnimatedBuilder(
-                  animation: _breathe,
-                  builder: (context, _) => _Orb(
-                    breathe: 0.5 - 0.5 * math.cos(2 * math.pi * _breathe.value),
-                    amplitude: widget.muted ? 0 : widget.amplitude.clamp(0, 1),
-                    active: widget.status == AiLiveStatus.speaking ||
-                        widget.status == AiLiveStatus.listening,
-                  ),
+          ),
+          Expanded(
+            child: Center(
+              child: AnimatedBuilder(
+                animation: _breathe,
+                builder: (context, _) => _Orb(
+                  breathe: 0.5 - 0.5 * math.cos(2 * math.pi * _breathe.value),
+                  amplitude: widget.muted ? 0 : widget.amplitude.clamp(0, 1),
+                  active: widget.status == AiLiveStatus.speaking ||
+                      widget.status == AiLiveStatus.listening,
                 ),
               ),
             ),
-            if (widget.transcript != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: Text(
-                  widget.transcript!,
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textStyle.copyWith(
-                    fontSize: 18,
-                    height: 1.4,
-                    color: textColor,
-                  ),
+          ),
+          if (widget.transcript != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Text(
+                widget.transcript!,
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textStyle.copyWith(
+                  fontSize: 18,
+                  height: 1.4,
+                  color: textColor,
                 ),
               ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (widget.onKeyboard != null)
-                  _CircleButton(
-                    icon: Icons.keyboard_outlined,
-                    label: 'Keyboard',
-                    onTap: widget.onKeyboard,
-                    theme: theme,
-                  ),
-                if (widget.onMute != null)
-                  _CircleButton(
-                    icon: widget.muted ? Icons.mic_off : Icons.mic_none_rounded,
-                    label: widget.muted ? 'Unmute' : 'Mute',
-                    onTap: widget.onMute,
-                    theme: theme,
-                  ),
-                if (widget.onEnd != null)
-                  _CircleButton(
-                    icon: Icons.close,
-                    label: 'End',
-                    onTap: widget.onEnd,
-                    theme: theme,
-                    filled: true,
-                  ),
-              ],
             ),
-          ],
-        ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (widget.onKeyboard != null)
+                _CircleButton(
+                  icon: Icons.keyboard_outlined,
+                  label: 'Keyboard',
+                  onTap: widget.onKeyboard,
+                  theme: theme,
+                ),
+              if (widget.onMute != null)
+                _CircleButton(
+                  icon: widget.muted ? Icons.mic_off : Icons.mic_none_rounded,
+                  label: widget.muted ? 'Unmute' : 'Mute',
+                  onTap: widget.onMute,
+                  theme: theme,
+                ),
+              if (widget.onEnd != null)
+                _CircleButton(
+                  icon: Icons.close,
+                  label: 'End',
+                  onTap: widget.onEnd,
+                  theme: theme,
+                  filled: true,
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -204,7 +203,8 @@ class _Orb extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1B1B20).withValues(alpha: 0.10 + 0.18 * react),
+            color:
+                const Color(0xFF1B1B20).withValues(alpha: 0.10 + 0.18 * react),
             blurRadius: 30 + 44 * react,
             spreadRadius: 1 + 6 * react,
           ),
@@ -243,7 +243,7 @@ class _CircleButton extends StatelessWidget {
             height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: filled ? theme.accentColor : const Color(0xFFECECEF),
+              color: filled ? theme.accentColor : theme.assistantBubbleColor,
             ),
             child: Icon(
               icon,

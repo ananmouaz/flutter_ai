@@ -96,7 +96,8 @@ class DemoChatProvider implements LlmProvider {
     yield await _step(
       TextDelta(
         messageId: id,
-        delta: '## Day 1\n'
+        delta:
+            '## Day 1\n'
             '- Morning: Belém Tower and pastéis de nata\n'
             '- Afternoon: wander Alfama and São Jorge Castle\n\n'
             '## Day 2\n'
@@ -159,7 +160,8 @@ class DemoChatProvider implements LlmProvider {
     yield await _step(
       TextDelta(
         messageId: id,
-        delta: '## Steps\n'
+        delta:
+            '## Steps\n'
             '1. Sear the chicken 5 minutes per side\n'
             '2. Add garlic, lemon, and a splash of stock\n'
             '3. Simmer 10 minutes, then stir in the spinach\n\n'
@@ -186,7 +188,8 @@ class DemoChatProvider implements LlmProvider {
     yield await _step(
       TextDelta(
         messageId: id,
-        delta: '**Summary**\n\nThe article makes three points:\n\n'
+        delta:
+            '**Summary**\n\nThe article makes three points:\n\n'
             '- Streaming UIs must batch updates to stay smooth\n'
             '- Tool calls should be inspectable, not hidden\n'
             '- Citations build user trust\n\n'

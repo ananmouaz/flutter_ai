@@ -10,32 +10,59 @@ import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 void main() => runApp(const FlutterAiDemoApp());
 
 /// Root of the showcase app.
-class FlutterAiDemoApp extends StatelessWidget {
+class FlutterAiDemoApp extends StatefulWidget {
   /// Creates the demo app.
   const FlutterAiDemoApp({super.key});
+
+  @override
+  State<FlutterAiDemoApp> createState() => _FlutterAiDemoAppState();
+}
+
+class _FlutterAiDemoAppState extends State<FlutterAiDemoApp> {
+  ThemeMode _mode = ThemeMode.light;
+
+  void _toggleTheme() => setState(
+    () => _mode = _mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+  );
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'flutter_ai demo',
       debugShowCheckedModeBanner: false,
+      themeMode: _mode,
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'Roboto',
         colorSchemeSeed: const Color(0xFF0D0D0D),
         scaffoldBackgroundColor: Colors.white,
-        // Suppress Material ripples for a calmer, platform-neutral feel.
         splashFactory: NoSplash.splashFactory,
         highlightColor: Colors.transparent,
-        extensions: [demoTheme],
+        extensions: [AiThemeExtension.fallback()],
       ),
-      home: const _HomePage(),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+        brightness: Brightness.dark,
+        colorSchemeSeed: const Color(0xFF8E8E96),
+        scaffoldBackgroundColor: const Color(0xFF131316),
+        splashFactory: NoSplash.splashFactory,
+        highlightColor: Colors.transparent,
+        extensions: [AiThemeExtension.dark()],
+      ),
+      home: _HomePage(
+        onToggleTheme: _toggleTheme,
+        isDark: _mode == ThemeMode.dark,
+      ),
     );
   }
 }
 
 class _HomePage extends StatefulWidget {
-  const _HomePage();
+  const _HomePage({required this.onToggleTheme, required this.isDark});
+
+  final VoidCallback onToggleTheme;
+  final bool isDark;
 
   @override
   State<_HomePage> createState() => _HomePageState();
@@ -43,8 +70,9 @@ class _HomePage extends StatefulWidget {
 
 class _HomePageState extends State<_HomePage> {
   int _tab = 0;
-  final UseChatController _controller =
-      UseChatController(provider: const DemoChatProvider());
+  final UseChatController _controller = UseChatController(
+    provider: const DemoChatProvider(),
+  );
 
   @override
   void dispose() {
@@ -72,11 +100,19 @@ class _HomePageState extends State<_HomePage> {
                     ),
                   ),
                   const Spacer(),
+                  IconButton(
+                    icon: Icon(
+                      widget.isDark
+                          ? Icons.light_mode_outlined
+                          : Icons.dark_mode_outlined,
+                    ),
+                    tooltip: 'Toggle theme',
+                    onPressed: widget.onToggleTheme,
+                  ),
                   // Live voice + new-chat buttons (Chat tab only).
                   if (_tab == 0) ...[
                     IconButton(
                       icon: const Icon(Icons.graphic_eq),
-                      color: const Color(0xFF0D0D0D),
                       tooltip: 'Live voice',
                       onPressed: () => unawaited(
                         Navigator.of(context).push(
@@ -88,7 +124,6 @@ class _HomePageState extends State<_HomePage> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.edit_square),
-                      color: const Color(0xFF0D0D0D),
                       tooltip: 'New chat',
                       onPressed: _controller.clear,
                     ),
@@ -101,18 +136,26 @@ class _HomePageState extends State<_HomePage> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: CupertinoSlidingSegmentedControl<int>(
               groupValue: _tab,
-              backgroundColor: const Color(0xFFF0F0F2),
-              thumbColor: Colors.white,
+              backgroundColor: widget.isDark
+                  ? const Color(0xFF2A2A2E)
+                  : const Color(0xFFF0F0F2),
+              thumbColor: widget.isDark
+                  ? const Color(0xFF45454D)
+                  : Colors.white,
               onValueChanged: (value) => setState(() => _tab = value ?? 0),
-              children: const {
-                0: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('Chat'),
-                ),
-                1: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('Elements'),
-                ),
+              children: {
+                for (final entry in const {0: 'Chat', 1: 'Elements'}.entries)
+                  entry.key: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(
+                      entry.value,
+                      style: TextStyle(
+                        color: widget.isDark
+                            ? Colors.white
+                            : const Color(0xFF0D0D0D),
+                      ),
+                    ),
+                  ),
               },
             ),
           ),
@@ -183,12 +226,12 @@ class ChatScreen extends StatelessWidget {
 
   // Simulates picking an image from the library (no real picker plugin).
   Future<List<FilePart>> _pickAttachment() async => [
-        FilePart(
-          mediaType: 'image/png',
-          bytes: sampleImageBytes,
-          name: 'photo.png',
-        ),
-      ];
+    FilePart(
+      mediaType: 'image/png',
+      bytes: sampleImageBytes,
+      name: 'photo.png',
+    ),
+  ];
 
   // Simulates a spoken prompt arriving from the mic.
   void _onVoice() => unawaited(controller.sendText('Suggest a dinner recipe'));
@@ -326,24 +369,24 @@ class ChatScreen extends StatelessWidget {
   }
 
   Widget _emptyState() => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const AiEmptyState(
-              title: 'Ask me anything',
-              subtitle: 'Powered by flutter_ai',
-            ),
-            AiSuggestions(
-              suggestions: const [
-                'Plan a weekend in Lisbon',
-                'Suggest a dinner recipe',
-                'Summarize this article',
-              ],
-              onSelected: _onSuggestion,
-            ),
-          ],
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const AiEmptyState(
+          title: 'Ask me anything',
+          subtitle: 'Powered by flutter_ai',
         ),
-      );
+        AiSuggestions(
+          suggestions: const [
+            'Plan a weekend in Lisbon',
+            'Suggest a dinner recipe',
+            'Summarize this article',
+          ],
+          onSelected: _onSuggestion,
+        ),
+      ],
+    ),
+  );
 }
 
 /// A scrolling gallery of every element with sample data.
@@ -354,12 +397,13 @@ class GalleryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = galleryItems();
+    final divider = AiThemeExtension.of(context).borderColor;
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Divider(height: 1, color: Color(0xFFEEECF5)),
+      separatorBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Divider(height: 1, color: divider),
       ),
       itemBuilder: (context, index) {
         final item = items[index];

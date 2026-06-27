@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/main.dart';
+import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Headless screenshot generation via golden capture.
@@ -49,7 +50,8 @@ void main() {
   });
 
   setUp(() {
-    final view = TestWidgetsFlutterBinding.instance.platformDispatcher.views.first;
+    final view =
+        TestWidgetsFlutterBinding.instance.platformDispatcher.views.first;
     view.physicalSize = const Size(1170, 2532); // iPhone-ish @3x
     view.devicePixelRatio = 3;
   });
@@ -102,31 +104,88 @@ void main() {
       matchesGoldenFile('shots/chat_error.png'),
     );
   });
-}
 
-/// Renders a single element inside a content-tight white card so the captured
-/// PNG hugs the element instead of spanning the whole screen.
-Widget _card(Widget child, Key key) => MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        fontFamily: 'Roboto',
-        colorSchemeSeed: const Color(0xFF6D28D9),
-        scaffoldBackgroundColor: const Color(0xFFEDEBF3),
-        splashFactory: NoSplash.splashFactory,
-        extensions: [demoTheme],
-      ),
-      home: Scaffold(
-        body: Center(
-          child: RepaintBoundary(
-            key: key,
-            child: Container(
-              width: 360,
-              color: Colors.white,
+  testWidgets('dark mode preview', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          fontFamily: 'Roboto',
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF131316),
+          splashFactory: NoSplash.splashFactory,
+          extensions: [AiThemeExtension.dark()],
+        ),
+        home: Scaffold(
+          body: SafeArea(
+            child: Padding(
               padding: const EdgeInsets.all(20),
-              child: child,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const AiMessageBubble(
+                    message: AiMessage(
+                      id: 'u',
+                      role: AiRole.user,
+                      parts: [TextPart('Plan a weekend in Lisbon')],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const AiResponse(
+                    text: '## Day 1\n- Belém Tower & pastéis de nata\n'
+                        '- Alfama and the castle\n\nSunny, **~24°C** — pack '
+                        'light. See the [guide](https://x.test).',
+                  ),
+                  const Spacer(),
+                  AiComposer(
+                    onSend: (_) {},
+                    onAttach: () {},
+                    onVoice: () {},
+                    modelSelector: AiModelSelector(
+                      models: demoModels,
+                      selectedId: 'gpt-4o',
+                      onSelected: (_) {},
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+    await tester.pump(const Duration(milliseconds: 300));
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('shots/dark_preview.png'),
+    );
+  });
+}
+
+/// Renders a single element inside a content-tight white card so the captured
+/// PNG hugs the element instead of spanning the whole screen.
+Widget _card(Widget child, Key key) => MaterialApp(
+  debugShowCheckedModeBanner: false,
+  theme: ThemeData(
+    useMaterial3: true,
+    fontFamily: 'Roboto',
+    colorSchemeSeed: const Color(0xFF6D28D9),
+    scaffoldBackgroundColor: const Color(0xFFEDEBF3),
+    splashFactory: NoSplash.splashFactory,
+    extensions: [demoTheme],
+  ),
+  home: Scaffold(
+    body: Center(
+      child: RepaintBoundary(
+        key: key,
+        child: Container(
+          width: 360,
+          color: Colors.white,
+          padding: const EdgeInsets.all(20),
+          child: child,
+        ),
+      ),
+    ),
+  ),
+);

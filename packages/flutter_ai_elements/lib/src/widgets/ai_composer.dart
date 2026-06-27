@@ -349,7 +349,8 @@ class _SendButtonState extends State<_SendButton> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: enabled ? widget.color : widget.color.withValues(alpha: 0.4),
+              color:
+                  enabled ? widget.color : widget.color.withValues(alpha: 0.4),
               shape: BoxShape.circle,
             ),
             child: Icon(widget.icon, color: widget.iconColor, size: 22),

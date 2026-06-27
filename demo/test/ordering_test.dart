@@ -14,10 +14,12 @@ void main() {
     await controller.sendText('Suggest a dinner recipe');
 
     // Order must be user → assistant → user → assistant.
-    expect(
-      controller.messages.map((m) => m.role).toList(),
-      [AiRole.user, AiRole.assistant, AiRole.user, AiRole.assistant],
-    );
+    expect(controller.messages.map((m) => m.role).toList(), [
+      AiRole.user,
+      AiRole.assistant,
+      AiRole.user,
+      AiRole.assistant,
+    ]);
 
     // The two responses are distinct messages, not one mutated in place.
     final assistantIds = controller.messages

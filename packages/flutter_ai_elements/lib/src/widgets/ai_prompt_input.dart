@@ -79,7 +79,8 @@ class _AiPromptInputState extends State<AiPromptInput> {
         isBusy: widget.controller.status.isBusy,
         onStop: widget.controller.stop,
         onSend: _send,
-        onAttach: widget.onPickAttachment == null ? null : () => unawaited(_pick()),
+        onAttach:
+            widget.onPickAttachment == null ? null : () => unawaited(_pick()),
         onVoice: widget.onVoice,
         attachments: _attachments,
         onRemoveAttachment: (f) => setState(() => _attachments.remove(f)),

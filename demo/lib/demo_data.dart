@@ -56,283 +56,274 @@ final AiMessage richAssistantMessage = AiMessage(
 
 /// The elements gallery, each wrapped for display and screenshotting.
 List<GalleryItem> galleryItems() => [
-      (
-        name: 'message_user',
-        title: 'AiMessageBubble — user',
-        child: const AiMessageBubble(
-          message: AiMessage(
-            id: 'u1',
-            role: AiRole.user,
-            parts: [TextPart('What is the weather in London today?')],
-          ),
+  (
+    name: 'message_user',
+    title: 'AiMessageBubble — user',
+    child: const AiMessageBubble(
+      message: AiMessage(
+        id: 'u1',
+        role: AiRole.user,
+        parts: [TextPart('What is the weather in London today?')],
+      ),
+    ),
+  ),
+  (
+    name: 'message_assistant',
+    title: 'AiMessageBubble — assistant (rich)',
+    child: AiMessageBubble(message: richAssistantMessage),
+  ),
+  (name: 'loader', title: 'AiLoader', child: const AiLoader()),
+  (
+    name: 'reasoning',
+    title: 'AiReasoning',
+    child: const AiReasoning(
+      text:
+          'First, identify the city. Then call the weather tool and '
+          'summarize the result for the user.',
+      initiallyExpanded: true,
+    ),
+  ),
+  (
+    name: 'tool_invocation',
+    title: 'AiToolInvocation',
+    child: const AiToolInvocation(
+      call: ToolCallPart(
+        toolCallId: 'c1',
+        toolName: 'get_weather',
+        args: {'city': 'London', 'units': 'metric'},
+        state: ToolCallState.outputAvailable,
+      ),
+      result: ToolResultPart(
+        toolCallId: 'c1',
+        result: {'tempC': 18, 'condition': 'Rainy'},
+      ),
+      initiallyExpanded: true,
+    ),
+  ),
+  (
+    name: 'tool_group',
+    title: 'AiToolGroup — parallel calls',
+    child: const AiToolGroup(
+      calls: [
+        ToolCallPart(
+          toolCallId: 'c1',
+          toolName: 'get_weather',
+          state: ToolCallState.outputAvailable,
         ),
-      ),
-      (
-        name: 'message_assistant',
-        title: 'AiMessageBubble — assistant (rich)',
-        child: AiMessageBubble(message: richAssistantMessage),
-      ),
-      (
-        name: 'loader',
-        title: 'AiLoader',
-        child: const AiLoader(),
-      ),
-      (
-        name: 'reasoning',
-        title: 'AiReasoning',
-        child: const AiReasoning(
-          text: 'First, identify the city. Then call the weather tool and '
-              'summarize the result for the user.',
-          initiallyExpanded: true,
+        ToolCallPart(
+          toolCallId: 'c2',
+          toolName: 'web_search',
+          state: ToolCallState.executing,
         ),
-      ),
-      (
-        name: 'tool_invocation',
-        title: 'AiToolInvocation',
-        child: const AiToolInvocation(
-          call: ToolCallPart(
-            toolCallId: 'c1',
-            toolName: 'get_weather',
-            args: {'city': 'London', 'units': 'metric'},
-            state: ToolCallState.outputAvailable,
-          ),
-          result: ToolResultPart(
-            toolCallId: 'c1',
-            result: {'tempC': 18, 'condition': 'Rainy'},
-          ),
-          initiallyExpanded: true,
+      ],
+      results: {
+        'c1': ToolResultPart(toolCallId: 'c1', result: {'tempC': 18}),
+      },
+    ),
+  ),
+  (
+    name: 'attachment',
+    title: 'AiAttachment',
+    child: const AiAttachment(
+      file: FilePart(mediaType: 'application/pdf', name: 'itinerary.pdf'),
+    ),
+  ),
+  (
+    name: 'sources',
+    title: 'AiSources',
+    child: AiSources(
+      sources: [
+        SourcePart(url: _weatherUri, title: 'weather.example.com'),
+        SourcePart(url: Uri.parse('https://flutter.dev'), title: 'Flutter'),
+      ],
+    ),
+  ),
+  (
+    name: 'code_block',
+    title: 'AiCodeBlock',
+    child: const AiCodeBlock(
+      language: 'dart',
+      code: "void main() {\n  print('Hello, flutter_ai!');\n}",
+    ),
+  ),
+  (
+    name: 'response',
+    title: 'AiResponse — Markdown',
+    child: const AiResponse(
+      text:
+          '## Streaming\n\nFold the **event stream** with a reducer:\n\n'
+          '- rebuild only changed messages\n'
+          '- stays at `60fps`\n\n'
+          'See the [docs](https://docs.flutter.dev/ai).',
+    ),
+  ),
+  (
+    name: 'chain_of_thought',
+    title: 'AiChainOfThought',
+    child: const AiChainOfThought(
+      initiallyExpanded: true,
+      steps: [
+        AiThoughtStep(label: 'Search the web', detail: 'flutter stream tokens'),
+        AiThoughtStep(label: 'Read top results'),
+        AiThoughtStep(label: 'Synthesize an answer', isActive: true),
+      ],
+    ),
+  ),
+  (
+    name: 'task',
+    title: 'AiTask',
+    child: const AiTask(
+      title: 'Refactor the controller',
+      items: [
+        AiTaskItem(
+          label: 'Read use_chat_controller.dart',
+          status: AiTaskStatus.complete,
         ),
-      ),
-      (
-        name: 'tool_group',
-        title: 'AiToolGroup — parallel calls',
-        child: const AiToolGroup(
-          calls: [
-            ToolCallPart(
-              toolCallId: 'c1',
-              toolName: 'get_weather',
-              state: ToolCallState.outputAvailable,
-            ),
-            ToolCallPart(
-              toolCallId: 'c2',
-              toolName: 'web_search',
-              state: ToolCallState.executing,
-            ),
-          ],
-          results: {
-            'c1': ToolResultPart(toolCallId: 'c1', result: {'tempC': 18}),
-          },
+        AiTaskItem(
+          label: 'Extract _startStream()',
+          status: AiTaskStatus.active,
         ),
+        AiTaskItem(label: 'Update tests'),
+      ],
+    ),
+  ),
+  (
+    name: 'inline_citation',
+    title: 'AiInlineCitation',
+    child: const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('Backed by sources'),
+        SizedBox(width: 6),
+        AiInlineCitation(number: 1),
+        SizedBox(width: 4),
+        AiInlineCitation(number: 2),
+      ],
+    ),
+  ),
+  (
+    name: 'branch',
+    title: 'AiBranch — versions',
+    child: const AiBranch(index: 1, total: 3),
+  ),
+  (
+    name: 'image',
+    title: 'AiImage',
+    child: SizedBox(
+      width: 200,
+      child: AiImage(bytes: sampleImageBytes, aspectRatio: 16 / 9),
+    ),
+  ),
+  (
+    name: 'model_selector',
+    title: 'AiModelSelector',
+    child: AiModelSelector(
+      models: demoModels,
+      selectedId: 'gpt-4o',
+      onSelected: (_) {},
+    ),
+  ),
+  (
+    name: 'confirmation',
+    title: 'AiConfirmation',
+    child: AiConfirmation(
+      title: 'Send this email to the team?',
+      description: 'Subject: "Weekend plan in Lisbon"',
+      onConfirm: () {},
+      onDeny: () {},
+    ),
+  ),
+  (
+    name: 'context_meter',
+    title: 'AiContextMeter',
+    child: const AiContextMeter(usedTokens: 8200, totalTokens: 128000),
+  ),
+  (name: 'shimmer', title: 'AiShimmer', child: const AiShimmer()),
+  (
+    name: 'live_session',
+    title: 'AiLiveSession — voice mode',
+    child: SizedBox(
+      height: 360,
+      child: AiLiveSession(
+        status: AiLiveStatus.speaking,
+        amplitude: 0.6,
+        transcript: 'Lisbon is sunny, about 24°C this weekend.',
+        onMute: () {},
+        onKeyboard: () {},
+        onEnd: () {},
       ),
-      (
-        name: 'attachment',
-        title: 'AiAttachment',
-        child: const AiAttachment(
-          file: FilePart(mediaType: 'application/pdf', name: 'itinerary.pdf'),
-        ),
+    ),
+  ),
+  (
+    name: 'suggestions',
+    title: 'AiSuggestions',
+    child: AiSuggestions(
+      suggestions: const ['Summarize this', 'Translate to French', 'Explain'],
+      onSelected: (_) {},
+    ),
+  ),
+  (
+    name: 'avatars',
+    title: 'AiAvatar',
+    child: const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AiAvatar(role: AiRole.user),
+        SizedBox(width: 12),
+        AiAvatar(role: AiRole.assistant),
+      ],
+    ),
+  ),
+  (
+    name: 'empty_state',
+    title: 'AiEmptyState',
+    child: const SizedBox(
+      height: 220,
+      child: AiEmptyState(
+        title: 'Ask me anything',
+        subtitle: 'Your AI assistant is ready to help.',
       ),
-      (
-        name: 'sources',
-        title: 'AiSources',
-        child: AiSources(
-          sources: [
-            SourcePart(url: _weatherUri, title: 'weather.example.com'),
-            SourcePart(url: Uri.parse('https://flutter.dev'), title: 'Flutter'),
-          ],
-        ),
+    ),
+  ),
+  (
+    name: 'error_banner',
+    title: 'AiErrorBanner',
+    child: AiErrorBanner(
+      message: 'The request timed out.',
+      onRetry: () {},
+      onDismiss: () {},
+    ),
+  ),
+  (
+    name: 'message_actions',
+    title: 'AiMessageActions',
+    child: AiMessageActions(
+      message: const AiMessage(
+        id: 'm',
+        role: AiRole.assistant,
+        parts: [TextPart('hi')],
       ),
-      (
-        name: 'code_block',
-        title: 'AiCodeBlock',
-        child: const AiCodeBlock(
-          language: 'dart',
-          code: "void main() {\n  print('Hello, flutter_ai!');\n}",
-        ),
+      onRegenerate: () {},
+      onEdit: () {},
+    ),
+  ),
+  (
+    name: 'composer_idle',
+    title: 'AiComposer — attach · model · voice',
+    child: AiComposer(
+      onSend: (_) {},
+      onAttach: () {},
+      onVoice: () {},
+      modelSelector: AiModelSelector(
+        models: demoModels,
+        selectedId: 'gpt-4o',
+        onSelected: (_) {},
       ),
-      (
-        name: 'response',
-        title: 'AiResponse — Markdown',
-        child: const AiResponse(
-          text: '## Streaming\n\nFold the **event stream** with a reducer:\n\n'
-              '- rebuild only changed messages\n'
-              '- stays at `60fps`\n\n'
-              'See the [docs](https://docs.flutter.dev/ai).',
-        ),
-      ),
-      (
-        name: 'chain_of_thought',
-        title: 'AiChainOfThought',
-        child: const AiChainOfThought(
-          initiallyExpanded: true,
-          steps: [
-            AiThoughtStep(
-              label: 'Search the web',
-              detail: 'flutter stream tokens',
-            ),
-            AiThoughtStep(label: 'Read top results'),
-            AiThoughtStep(label: 'Synthesize an answer', isActive: true),
-          ],
-        ),
-      ),
-      (
-        name: 'task',
-        title: 'AiTask',
-        child: const AiTask(
-          title: 'Refactor the controller',
-          items: [
-            AiTaskItem(
-              label: 'Read use_chat_controller.dart',
-              status: AiTaskStatus.complete,
-            ),
-            AiTaskItem(
-              label: 'Extract _startStream()',
-              status: AiTaskStatus.active,
-            ),
-            AiTaskItem(label: 'Update tests'),
-          ],
-        ),
-      ),
-      (
-        name: 'inline_citation',
-        title: 'AiInlineCitation',
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Backed by sources'),
-            SizedBox(width: 6),
-            AiInlineCitation(number: 1),
-            SizedBox(width: 4),
-            AiInlineCitation(number: 2),
-          ],
-        ),
-      ),
-      (
-        name: 'branch',
-        title: 'AiBranch — versions',
-        child: const AiBranch(index: 1, total: 3),
-      ),
-      (
-        name: 'image',
-        title: 'AiImage',
-        child: SizedBox(
-          width: 200,
-          child: AiImage(bytes: sampleImageBytes, aspectRatio: 16 / 9),
-        ),
-      ),
-      (
-        name: 'model_selector',
-        title: 'AiModelSelector',
-        child: AiModelSelector(
-          models: demoModels,
-          selectedId: 'gpt-4o',
-          onSelected: (_) {},
-        ),
-      ),
-      (
-        name: 'confirmation',
-        title: 'AiConfirmation',
-        child: AiConfirmation(
-          title: 'Send this email to the team?',
-          description: 'Subject: "Weekend plan in Lisbon"',
-          onConfirm: () {},
-          onDeny: () {},
-        ),
-      ),
-      (
-        name: 'context_meter',
-        title: 'AiContextMeter',
-        child: const AiContextMeter(usedTokens: 8200, totalTokens: 128000),
-      ),
-      (
-        name: 'shimmer',
-        title: 'AiShimmer',
-        child: const AiShimmer(),
-      ),
-      (
-        name: 'live_session',
-        title: 'AiLiveSession — voice mode',
-        child: SizedBox(
-          height: 360,
-          child: AiLiveSession(
-            status: AiLiveStatus.speaking,
-            amplitude: 0.6,
-            transcript: 'Lisbon is sunny, about 24°C this weekend.',
-            onMute: () {},
-            onKeyboard: () {},
-            onEnd: () {},
-          ),
-        ),
-      ),
-      (
-        name: 'suggestions',
-        title: 'AiSuggestions',
-        child: AiSuggestions(
-          suggestions: const ['Summarize this', 'Translate to French', 'Explain'],
-          onSelected: (_) {},
-        ),
-      ),
-      (
-        name: 'avatars',
-        title: 'AiAvatar',
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AiAvatar(role: AiRole.user),
-            SizedBox(width: 12),
-            AiAvatar(role: AiRole.assistant),
-          ],
-        ),
-      ),
-      (
-        name: 'empty_state',
-        title: 'AiEmptyState',
-        child: const SizedBox(
-          height: 220,
-          child: AiEmptyState(
-            title: 'Ask me anything',
-            subtitle: 'Your AI assistant is ready to help.',
-          ),
-        ),
-      ),
-      (
-        name: 'error_banner',
-        title: 'AiErrorBanner',
-        child: AiErrorBanner(
-          message: 'The request timed out.',
-          onRetry: () {},
-          onDismiss: () {},
-        ),
-      ),
-      (
-        name: 'message_actions',
-        title: 'AiMessageActions',
-        child: AiMessageActions(
-          message: const AiMessage(
-            id: 'm',
-            role: AiRole.assistant,
-            parts: [TextPart('hi')],
-          ),
-          onRegenerate: () {},
-          onEdit: () {},
-        ),
-      ),
-      (
-        name: 'composer_idle',
-        title: 'AiComposer — attach · model · voice',
-        child: AiComposer(
-          onSend: (_) {},
-          onAttach: () {},
-          onVoice: () {},
-          modelSelector: AiModelSelector(
-            models: demoModels,
-            selectedId: 'gpt-4o',
-            onSelected: (_) {},
-          ),
-        ),
-      ),
-      (
-        name: 'composer_busy',
-        title: 'AiComposer — streaming (Stop)',
-        child: AiComposer(onSend: (_) {}, onStop: () {}, isBusy: true),
-      ),
-    ];
+    ),
+  ),
+  (
+    name: 'composer_busy',
+    title: 'AiComposer — streaming (Stop)',
+    child: AiComposer(onSend: (_) {}, onStop: () {}, isBusy: true),
+  ),
+];
