@@ -1,0 +1,376 @@
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
+import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_code_block.dart';
+
+/// Renders a useful subset of Markdown — headings, bold/italic, inline code,
+/// fenced code blocks, ordered/unordered lists, blockquotes, and links — with
+/// **no external dependency**.
+///
+/// This is the content renderer for assistant answers. Inline links are styled
+/// always and become tappable when [onLinkTap] is provided.
+class AiResponse extends StatefulWidget {
+  /// Creates a Markdown response from [text].
+  const AiResponse({super.key, required this.text, this.onLinkTap});
+
+  /// The Markdown source to render.
+  final String text;
+
+  /// Called when a link is tapped. If `null`, links render but aren't tappable.
+  final void Function(Uri url)? onLinkTap;
+
+  @override
+  State<AiResponse> createState() => _AiResponseState();
+}
+
+class _AiResponseState extends State<AiResponse> {
+  final List<TapGestureRecognizer> _recognizers = [];
+
+  void _disposeRecognizers() {
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    _recognizers.clear();
+  }
+
+  @override
+  void dispose() {
+    _disposeRecognizers();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _disposeRecognizers();
+    final theme = AiThemeExtension.of(context);
+    final base = DefaultTextStyle.of(context).style.merge(theme.textStyle);
+    final blocks = _parseBlocks(widget.text);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < blocks.length; i++) ...[
+          if (i > 0) const SizedBox(height: 8),
+          _buildBlock(blocks[i], theme, base),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBlock(_Block block, AiThemeExtension theme, TextStyle base) {
+    switch (block.type) {
+      case _BlockType.heading:
+        final sizes = {1: 24.0, 2: 20.0, 3: 17.0};
+        final style = base.copyWith(
+          fontSize: sizes[block.level] ?? 16,
+          fontWeight: FontWeight.w700,
+          height: 1.3,
+        );
+        return Text.rich(TextSpan(children: _inline(block.text, style, theme)));
+      case _BlockType.code:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: AiCodeBlock(code: block.text, language: block.language),
+        );
+      case _BlockType.bullet:
+      case _BlockType.ordered:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < block.items.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      child: Text(
+                        block.type == _BlockType.ordered ? '${i + 1}.' : '•',
+                        style: base,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          children: _inline(block.items[i], base, theme),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      case _BlockType.quote:
+        return Container(
+          padding: const EdgeInsets.only(left: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(color: theme.borderColor, width: 3),
+            ),
+          ),
+          child: Text.rich(
+            TextSpan(
+              children: _inline(
+                block.text,
+                base.copyWith(color: base.color?.withValues(alpha: 0.7)),
+                theme,
+              ),
+            ),
+          ),
+        );
+      case _BlockType.paragraph:
+        return Text.rich(TextSpan(children: _inline(block.text, base, theme)));
+    }
+  }
+
+  // Inline parsing: **bold**, *italic*/_italic_, `code`, [text](url).
+  List<InlineSpan> _inline(
+    String text,
+    TextStyle base,
+    AiThemeExtension theme,
+  ) {
+    final spans = <InlineSpan>[];
+    final buffer = StringBuffer();
+    var i = 0;
+
+    void flush() {
+      if (buffer.isNotEmpty) {
+        spans.add(TextSpan(text: buffer.toString(), style: base));
+        buffer.clear();
+      }
+    }
+
+    while (i < text.length) {
+      if (text.startsWith('**', i)) {
+        final end = text.indexOf('**', i + 2);
+        if (end != -1) {
+          flush();
+          spans.addAll(
+            _inline(
+              text.substring(i + 2, end),
+              base.copyWith(fontWeight: FontWeight.w700),
+              theme,
+            ),
+          );
+          i = end + 2;
+          continue;
+        }
+      }
+      final char = text[i];
+      if (char == '`') {
+        final end = text.indexOf('`', i + 1);
+        if (end != -1) {
+          flush();
+          spans.add(
+            TextSpan(
+              text: text.substring(i + 1, end),
+              style: theme.codeStyle.copyWith(color: base.color),
+            ),
+          );
+          i = end + 1;
+          continue;
+        }
+      }
+      if (char == '[') {
+        final close = text.indexOf(']', i + 1);
+        if (close != -1 && close + 1 < text.length && text[close + 1] == '(') {
+          final urlEnd = text.indexOf(')', close + 2);
+          if (urlEnd != -1) {
+            flush();
+            spans.add(
+              _linkSpan(
+                text.substring(i + 1, close),
+                text.substring(close + 2, urlEnd),
+                base,
+                theme,
+              ),
+            );
+            i = urlEnd + 1;
+            continue;
+          }
+        }
+      }
+      if (char == '*' || char == '_') {
+        final end = text.indexOf(char, i + 1);
+        if (end != -1 && end > i + 1) {
+          flush();
+          spans.addAll(
+            _inline(
+              text.substring(i + 1, end),
+              base.copyWith(fontStyle: FontStyle.italic),
+              theme,
+            ),
+          );
+          i = end + 1;
+          continue;
+        }
+      }
+      buffer.write(char);
+      i++;
+    }
+    flush();
+    return spans;
+  }
+
+  InlineSpan _linkSpan(
+    String label,
+    String url,
+    TextStyle base,
+    AiThemeExtension theme,
+  ) {
+    final style = base.copyWith(
+      color: theme.accentColor,
+      decoration: TextDecoration.underline,
+    );
+    final onTap = widget.onLinkTap;
+    if (onTap == null) return TextSpan(text: label, style: style);
+    final recognizer = TapGestureRecognizer()
+      ..onTap = () => onTap(Uri.parse(url));
+    _recognizers.add(recognizer);
+    return TextSpan(text: label, style: style, recognizer: recognizer);
+  }
+}
+
+/// An [AiTextRenderer] that renders Markdown via [AiResponse]. The default
+/// renderer for assistant content.
+class MarkdownTextRenderer implements AiTextRenderer {
+  /// Creates a Markdown renderer.
+  const MarkdownTextRenderer({this.onLinkTap});
+
+  /// Forwarded to [AiResponse.onLinkTap].
+  final void Function(Uri url)? onLinkTap;
+
+  @override
+  Widget render(String text, {required bool isStreaming}) =>
+      AiResponse(text: text, onLinkTap: onLinkTap);
+}
+
+enum _BlockType { paragraph, heading, code, bullet, ordered, quote }
+
+class _Block {
+  _Block.paragraph(this.text)
+      : type = _BlockType.paragraph,
+        level = 0,
+        language = null,
+        items = const [];
+  _Block.heading(this.level, this.text)
+      : type = _BlockType.heading,
+        language = null,
+        items = const [];
+  _Block.code(this.text, this.language)
+      : type = _BlockType.code,
+        level = 0,
+        items = const [];
+  _Block.quote(this.text)
+      : type = _BlockType.quote,
+        level = 0,
+        language = null,
+        items = const [];
+  _Block.list(this.type, this.items)
+      : level = 0,
+        language = null,
+        text = '';
+
+  final _BlockType type;
+  final String text;
+  final int level;
+  final String? language;
+  final List<String> items;
+}
+
+List<_Block> _parseBlocks(String source) {
+  final lines = source.replaceAll('\r\n', '\n').split('\n');
+  final blocks = <_Block>[];
+  var i = 0;
+
+  while (i < lines.length) {
+    final line = lines[i];
+    final trimmed = line.trim();
+
+    if (trimmed.isEmpty) {
+      i++;
+      continue;
+    }
+
+    // Fenced code block.
+    if (trimmed.startsWith('```')) {
+      final language = trimmed.substring(3).trim();
+      final codeLines = <String>[];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.add(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++; // skip closing fence
+      blocks.add(
+        _Block.code(codeLines.join('\n'), language.isEmpty ? null : language),
+      );
+      continue;
+    }
+
+    // Heading.
+    final heading = RegExp(r'^(#{1,6})\s+(.*)$').firstMatch(trimmed);
+    if (heading != null) {
+      blocks.add(_Block.heading(heading.group(1)!.length, heading.group(2)!));
+      i++;
+      continue;
+    }
+
+    // Blockquote (consecutive > lines).
+    if (trimmed.startsWith('>')) {
+      final quoteLines = <String>[];
+      while (i < lines.length && lines[i].trim().startsWith('>')) {
+        quoteLines.add(lines[i].trim().replaceFirst(RegExp(r'^>\s?'), ''));
+        i++;
+      }
+      blocks.add(_Block.quote(quoteLines.join(' ')));
+      continue;
+    }
+
+    // Unordered list.
+    if (RegExp(r'^[-*+]\s+').hasMatch(trimmed)) {
+      final items = <String>[];
+      while (
+          i < lines.length && RegExp(r'^[-*+]\s+').hasMatch(lines[i].trim())) {
+        items.add(lines[i].trim().replaceFirst(RegExp(r'^[-*+]\s+'), ''));
+        i++;
+      }
+      blocks.add(_Block.list(_BlockType.bullet, items));
+      continue;
+    }
+
+    // Ordered list.
+    if (RegExp(r'^\d+\.\s+').hasMatch(trimmed)) {
+      final items = <String>[];
+      while (
+          i < lines.length && RegExp(r'^\d+\.\s+').hasMatch(lines[i].trim())) {
+        items.add(lines[i].trim().replaceFirst(RegExp(r'^\d+\.\s+'), ''));
+        i++;
+      }
+      blocks.add(_Block.list(_BlockType.ordered, items));
+      continue;
+    }
+
+    // Paragraph (consecutive non-blank, non-special lines).
+    final paragraph = <String>[];
+    while (i < lines.length && lines[i].trim().isNotEmpty) {
+      final t = lines[i].trim();
+      if (t.startsWith('```') ||
+          t.startsWith('#') ||
+          t.startsWith('>') ||
+          RegExp(r'^[-*+]\s+').hasMatch(t) ||
+          RegExp(r'^\d+\.\s+').hasMatch(t)) {
+        break;
+      }
+      paragraph.add(t);
+      i++;
+    }
+    blocks.add(_Block.paragraph(paragraph.join(' ')));
+  }
+
+  return blocks;
+}

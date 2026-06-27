@@ -12,6 +12,10 @@ Initial release.
   haptics), `AiLoader`.
 - Controller-bound widgets: `AiChat` (live transcript with auto-scroll and a
   thinking loader) and `AiPromptInput`.
-- `AiTextRenderer` typedef (`TextRenderer<Widget>`) with a default
-  `PlainTextRenderer`; inject a custom renderer for Markdown/LaTeX.
+- `AiResponse` — a dependency-free Markdown renderer (headings, bold/italic,
+  inline + fenced code, lists, blockquotes, links); `MarkdownTextRenderer` wraps
+  it and is now the **default** `AiTextRenderer`. `PlainTextRenderer` remains.
+- `AiChainOfThought` (stepwise timeline), `AiTask` (agent checklist),
+  `AiInlineCitation` (numbered badge), `AiBranch` (version navigation),
+  `AiImage` (loading/error/tap-to-zoom).
 - Re-exports `flutter_ai_client` (and `flutter_ai_core`).

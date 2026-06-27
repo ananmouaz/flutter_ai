@@ -325,6 +325,78 @@ void main() {
     });
   });
 
+  group('new components', () {
+    testWidgets('AiResponse renders markdown blocks', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const SingleChildScrollView(
+            child: AiResponse(
+              text: '# Title\n\nHello **world** and `code`.\n\n'
+                  '```dart\nx();\n```\n\n- one\n- two',
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Title'), findsOneWidget);
+      expect(find.byType(AiCodeBlock), findsOneWidget);
+      expect(find.text('one'), findsOneWidget);
+    });
+
+    testWidgets('AiChainOfThought reveals steps when expanded',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AiChainOfThought(
+            initiallyExpanded: true,
+            steps: [
+              AiThoughtStep(label: 'Search'),
+              AiThoughtStep(label: 'Synthesize', isActive: true),
+            ],
+          ),
+        ),
+      );
+      expect(find.text('Search'), findsOneWidget);
+      expect(find.text('Synthesize'), findsOneWidget);
+    });
+
+    testWidgets('AiTask shows title, count, and items', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AiTask(
+            title: 'Refactor',
+            items: [
+              AiTaskItem(label: 'Read files', status: AiTaskStatus.complete),
+              AiTaskItem(label: 'Apply edits', status: AiTaskStatus.active),
+            ],
+          ),
+        ),
+      );
+      expect(find.text('Refactor'), findsOneWidget);
+      expect(find.text('1/2'), findsOneWidget);
+      expect(find.text('Read files'), findsOneWidget);
+    });
+
+    testWidgets('AiInlineCitation shows its number', (tester) async {
+      await tester.pumpWidget(_wrap(const AiInlineCitation(number: 3)));
+      expect(find.text('3'), findsOneWidget);
+    });
+
+    testWidgets('AiBranch shows position and hides when single', (tester) async {
+      await tester.pumpWidget(_wrap(const AiBranch(index: 1, total: 3)));
+      expect(find.text('2/3'), findsOneWidget);
+
+      await tester.pumpWidget(_wrap(const AiBranch(index: 0, total: 1)));
+      expect(find.text('1/1'), findsNothing);
+    });
+
+    testWidgets('AiImage builds with a url', (tester) async {
+      await tester.pumpWidget(
+        _wrap(AiImage(url: Uri.parse('https://example.com/a.png'))),
+      );
+      expect(find.byType(AiImage), findsOneWidget);
+    });
+  });
+
   group('AiConversationView', () {
     testWidgets('renders a bubble per message plus a loader', (tester) async {
       await tester.pumpWidget(

@@ -3,6 +3,7 @@ import 'package:flutter_ai_core/flutter_ai_core.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_loader.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_message_bubble.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
 
 /// A scrolling list of message bubbles.
 ///
@@ -15,7 +16,7 @@ class AiConversationView extends StatelessWidget {
     super.key,
     required this.messages,
     this.scrollController,
-    this.textRenderer = const PlainTextRenderer(),
+    this.textRenderer = const MarkdownTextRenderer(),
     this.messageBuilder,
     this.showLoader = false,
     this.padding = const EdgeInsets.all(16),
@@ -27,7 +28,7 @@ class AiConversationView extends StatelessWidget {
   /// Optional scroll controller, supplied by a parent that manages scrolling.
   final ScrollController? scrollController;
 
-  /// Renderer for message text. Defaults to [PlainTextRenderer].
+  /// Renderer for message text. Defaults to [MarkdownTextRenderer].
   final AiTextRenderer textRenderer;
 
   /// Optional override for how each message is built.

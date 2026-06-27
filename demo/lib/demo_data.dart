@@ -1,8 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 
 /// The demo uses the package's modern default skin as-is.
 final AiThemeExtension demoTheme = AiThemeExtension.fallback();
+
+/// A tiny 1×1 PNG used to show the AiImage frame in the gallery without network.
+final _sampleImage = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAen6'
+  '3NgAAAAASUVORK5CYII=',
+);
 
 /// One entry in the element gallery.
 typedef GalleryItem = ({String name, String title, Widget child});
@@ -126,6 +134,76 @@ List<GalleryItem> galleryItems() => [
         child: const AiCodeBlock(
           language: 'dart',
           code: "void main() {\n  print('Hello, flutter_ai!');\n}",
+        ),
+      ),
+      (
+        name: 'response',
+        title: 'AiResponse — Markdown',
+        child: const AiResponse(
+          text: '## Streaming\n\nFold the **event stream** with a reducer:\n\n'
+              '- rebuild only changed messages\n'
+              '- stays at `60fps`\n\n'
+              'See the [docs](https://docs.flutter.dev/ai).',
+        ),
+      ),
+      (
+        name: 'chain_of_thought',
+        title: 'AiChainOfThought',
+        child: const AiChainOfThought(
+          initiallyExpanded: true,
+          steps: [
+            AiThoughtStep(
+              label: 'Search the web',
+              detail: 'flutter stream tokens',
+            ),
+            AiThoughtStep(label: 'Read top results'),
+            AiThoughtStep(label: 'Synthesize an answer', isActive: true),
+          ],
+        ),
+      ),
+      (
+        name: 'task',
+        title: 'AiTask',
+        child: const AiTask(
+          title: 'Refactor the controller',
+          items: [
+            AiTaskItem(
+              label: 'Read use_chat_controller.dart',
+              status: AiTaskStatus.complete,
+            ),
+            AiTaskItem(
+              label: 'Extract _startStream()',
+              status: AiTaskStatus.active,
+            ),
+            AiTaskItem(label: 'Update tests'),
+          ],
+        ),
+      ),
+      (
+        name: 'inline_citation',
+        title: 'AiInlineCitation',
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Backed by sources'),
+            SizedBox(width: 6),
+            AiInlineCitation(number: 1),
+            SizedBox(width: 4),
+            AiInlineCitation(number: 2),
+          ],
+        ),
+      ),
+      (
+        name: 'branch',
+        title: 'AiBranch — versions',
+        child: const AiBranch(index: 1, total: 3),
+      ),
+      (
+        name: 'image',
+        title: 'AiImage',
+        child: SizedBox(
+          width: 200,
+          child: AiImage(bytes: _sampleImage, aspectRatio: 16 / 9),
         ),
       ),
       (

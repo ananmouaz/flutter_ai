@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/demo_provider.dart';
-import 'package:flutter_ai_demo/demo_text_renderer.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 
 void main() => runApp(const FlutterAiDemoApp());
@@ -127,8 +126,6 @@ class ChatScreen extends StatelessWidget {
   /// The chat controller driving the conversation.
   final UseChatController controller;
 
-  static const DemoTextRenderer _renderer = DemoTextRenderer();
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -153,7 +150,6 @@ class ChatScreen extends StatelessWidget {
         Expanded(
           child: AiChat(
             controller: controller,
-            textRenderer: _renderer,
             messageBuilder: _buildMessage,
             emptyState: _emptyState(),
           ),
@@ -165,7 +161,7 @@ class ChatScreen extends StatelessWidget {
 
   // Adds a ChatGPT-style Copy/Regenerate action row beneath finished answers.
   Widget _buildMessage(BuildContext context, AiMessage message) {
-    final bubble = AiMessageBubble(message: message, textRenderer: _renderer);
+    final bubble = AiMessageBubble(message: message);
     if (message.role != AiRole.assistant ||
         message.status != AiMessageStatus.complete) {
       return bubble;

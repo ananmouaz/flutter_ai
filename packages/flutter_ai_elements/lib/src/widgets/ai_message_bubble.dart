@@ -4,6 +4,7 @@ import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_attachment.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_reasoning.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_tool_invocation.dart';
 
 /// A single chat bubble that renders one [AiMessage]'s parts.
@@ -26,13 +27,14 @@ class AiMessageBubble extends StatelessWidget {
   const AiMessageBubble({
     super.key,
     required this.message,
-    this.textRenderer = const PlainTextRenderer(),
+    this.textRenderer = const MarkdownTextRenderer(),
   });
 
   /// The message to render.
   final AiMessage message;
 
-  /// How text and reasoning parts are rendered. Defaults to [PlainTextRenderer].
+  /// How text and reasoning parts are rendered. Defaults to
+  /// [MarkdownTextRenderer].
   final AiTextRenderer textRenderer;
 
   @override
@@ -42,7 +44,8 @@ class AiMessageBubble extends StatelessWidget {
     final isStreaming = message.status == AiMessageStatus.streaming;
     // The user is always bubbled; the assistant follows the theme (plain by
     // default — full-width, like a modern AI assistant).
-    final bubbled = isUser || theme.assistantMessageStyle == AiMessageStyle.bubble;
+    final bubbled =
+        isUser || theme.assistantMessageStyle == AiMessageStyle.bubble;
 
     final content = DefaultTextStyle.merge(
       style: theme.textStyle.copyWith(

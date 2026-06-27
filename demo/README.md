@@ -42,4 +42,6 @@ ffmpeg -y -framerate 8 -i test/shots/chat_%03d.png \
 | <img src="screenshots/element_code_block.png" width="220"/><br/>**AiCodeBlock** | <img src="screenshots/element_attachment.png" width="220"/><br/>**AiAttachment** | <img src="screenshots/element_suggestions.png" width="220"/><br/>**AiSuggestions** |
 | <img src="screenshots/element_composer_idle.png" width="220"/><br/>**AiComposer** (idle) | <img src="screenshots/element_composer_busy.png" width="220"/><br/>**AiComposer** (streaming) | <img src="screenshots/element_message_actions.png" width="220"/><br/>**AiMessageActions** |
 | <img src="screenshots/element_avatars.png" width="220"/><br/>**AiAvatar** | <img src="screenshots/element_loader.png" width="220"/><br/>**AiLoader** | <img src="screenshots/element_error_banner.png" width="220"/><br/>**AiErrorBanner** |
-| <img src="screenshots/element_empty_state.png" width="220"/><br/>**AiEmptyState** | | |
+| <img src="screenshots/element_empty_state.png" width="220"/><br/>**AiEmptyState** | <img src="screenshots/element_response.png" width="220"/><br/>**AiResponse** (Markdown) | <img src="screenshots/element_chain_of_thought.png" width="220"/><br/>**AiChainOfThought** |
+| <img src="screenshots/element_task.png" width="220"/><br/>**AiTask** | <img src="screenshots/element_inline_citation.png" width="220"/><br/>**AiInlineCitation** | <img src="screenshots/element_branch.png" width="220"/><br/>**AiBranch** |
+| <img src="screenshots/element_image.png" width="220"/><br/>**AiImage** | | |

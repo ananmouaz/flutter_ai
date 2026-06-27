@@ -28,7 +28,7 @@ Browse the full [element gallery](demo/README.md#elements).
 |---|---|---|
 | [`flutter_ai_core`](packages/flutter_ai_core) | ✅ 0.1.0 | Dependency-free models, streaming `MessageProcessor`, provider/renderer contracts |
 | [`flutter_ai_client`](packages/flutter_ai_client) | ✅ 0.1.0 | Provider abstraction + `UseChatController` (Listenable) |
-| [`flutter_ai_elements`](packages/flutter_ai_elements) | ✅ 0.1.0 | UI components + `AiThemeExtension` (`AiChat`, `AiPromptInput`, `AiMessageBubble`, `AiToolInvocation`, `AiReasoning`, `AiAttachment`, `AiSources`, `AiCodeBlock`, `AiMessageActions`, `AiSuggestions`, `AiAvatar`, `AiEmptyState`, `AiErrorBanner`, …) |
+| [`flutter_ai_elements`](packages/flutter_ai_elements) | ✅ 0.1.0 | 22 UI components + `AiThemeExtension`: `AiChat`, `AiPromptInput`, `AiMessageBubble`, `AiResponse` (Markdown), `AiToolInvocation`, `AiReasoning`, `AiChainOfThought`, `AiTask`, `AiSources`, `AiInlineCitation`, `AiCodeBlock`, `AiImage`, `AiBranch`, `AiAttachment`, `AiMessageActions`, `AiSuggestions`, `AiAvatar`, `AiEmptyState`, `AiErrorBanner`, … |
 | [`flutter_ai_tools`](packages/flutter_ai_tools) | ✅ 0.1.0 | Tool calling (`ToolSpec`, `ToolRegistry`), web search adapter |
 | [`flutter_ai_provider_openai`](packages/flutter_ai_provider_openai) | ✅ 0.1.0 | OpenAI-compatible streaming `LlmProvider` |
 | [`flutter_ai_voice`](packages/flutter_ai_voice) | ✅ 0.1.0 | Speech-to-text contracts + models (engine-agnostic) |

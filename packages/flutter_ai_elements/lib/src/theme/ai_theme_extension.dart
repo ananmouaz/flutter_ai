@@ -71,7 +71,8 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
         maxBubbleWidthFraction: 0.80,
         composerPadding: EdgeInsets.fromLTRB(14, 8, 14, 12),
         textStyle: TextStyle(fontSize: 16.5, height: 1.5),
-        codeStyle: TextStyle(fontFamily: 'monospace', fontSize: 14, height: 1.45),
+        codeStyle:
+            TextStyle(fontFamily: 'monospace', fontSize: 14, height: 1.45),
         loaderColor: Color(0xFF8E8EA0),
         motionDuration: Duration(milliseconds: 240),
         motionCurve: Curves.easeOutCubic,
@@ -210,8 +211,8 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
       onAccentColor: Color.lerp(onAccentColor, other.onAccentColor, t)!,
       borderColor: Color.lerp(borderColor, other.borderColor, t)!,
       bubbleRadius: BorderRadius.lerp(bubbleRadius, other.bubbleRadius, t)!,
-      bubbleShadow:
-          BoxShadow.lerpList(bubbleShadow, other.bubbleShadow, t) ?? bubbleShadow,
+      bubbleShadow: BoxShadow.lerpList(bubbleShadow, other.bubbleShadow, t) ??
+          bubbleShadow,
       bubblePadding: EdgeInsets.lerp(bubblePadding, other.bubblePadding, t)!,
       messageSpacing: lerpDouble(messageSpacing, other.messageSpacing, t)!,
       maxBubbleWidthFraction: lerpDouble(

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_ai_client/flutter_ai_client.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_conversation_view.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
 
 /// A live, drop-in chat transcript bound to a [UseChatController].
 ///
@@ -16,7 +17,7 @@ class AiChat extends StatefulWidget {
   const AiChat({
     super.key,
     required this.controller,
-    this.textRenderer = const PlainTextRenderer(),
+    this.textRenderer = const MarkdownTextRenderer(),
     this.messageBuilder,
     this.padding = const EdgeInsets.all(16),
     this.autoScroll = true,

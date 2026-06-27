@@ -123,9 +123,8 @@ class _AiComposerState extends State<AiComposer> {
             iconColor: theme.onAccentColor,
             icon: showStop ? Icons.stop_rounded : Icons.arrow_upward_rounded,
             tooltip: showStop ? 'Stop' : 'Send',
-            onPressed: !widget.enabled
-                ? null
-                : (showStop ? _handleStop : _handleSend),
+            onPressed:
+                !widget.enabled ? null : (showStop ? _handleStop : _handleSend),
           ),
         ],
       ),
@@ -174,9 +173,8 @@ class _ActionButtonState extends State<_ActionButton> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: enabled
-                  ? widget.color
-                  : widget.color.withValues(alpha: 0.4),
+              color:
+                  enabled ? widget.color : widget.color.withValues(alpha: 0.4),
               shape: BoxShape.circle,
             ),
             child: Icon(widget.icon, color: widget.iconColor, size: 22),
