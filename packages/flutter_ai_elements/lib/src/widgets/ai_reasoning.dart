@@ -65,12 +65,13 @@ class _AiReasoningState extends State<AiReasoning> {
           alignment: Alignment.topCenter,
           child: _expanded
               ? Padding(
-                  padding: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     widget.text,
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
+                    style: theme.textStyle.copyWith(
                       color: subdued,
+                      fontSize: 14.5,
+                      height: 1.45,
                     ),
                   ),
                 )

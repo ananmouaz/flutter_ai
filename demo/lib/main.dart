@@ -43,6 +43,14 @@ class _HomePage extends StatefulWidget {
 
 class _HomePageState extends State<_HomePage> {
   int _tab = 0;
+  final UseChatController _controller =
+      UseChatController(provider: const DemoChatProvider());
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +60,7 @@ class _HomePageState extends State<_HomePage> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+              padding: const EdgeInsets.fromLTRB(20, 10, 12, 8),
               child: Row(
                 children: [
                   const Text(
@@ -64,14 +72,14 @@ class _HomePageState extends State<_HomePage> {
                     ),
                   ),
                   const Spacer(),
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF22C55E),
-                      shape: BoxShape.circle,
+                  // New-chat button (Chat tab only).
+                  if (_tab == 0)
+                    IconButton(
+                      icon: const Icon(Icons.edit_square),
+                      color: const Color(0xFF0D0D0D),
+                      tooltip: 'New chat',
+                      onPressed: _controller.clear,
                     ),
-                  ),
                 ],
               ),
             ),
@@ -99,7 +107,10 @@ class _HomePageState extends State<_HomePage> {
           Expanded(
             child: IndexedStack(
               index: _tab,
-              children: const [ChatScreen(), GalleryScreen()],
+              children: [
+                ChatScreen(controller: _controller),
+                const GalleryScreen(),
+              ],
             ),
           ),
         ],
@@ -108,28 +119,15 @@ class _HomePageState extends State<_HomePage> {
   }
 }
 
-/// A live chat backed by the scripted [DemoChatProvider].
-class ChatScreen extends StatefulWidget {
-  /// Creates the chat screen.
-  const ChatScreen({super.key});
+/// A live chat backed by a [UseChatController] (owned by the parent).
+class ChatScreen extends StatelessWidget {
+  /// Creates the chat screen bound to [controller].
+  const ChatScreen({super.key, required this.controller});
 
-  @override
-  State<ChatScreen> createState() => ChatScreenState();
-}
-
-/// State for [ChatScreen]; public so tests can drive the controller.
-class ChatScreenState extends State<ChatScreen> {
-  /// The chat controller bound to the demo provider.
-  final UseChatController controller =
-      UseChatController(provider: const DemoChatProvider());
+  /// The chat controller driving the conversation.
+  final UseChatController controller;
 
   static const DemoTextRenderer _renderer = DemoTextRenderer();
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
