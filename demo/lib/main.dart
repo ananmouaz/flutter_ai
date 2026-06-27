@@ -159,23 +159,132 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
-  // Adds a ChatGPT-style Copy/Regenerate action row beneath finished answers.
+  // A tiny generative-UI catalog: render each part with the matching element,
+  // mapping DataParts to AiChainOfThought / AiTask.
   Widget _buildMessage(BuildContext context, AiMessage message) {
-    final bubble = AiMessageBubble(message: message);
-    if (message.role != AiRole.assistant ||
-        message.status != AiMessageStatus.complete) {
-      return bubble;
+    if (message.role == AiRole.user) return AiMessageBubble(message: message);
+
+    final results = <String, ToolResultPart>{
+      for (final p in message.parts)
+        if (p is ToolResultPart) p.toolCallId: p,
+    };
+    final sources = message.parts.whereType<SourcePart>().toList();
+
+    final children = <Widget>[];
+    void add(Widget w) {
+      if (children.isNotEmpty) children.add(const SizedBox(height: 12));
+      children.add(w);
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        bubble,
-        AiMessageActions(
-          message: message,
-          onRegenerate: () => unawaited(controller.regenerate()),
+
+    for (final part in message.parts) {
+      switch (part) {
+        case ReasoningPart(:final text):
+          add(AiReasoning(text: text));
+        case TextPart(:final text):
+          add(AiResponse(text: text));
+        case ToolCallPart():
+          add(AiToolInvocation(call: part, result: results[part.toolCallId]));
+        case ToolResultPart():
+          break;
+        case FilePart():
+          if (part.mediaType.startsWith('image/')) {
+            add(
+              SizedBox(
+                width: 260,
+                child: AiImage(
+                  url: part.url,
+                  bytes: part.bytes,
+                  aspectRatio: 16 / 9,
+                ),
+              ),
+            );
+          } else {
+            add(AiAttachment(file: part));
+          }
+        case SourcePart():
+          break; // rendered below
+        case DataPart(:final dataType, :final data):
+          if (dataType == 'chain_of_thought') {
+            add(AiChainOfThought(initiallyExpanded: true, steps: _steps(data)));
+          } else if (dataType == 'task') {
+            add(
+              AiTask(
+                title: data['title'] as String? ?? 'Task',
+                items: _taskItems(data),
+              ),
+            );
+          }
+      }
+    }
+
+    if (sources.isNotEmpty) {
+      add(
+        Wrap(
+          spacing: 6,
+          children: [
+            for (var i = 0; i < sources.length; i++)
+              AiInlineCitation(number: i + 1),
+          ],
         ),
-      ],
+      );
+      add(AiSources(sources: sources));
+    }
+
+    if (message.status == AiMessageStatus.complete) {
+      add(
+        Row(
+          children: [
+            AiMessageActions(
+              message: message,
+              onRegenerate: () => unawaited(controller.regenerate()),
+            ),
+            const Spacer(),
+            AiBranch(
+              index: 0,
+              total: 2,
+              onNext: () => unawaited(controller.regenerate()),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: children,
+      ),
     );
+  }
+
+  List<AiThoughtStep> _steps(Map<String, Object?> data) {
+    final raw = (data['steps'] as List?) ?? const [];
+    return raw.map((s) {
+      final m = (s! as Map).cast<String, Object?>();
+      return AiThoughtStep(
+        label: m['label'] as String? ?? '',
+        detail: m['detail'] as String?,
+        isActive: m['active'] as bool? ?? false,
+      );
+    }).toList();
+  }
+
+  List<AiTaskItem> _taskItems(Map<String, Object?> data) {
+    final raw = (data['items'] as List?) ?? const [];
+    return raw.map((item) {
+      final m = (item! as Map).cast<String, Object?>();
+      return AiTaskItem(
+        label: m['label'] as String? ?? '',
+        status: switch (m['status']) {
+          'complete' => AiTaskStatus.complete,
+          'active' => AiTaskStatus.active,
+          'error' => AiTaskStatus.error,
+          _ => AiTaskStatus.pending,
+        },
+      );
+    }).toList();
   }
 
   void _onSuggestion(String text) {

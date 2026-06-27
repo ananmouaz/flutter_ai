@@ -1,9 +1,12 @@
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 
-/// A scripted [LlmProvider] that streams a rich response exercising many
-/// elements — reasoning, a tool call with a result, prose, a fenced code block,
-/// and citations — with no real backend. If the prompt mentions "error", it
-/// streams a failure instead, to demo the error path.
+/// A scripted [LlmProvider] that streams a kitchen-sink agent response so every
+/// element appears in one flow: chain of thought, a task list, a tool call, a
+/// Markdown answer with a code block, a generated image, and citations.
+///
+/// Structured widgets ride along as `DataPart`s; the demo's `messageBuilder`
+/// maps them to elements (a tiny generative-UI catalog). An "error" prompt
+/// streams a failure instead.
 class DemoChatProvider implements LlmProvider {
   /// Creates a demo provider with a per-event [delay] for a streaming feel.
   const DemoChatProvider({this.delay = const Duration(milliseconds: 95)});
@@ -40,19 +43,46 @@ class DemoChatProvider implements LlmProvider {
       return;
     }
 
+    // Chain of thought.
     yield await step(
-      const ReasoningDelta(
+      const PartReceived(
         messageId: id,
-        delta: "I'll confirm the current best practice and show a short "
-            'example.',
+        part: DataPart(
+          dataType: 'chain_of_thought',
+          data: {
+            'steps': [
+              {'label': 'Locate the controller', 'detail': 'flutter_ai_client'},
+              {'label': 'Read use_chat_controller.dart', 'detail': '~210 lines'},
+              {'label': 'Plan the change', 'active': true},
+            ],
+          },
+        ),
       ),
     );
+
     yield await step(
-      const TextDelta(messageId: id, delta: 'Sure — let me check the latest '
-          'guidance. '),
+      const TextDelta(messageId: id, delta: "I'll work through these steps:"),
     );
 
-    // A tool call with streamed arguments and a result.
+    // Task list.
+    yield await step(
+      const PartReceived(
+        messageId: id,
+        part: DataPart(
+          dataType: 'task',
+          data: {
+            'title': 'Refactor plan',
+            'items': [
+              {'label': 'Extract _startStream()', 'status': 'complete'},
+              {'label': 'Harden error handling', 'status': 'active'},
+              {'label': 'Update tests', 'status': 'pending'},
+            ],
+          },
+        ),
+      ),
+    );
+
+    // Tool call.
     yield await step(
       const ToolCallStarted(
         messageId: id,
@@ -78,12 +108,11 @@ class DemoChatProvider implements LlmProvider {
       ),
     );
 
-    // The answer: prose + a fenced code block (rendered by DemoTextRenderer).
+    // Markdown answer with a fenced code block.
     yield await step(
       const TextDelta(
         messageId: id,
-        delta: "Here's the idiomatic approach — fold the provider's event "
-            'stream:\n\n',
+        delta: '### Result\n\nFold the provider stream with a reducer:\n\n',
       ),
     );
     yield await step(
@@ -99,8 +128,19 @@ class DemoChatProvider implements LlmProvider {
     yield await step(
       const TextDelta(
         messageId: id,
-        delta: 'This keeps the UI at 60fps by rebuilding only the messages '
-            'that changed.',
+        delta: 'This rebuilds **only changed messages**, staying at `60fps`.',
+      ),
+    );
+
+    // A generated image (loads on-device).
+    yield await step(
+      PartReceived(
+        messageId: id,
+        part: FilePart(
+          mediaType: 'image/jpeg',
+          url: Uri.parse('https://picsum.photos/seed/flutterai/640/360'),
+          name: 'diagram.jpg',
+        ),
       ),
     );
 
