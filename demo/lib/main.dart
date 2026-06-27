@@ -288,12 +288,12 @@ class ChatScreen extends StatelessWidget {
   }
 
   void _onSuggestion(String text) {
-    if (text.startsWith('Review')) {
+    if (text.startsWith('Summarize')) {
       unawaited(
         controller.sendText(
-          'Can you review this file?',
+          'Summarize this article',
           attachments: const [
-            FilePart(mediaType: 'text/x-dart', name: 'use_chat_controller.dart'),
+            FilePart(mediaType: 'application/pdf', name: 'article.pdf'),
           ],
         ),
       );
@@ -312,9 +312,9 @@ class ChatScreen extends StatelessWidget {
             ),
             AiSuggestions(
               suggestions: const [
-                'How do I stream tokens in Flutter?',
-                'Review this file',
-                'Trigger an error',
+                'Plan a weekend in Lisbon',
+                'Suggest a dinner recipe',
+                'Summarize this article',
               ],
               onSelected: _onSuggestion,
             ),

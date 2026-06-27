@@ -75,7 +75,7 @@ void main() {
     await tester.pumpWidget(const FlutterAiDemoApp());
     await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.tap(find.text('How do I stream tokens in Flutter?'));
+    await tester.tap(find.text('Plan a weekend in Lisbon'));
     await tester.pump();
 
     for (var i = 0; i < 38; i++) {
