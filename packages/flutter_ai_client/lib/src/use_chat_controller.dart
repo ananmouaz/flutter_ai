@@ -183,7 +183,12 @@ class UseChatController extends ChangeNotifier {
       (event) {
         _processor.apply(event);
         if (!_events.isClosed) _events.add(event);
-        if (_status == ChatStatus.submitted) {
+        // A message-level error event puts the turn into the error state (a
+        // tool-scoped error is left to the tool result instead).
+        if (event is StreamErrorEvent && event.toolCallId == null) {
+          _error = event.error;
+          _status = ChatStatus.error;
+        } else if (_status == ChatStatus.submitted) {
           _status = ChatStatus.streaming;
         }
         _scheduleNotify();

@@ -226,6 +226,22 @@ void main() {
       expect(controller.status, ChatStatus.error);
       expect(controller.error, isNotNull);
     });
+
+    test('surfaces an in-band StreamErrorEvent as error status', () async {
+      final provider = ScriptedProvider(const [
+        MessageStarted(messageId: 'a1', role: AiRole.assistant),
+        StreamErrorEvent(error: 'upstream timeout', messageId: 'a1'),
+      ]);
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hi');
+      expect(controller.status, ChatStatus.error);
+      expect(controller.error, 'upstream timeout');
+    });
   });
 
   group('configuration', () {
