@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/demo_provider.dart';
+import 'package:flutter_ai_demo/demo_text_renderer.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 
 void main() => runApp(const FlutterAiDemoApp());
@@ -122,6 +123,8 @@ class ChatScreenState extends State<ChatScreen> {
   final UseChatController controller =
       UseChatController(provider: const DemoChatProvider());
 
+  static const DemoTextRenderer _renderer = DemoTextRenderer();
+
   @override
   void dispose() {
     controller.dispose();
@@ -132,12 +135,68 @@ class ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // Error banner reacts to controller state.
+        ListenableBuilder(
+          listenable: controller,
+          builder: (context, _) {
+            if (controller.status != ChatStatus.error) {
+              return const SizedBox.shrink();
+            }
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: AiErrorBanner(
+                message: '${controller.error}',
+                onRetry: () => unawaited(controller.regenerate()),
+                onDismiss: controller.clear,
+              ),
+            );
+          },
+        ),
         Expanded(
-          child: AiChat(controller: controller, emptyState: _emptyState()),
+          child: AiChat(
+            controller: controller,
+            textRenderer: _renderer,
+            messageBuilder: _buildMessage,
+            emptyState: _emptyState(),
+          ),
         ),
         SafeArea(top: false, child: AiPromptInput(controller: controller)),
       ],
     );
+  }
+
+  // Adds a ChatGPT-style Copy/Regenerate action row beneath finished answers.
+  Widget _buildMessage(BuildContext context, AiMessage message) {
+    final bubble = AiMessageBubble(message: message, textRenderer: _renderer);
+    if (message.role != AiRole.assistant ||
+        message.status != AiMessageStatus.complete) {
+      return bubble;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        bubble,
+        AiMessageActions(
+          message: message,
+          onRegenerate: () => unawaited(controller.regenerate()),
+        ),
+      ],
+    );
+  }
+
+  void _onSuggestion(String text) {
+    if (text.startsWith('Review')) {
+      unawaited(
+        controller.sendText(
+          'Can you review this file?',
+          attachments: const [
+            FilePart(mediaType: 'text/x-dart', name: 'use_chat_controller.dart'),
+          ],
+        ),
+      );
+    } else {
+      unawaited(controller.sendText(text));
+    }
   }
 
   Widget _emptyState() => Center(
@@ -150,11 +209,11 @@ class ChatScreenState extends State<ChatScreen> {
             ),
             AiSuggestions(
               suggestions: const [
-                "What's the weather in London?",
-                'Plan my weekend',
-                'Summarize this article',
+                'How do I stream tokens in Flutter?',
+                'Review this file',
+                'Trigger an error',
               ],
-              onSelected: (text) => unawaited(controller.sendText(text)),
+              onSelected: _onSuggestion,
             ),
           ],
         ),

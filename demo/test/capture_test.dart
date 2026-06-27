@@ -75,10 +75,10 @@ void main() {
     await tester.pumpWidget(const FlutterAiDemoApp());
     await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.tap(find.text("What's the weather in London?"));
+    await tester.tap(find.text('How do I stream tokens in Flutter?'));
     await tester.pump();
 
-    for (var i = 0; i < 30; i++) {
+    for (var i = 0; i < 38; i++) {
       await tester.pump(const Duration(milliseconds: 130));
       await expectLater(
         find.byType(MaterialApp),
