@@ -22,7 +22,7 @@ void main() {
     test('of returns the fallback when none is registered', () {
       final fallback = AiThemeExtension.fallback();
       expect(fallback.enableHaptics, isTrue);
-      expect(fallback.maxBubbleWidthFraction, closeTo(0.82, 0.001));
+      expect(fallback.maxBubbleWidthFraction, closeTo(0.80, 0.001));
     });
 
     test('copyWith overrides only the given token', () {
@@ -36,7 +36,7 @@ void main() {
       final a = AiThemeExtension.fallback();
       final b = a.copyWith(messageSpacing: 30, enableHaptics: false);
       final lerped = a.lerp(b, 0.4);
-      expect(lerped.messageSpacing, closeTo(18, 0.001)); // 10 + 0.4 * 20
+      expect(lerped.messageSpacing, closeTo(22.8, 0.001)); // 18 + 0.4 * 12
       expect(lerped.enableHaptics, isTrue); // snaps to `a` while t < 0.5
     });
   });

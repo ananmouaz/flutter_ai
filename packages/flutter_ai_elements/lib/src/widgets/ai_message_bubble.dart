@@ -40,38 +40,48 @@ class AiMessageBubble extends StatelessWidget {
     final theme = AiThemeExtension.of(context);
     final isUser = message.role == AiRole.user;
     final isStreaming = message.status == AiMessageStatus.streaming;
+    // The user is always bubbled; the assistant follows the theme (plain by
+    // default — full-width, like a modern AI assistant).
+    final bubbled = isUser || theme.assistantMessageStyle == AiMessageStyle.bubble;
 
-    final bubble = Container(
-      decoration: BoxDecoration(
-        color: isUser ? theme.userBubbleColor : theme.assistantBubbleColor,
-        borderRadius: theme.bubbleRadius,
-        boxShadow: theme.bubbleShadow,
+    final content = DefaultTextStyle.merge(
+      style: theme.textStyle.copyWith(
+        color: isUser ? theme.userTextColor : theme.assistantTextColor,
       ),
-      padding: theme.bubblePadding,
-      child: DefaultTextStyle.merge(
-        style: theme.textStyle.copyWith(
-          color: isUser ? theme.userTextColor : theme.assistantTextColor,
-        ),
-        child: _content(context, isStreaming),
-      ),
+      child: _content(context, isStreaming),
     );
 
-    final aligned = Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth:
-              MediaQuery.sizeOf(context).width * theme.maxBubbleWidthFraction,
+    final Widget body;
+    if (bubbled) {
+      body = Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth:
+                MediaQuery.sizeOf(context).width * theme.maxBubbleWidthFraction,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color:
+                  isUser ? theme.userBubbleColor : theme.assistantBubbleColor,
+              borderRadius: theme.bubbleRadius,
+              boxShadow: theme.bubbleShadow,
+            ),
+            padding: theme.bubblePadding,
+            child: content,
+          ),
         ),
-        child: bubble,
-      ),
-    );
+      );
+    } else {
+      // Plain assistant: full-width, no container.
+      body = SizedBox(width: double.infinity, child: content);
+    }
 
     return Padding(
       padding: EdgeInsets.only(bottom: theme.messageSpacing),
       child: isStreaming
-          ? ExcludeSemantics(child: aligned)
-          : Semantics(liveRegion: true, child: aligned),
+          ? ExcludeSemantics(child: body)
+          : Semantics(liveRegion: true, child: body),
     );
   }
 

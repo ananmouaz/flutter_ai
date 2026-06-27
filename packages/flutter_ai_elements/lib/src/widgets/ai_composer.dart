@@ -80,8 +80,6 @@ class _AiComposerState extends State<AiComposer> {
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
     final showStop = widget.isBusy && widget.onStop != null;
-    final hairline =
-        theme.assistantTextColor.withValues(alpha: 0.12);
 
     return Padding(
       padding: theme.composerPadding,
@@ -93,7 +91,7 @@ class _AiComposerState extends State<AiComposer> {
               decoration: BoxDecoration(
                 color: theme.assistantBubbleColor,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: hairline),
+                border: Border.all(color: theme.borderColor),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: TextField(
@@ -121,8 +119,8 @@ class _AiComposerState extends State<AiComposer> {
           ),
           const SizedBox(width: 8),
           _ActionButton(
-            color: theme.userBubbleColor,
-            iconColor: theme.userTextColor,
+            color: theme.accentColor,
+            iconColor: theme.onAccentColor,
             icon: showStop ? Icons.stop_rounded : Icons.arrow_upward_rounded,
             tooltip: showStop ? 'Stop' : 'Send',
             onPressed: !widget.enabled

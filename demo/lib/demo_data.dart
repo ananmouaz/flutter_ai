@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 
-/// A bespoke skin layered on the mobile-first default, used across the demo.
-final AiThemeExtension demoTheme = AiThemeExtension.fallback().copyWith(
-  userBubbleColor: const Color(0xFF6D28D9),
-  assistantBubbleColor: const Color(0xFFF3F1FA),
-  bubbleRadius: const BorderRadius.all(Radius.circular(22)),
-);
+/// The demo uses the package's modern default skin as-is.
+final AiThemeExtension demoTheme = AiThemeExtension.fallback();
 
 /// One entry in the element gallery.
 typedef GalleryItem = ({String name, String title, Widget child});

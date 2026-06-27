@@ -20,7 +20,8 @@ class FlutterAiDemoApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF6D28D9),
+        fontFamily: 'Roboto',
+        colorSchemeSeed: const Color(0xFF0D0D0D),
         scaffoldBackgroundColor: Colors.white,
         // Suppress Material ripples for a calmer, platform-neutral feel.
         splashFactory: NoSplash.splashFactory,
@@ -78,7 +79,7 @@ class _HomePageState extends State<_HomePage> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: CupertinoSlidingSegmentedControl<int>(
               groupValue: _tab,
-              backgroundColor: const Color(0xFFEEECF5),
+              backgroundColor: const Color(0xFFF0F0F2),
               thumbColor: Colors.white,
               onValueChanged: (value) => setState(() => _tab = value ?? 0),
               children: const {
