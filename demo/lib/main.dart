@@ -217,18 +217,7 @@ class ChatScreen extends StatelessWidget {
       }
     }
 
-    if (sources.isNotEmpty) {
-      add(
-        Wrap(
-          spacing: 6,
-          children: [
-            for (var i = 0; i < sources.length; i++)
-              AiInlineCitation(number: i + 1),
-          ],
-        ),
-      );
-      add(AiSources(sources: sources));
-    }
+    if (sources.isNotEmpty) add(AiSources(sources: sources));
 
     if (message.status == AiMessageStatus.complete) {
       add(

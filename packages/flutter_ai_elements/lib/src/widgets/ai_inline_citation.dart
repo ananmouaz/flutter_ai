@@ -20,13 +20,12 @@ class AiInlineCitation extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
     final color = DefaultTextStyle.of(context).style.color;
+    // Sizes to its content. (Note: a Container with `alignment` set expands to
+    // fill bounded parents — so this badge intentionally has none.)
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        constraints: const BoxConstraints(minWidth: 18),
-        height: 18,
-        padding: const EdgeInsets.symmetric(horizontal: 5),
-        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
         decoration: BoxDecoration(
           color: theme.assistantBubbleColor,
           borderRadius: BorderRadius.circular(6),
@@ -36,8 +35,8 @@ class AiInlineCitation extends StatelessWidget {
           '$number',
           style: theme.codeStyle.copyWith(
             fontSize: 11,
-            height: 1,
-            color: color?.withValues(alpha: 0.7),
+            height: 1.3,
+            color: color?.withValues(alpha: 0.75),
           ),
         ),
       ),
