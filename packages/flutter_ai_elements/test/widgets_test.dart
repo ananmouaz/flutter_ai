@@ -469,6 +469,24 @@ void main() {
       await tester.pumpWidget(_wrap(const AiShimmer(lines: 2)));
       expect(find.byType(AiShimmer), findsOneWidget);
     });
+
+    testWidgets('AiLiveSession shows status and ends', (tester) async {
+      var ended = false;
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            height: 500,
+            child: AiLiveSession(
+              onEnd: () => ended = true,
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Listening'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close));
+      expect(ended, isTrue);
+    });
   });
 
   group('AiConversationView', () {

@@ -249,6 +249,21 @@ List<GalleryItem> galleryItems() => [
         child: const AiShimmer(),
       ),
       (
+        name: 'live_session',
+        title: 'AiLiveSession — voice mode',
+        child: SizedBox(
+          height: 360,
+          child: AiLiveSession(
+            status: AiLiveStatus.speaking,
+            amplitude: 0.6,
+            transcript: 'Lisbon is sunny, about 24°C this weekend.',
+            onMute: () {},
+            onKeyboard: () {},
+            onEnd: () {},
+          ),
+        ),
+      ),
+      (
         name: 'suggestions',
         title: 'AiSuggestions',
         child: AiSuggestions(

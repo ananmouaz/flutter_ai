@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/demo_provider.dart';
+import 'package:flutter_ai_demo/live_demo.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 
 void main() => runApp(const FlutterAiDemoApp());
@@ -71,14 +72,27 @@ class _HomePageState extends State<_HomePage> {
                     ),
                   ),
                   const Spacer(),
-                  // New-chat button (Chat tab only).
-                  if (_tab == 0)
+                  // Live voice + new-chat buttons (Chat tab only).
+                  if (_tab == 0) ...[
+                    IconButton(
+                      icon: const Icon(Icons.graphic_eq),
+                      color: const Color(0xFF0D0D0D),
+                      tooltip: 'Live voice',
+                      onPressed: () => unawaited(
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const LiveDemoScreen(),
+                          ),
+                        ),
+                      ),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.edit_square),
                       color: const Color(0xFF0D0D0D),
                       tooltip: 'New chat',
                       onPressed: _controller.clear,
                     ),
+                  ],
                 ],
               ),
             ),

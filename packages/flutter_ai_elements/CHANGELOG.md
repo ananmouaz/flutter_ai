@@ -23,4 +23,7 @@ Initial release.
   attachments and switches models via the controller. `AiModelSelector`,
   `AiConfirmation` (approve/deny), `AiContextMeter` (token usage), and
   `AiShimmer` (loading skeleton).
+- `AiLiveSession` — a full-screen, engine-agnostic Live voice surface (animated
+  orb reacting to amplitude + status, live transcript, mute/keyboard/end). UI
+  only; drive it from a realtime audio engine.
 - Re-exports `flutter_ai_client` (and `flutter_ai_core`).
