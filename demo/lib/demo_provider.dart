@@ -13,8 +13,6 @@ class DemoChatProvider implements LlmProvider {
   /// Delay between emitted events.
   final Duration delay;
 
-  static const String _id = 'assistant';
-
   @override
   Stream<AiStreamEvent> send(
     AiConversation conversation, {
@@ -22,14 +20,16 @@ class DemoChatProvider implements LlmProvider {
     AiRequestOptions? options,
   }) {
     final prompt = conversation.lastMessage?.text.toLowerCase() ?? '';
-    if (prompt.contains('error')) return _error();
+    // A unique id per turn, so each response is its own message in order.
+    final id = 'assistant-${conversation.messages.length}';
+    if (prompt.contains('error')) return _error(id);
     if (prompt.contains('recipe') ||
         prompt.contains('dinner') ||
         prompt.contains('cook')) {
-      return _recipe();
+      return _recipe(id);
     }
-    if (prompt.contains('summar')) return _summary();
-    return _trip();
+    if (prompt.contains('summar')) return _summary(id);
+    return _trip(id);
   }
 
   Future<AiStreamEvent> _step(AiStreamEvent event) async {
@@ -37,25 +37,25 @@ class DemoChatProvider implements LlmProvider {
     return event;
   }
 
-  Stream<AiStreamEvent> _error() async* {
-    yield const MessageStarted(messageId: _id, role: AiRole.assistant);
+  Stream<AiStreamEvent> _error(String id) async* {
+    yield MessageStarted(messageId: id, role: AiRole.assistant);
     yield await _step(
-      const ReasoningDelta(messageId: _id, delta: 'Attempting the request…'),
+      ReasoningDelta(messageId: id, delta: 'Attempting the request…'),
     );
     yield await _step(
-      const StreamErrorEvent(
+      StreamErrorEvent(
         error: 'The upstream service timed out. Please try again.',
-        messageId: _id,
+        messageId: id,
       ),
     );
   }
 
-  Stream<AiStreamEvent> _trip() async* {
-    yield const MessageStarted(messageId: _id, role: AiRole.assistant);
+  Stream<AiStreamEvent> _trip(String id) async* {
+    yield MessageStarted(messageId: id, role: AiRole.assistant);
     yield await _step(
-      const PartReceived(
-        messageId: _id,
-        part: DataPart(
+      PartReceived(
+        messageId: id,
+        part: const DataPart(
           dataType: 'chain_of_thought',
           data: {
             'steps': [
@@ -68,15 +68,15 @@ class DemoChatProvider implements LlmProvider {
       ),
     );
     yield await _step(
-      const TextDelta(
-        messageId: _id,
+      TextDelta(
+        messageId: id,
         delta: "Lisbon is a great pick — here's a quick weekend plan.",
       ),
     );
     yield await _step(
-      const PartReceived(
-        messageId: _id,
-        part: DataPart(
+      PartReceived(
+        messageId: id,
+        part: const DataPart(
           dataType: 'task',
           data: {
             'title': 'Trip checklist',
@@ -89,13 +89,13 @@ class DemoChatProvider implements LlmProvider {
         ),
       ),
     );
-    yield* _tool('get_weather', '{"city":"Lisbon"}', {
+    yield* _tool(id, 'get_weather', '{"city":"Lisbon"}', {
       'tempC': 24,
       'condition': 'Sunny',
     });
     yield await _step(
-      const TextDelta(
-        messageId: _id,
+      TextDelta(
+        messageId: id,
         delta: '## Day 1\n'
             '- Morning: Belém Tower and pastéis de nata\n'
             '- Afternoon: wander Alfama and São Jorge Castle\n\n'
@@ -105,22 +105,22 @@ class DemoChatProvider implements LlmProvider {
             'The forecast is **sunny, ~24°C** — pack light!',
       ),
     );
-    yield* _image('lisbon');
-    yield* _sources(const [
+    yield* _image(id, 'lisbon');
+    yield* _sources(id, const [
       ('https://www.timeout.com/lisbon', 'timeout.com'),
       ('https://www.lonelyplanet.com/portugal/lisbon', 'lonelyplanet.com'),
     ]);
     yield await _step(
-      const MessageFinished(messageId: _id, reason: FinishReason.stop),
+      MessageFinished(messageId: id, reason: FinishReason.stop),
     );
   }
 
-  Stream<AiStreamEvent> _recipe() async* {
-    yield const MessageStarted(messageId: _id, role: AiRole.assistant);
+  Stream<AiStreamEvent> _recipe(String id) async* {
+    yield MessageStarted(messageId: id, role: AiRole.assistant);
     yield await _step(
-      const PartReceived(
-        messageId: _id,
-        part: DataPart(
+      PartReceived(
+        messageId: id,
+        part: const DataPart(
           dataType: 'chain_of_thought',
           data: {
             'steps': [
@@ -132,15 +132,15 @@ class DemoChatProvider implements LlmProvider {
       ),
     );
     yield await _step(
-      const TextDelta(
-        messageId: _id,
+      TextDelta(
+        messageId: id,
         delta: 'How about one-pan lemon chicken? Ready in about 30 minutes.',
       ),
     );
     yield await _step(
-      const PartReceived(
-        messageId: _id,
-        part: DataPart(
+      PartReceived(
+        messageId: id,
+        part: const DataPart(
           dataType: 'task',
           data: {
             'title': 'Ingredients',
@@ -153,10 +153,12 @@ class DemoChatProvider implements LlmProvider {
         ),
       ),
     );
-    yield* _tool('search_recipes', '{"q":"30 minute dinner"}', {'results': 5});
+    yield* _tool(id, 'search_recipes', '{"q":"30 minute dinner"}', {
+      'results': 5,
+    });
     yield await _step(
-      const TextDelta(
-        messageId: _id,
+      TextDelta(
+        messageId: id,
         delta: '## Steps\n'
             '1. Sear the chicken 5 minutes per side\n'
             '2. Add garlic, lemon, and a splash of stock\n'
@@ -164,26 +166,26 @@ class DemoChatProvider implements LlmProvider {
             '**Tip:** serve over rice or with crusty bread.',
       ),
     );
-    yield* _image('dinner');
-    yield* _sources(const [
+    yield* _image(id, 'dinner');
+    yield* _sources(id, const [
       ('https://www.bbcgoodfood.com', 'bbcgoodfood.com'),
     ]);
     yield await _step(
-      const MessageFinished(messageId: _id, reason: FinishReason.stop),
+      MessageFinished(messageId: id, reason: FinishReason.stop),
     );
   }
 
-  Stream<AiStreamEvent> _summary() async* {
-    yield const MessageStarted(messageId: _id, role: AiRole.assistant);
+  Stream<AiStreamEvent> _summary(String id) async* {
+    yield MessageStarted(messageId: id, role: AiRole.assistant);
     yield await _step(
-      const ReasoningDelta(
-        messageId: _id,
+      ReasoningDelta(
+        messageId: id,
         delta: 'Skimming the article for the key points.',
       ),
     );
     yield await _step(
-      const TextDelta(
-        messageId: _id,
+      TextDelta(
+        messageId: id,
         delta: '**Summary**\n\nThe article makes three points:\n\n'
             '- Streaming UIs must batch updates to stay smooth\n'
             '- Tool calls should be inspectable, not hidden\n'
@@ -191,34 +193,37 @@ class DemoChatProvider implements LlmProvider {
             'Overall, a strong case for *structured* AI interfaces.',
       ),
     );
-    yield* _sources(const [
+    yield* _sources(id, const [
       ('https://www.smashingmagazine.com', 'smashingmagazine.com'),
       ('https://www.nngroup.com', 'nngroup.com'),
     ]);
     yield await _step(
-      const MessageFinished(messageId: _id, reason: FinishReason.stop),
+      MessageFinished(messageId: id, reason: FinishReason.stop),
     );
   }
 
   Stream<AiStreamEvent> _tool(
+    String id,
     String name,
     String args,
     Map<String, Object?> result,
   ) async* {
     yield await _step(
-      ToolCallStarted(messageId: _id, toolCallId: 't1', toolName: name),
+      ToolCallStarted(messageId: id, toolCallId: '$id-t1', toolName: name),
     );
-    yield await _step(ToolCallDelta(toolCallId: 't1', argumentsDelta: args));
-    yield await _step(const ToolCallReady(toolCallId: 't1'));
     yield await _step(
-      ToolResultReceived(messageId: _id, toolCallId: 't1', result: result),
+      ToolCallDelta(toolCallId: '$id-t1', argumentsDelta: args),
+    );
+    yield await _step(ToolCallReady(toolCallId: '$id-t1'));
+    yield await _step(
+      ToolResultReceived(messageId: id, toolCallId: '$id-t1', result: result),
     );
   }
 
-  Stream<AiStreamEvent> _image(String seed) async* {
+  Stream<AiStreamEvent> _image(String id, String seed) async* {
     yield await _step(
       PartReceived(
-        messageId: _id,
+        messageId: id,
         part: FilePart(
           mediaType: 'image/jpeg',
           url: Uri.parse('https://picsum.photos/seed/$seed/640/360'),
@@ -228,11 +233,14 @@ class DemoChatProvider implements LlmProvider {
     );
   }
 
-  Stream<AiStreamEvent> _sources(List<(String, String)> sources) async* {
+  Stream<AiStreamEvent> _sources(
+    String id,
+    List<(String, String)> sources,
+  ) async* {
     for (final (url, title) in sources) {
       yield await _step(
         PartReceived(
-          messageId: _id,
+          messageId: id,
           part: SourcePart(url: Uri.parse(url), title: title),
         ),
       );
