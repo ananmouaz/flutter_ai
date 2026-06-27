@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
@@ -6,11 +7,23 @@ import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 /// The demo uses the package's modern default skin as-is.
 final AiThemeExtension demoTheme = AiThemeExtension.fallback();
 
-/// A tiny 1×1 PNG used to show the AiImage frame in the gallery without network.
-final _sampleImage = base64Decode(
+/// A tiny 1×1 PNG, used to fake a "picked" image and show the AiImage frame
+/// without a network round-trip.
+final Uint8List sampleImageBytes = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAen6'
   '3NgAAAAASUVORK5CYII=',
 );
+
+/// Models offered by the demo's model selector.
+const List<AiModelOption> demoModels = [
+  AiModelOption(id: 'gpt-4o', label: 'GPT-4o', description: 'Most capable'),
+  AiModelOption(
+    id: 'gpt-4o-mini',
+    label: 'GPT-4o mini',
+    description: 'Fast and economical',
+  ),
+  AiModelOption(id: 'claude', label: 'Claude', description: 'Great at writing'),
+];
 
 /// One entry in the element gallery.
 typedef GalleryItem = ({String name, String title, Widget child});
@@ -203,8 +216,37 @@ List<GalleryItem> galleryItems() => [
         title: 'AiImage',
         child: SizedBox(
           width: 200,
-          child: AiImage(bytes: _sampleImage, aspectRatio: 16 / 9),
+          child: AiImage(bytes: sampleImageBytes, aspectRatio: 16 / 9),
         ),
+      ),
+      (
+        name: 'model_selector',
+        title: 'AiModelSelector',
+        child: AiModelSelector(
+          models: demoModels,
+          selectedId: 'gpt-4o',
+          onSelected: (_) {},
+        ),
+      ),
+      (
+        name: 'confirmation',
+        title: 'AiConfirmation',
+        child: AiConfirmation(
+          title: 'Send this email to the team?',
+          description: 'Subject: "Weekend plan in Lisbon"',
+          onConfirm: () {},
+          onDeny: () {},
+        ),
+      ),
+      (
+        name: 'context_meter',
+        title: 'AiContextMeter',
+        child: const AiContextMeter(usedTokens: 8200, totalTokens: 128000),
+      ),
+      (
+        name: 'shimmer',
+        title: 'AiShimmer',
+        child: const AiShimmer(),
       ),
       (
         name: 'suggestions',
@@ -261,8 +303,17 @@ List<GalleryItem> galleryItems() => [
       ),
       (
         name: 'composer_idle',
-        title: 'AiComposer — idle',
-        child: AiComposer(onSend: (_) {}),
+        title: 'AiComposer — attach · model · voice',
+        child: AiComposer(
+          onSend: (_) {},
+          onAttach: () {},
+          onVoice: () {},
+          modelSelector: AiModelSelector(
+            models: demoModels,
+            selectedId: 'gpt-4o',
+            onSelected: (_) {},
+          ),
+        ),
       ),
       (
         name: 'composer_busy',

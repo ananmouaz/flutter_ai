@@ -397,6 +397,80 @@ void main() {
     });
   });
 
+  group('input & more', () {
+    testWidgets('AiComposer shows attach, model, and voice affordances',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          AiComposer(
+            onSend: (_) {},
+            onAttach: () {},
+            onVoice: () {},
+            modelSelector: const Text('GPT-4o'),
+            attachments: const [
+              FilePart(mediaType: 'application/pdf', name: 'a.pdf'),
+            ],
+            onRemoveAttachment: (_) {},
+          ),
+        ),
+      );
+      expect(find.byIcon(Icons.add), findsOneWidget);
+      expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
+      expect(find.text('GPT-4o'), findsOneWidget);
+      expect(find.text('a.pdf'), findsOneWidget); // staged attachment preview
+    });
+
+    testWidgets('AiModelSelector shows selection and opens a picker',
+        (tester) async {
+      String? chosen;
+      await tester.pumpWidget(
+        _wrap(
+          AiModelSelector(
+            selectedId: 'fast',
+            onSelected: (id) => chosen = id,
+            models: const [
+              AiModelOption(id: 'fast', label: 'Fast'),
+              AiModelOption(id: 'smart', label: 'Smart'),
+            ],
+          ),
+        ),
+      );
+      expect(find.text('Fast'), findsOneWidget);
+      await tester.tap(find.text('Fast'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Smart'));
+      await tester.pumpAndSettle();
+      expect(chosen, 'smart');
+    });
+
+    testWidgets('AiConfirmation fires confirm/deny', (tester) async {
+      var allowed = false;
+      await tester.pumpWidget(
+        _wrap(
+          AiConfirmation(
+            title: 'Send the email?',
+            onConfirm: () => allowed = true,
+          ),
+        ),
+      );
+      expect(find.text('Send the email?'), findsOneWidget);
+      await tester.tap(find.text('Allow'));
+      expect(allowed, isTrue);
+    });
+
+    testWidgets('AiContextMeter formats usage', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const AiContextMeter(usedTokens: 12345, totalTokens: 128000)),
+      );
+      expect(find.text('12.3k / 128.0k'), findsOneWidget);
+    });
+
+    testWidgets('AiShimmer builds', (tester) async {
+      await tester.pumpWidget(_wrap(const AiShimmer(lines: 2)));
+      expect(find.byType(AiShimmer), findsOneWidget);
+    });
+  });
+
   group('AiConversationView', () {
     testWidgets('renders a bubble per message plus a loader', (tester) async {
       await tester.pumpWidget(

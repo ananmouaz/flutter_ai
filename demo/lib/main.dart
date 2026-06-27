@@ -154,10 +154,30 @@ class ChatScreen extends StatelessWidget {
             emptyState: _emptyState(),
           ),
         ),
-        SafeArea(top: false, child: AiPromptInput(controller: controller)),
+        SafeArea(
+          top: false,
+          child: AiPromptInput(
+            controller: controller,
+            models: demoModels,
+            onPickAttachment: _pickAttachment,
+            onVoice: _onVoice,
+          ),
+        ),
       ],
     );
   }
+
+  // Simulates picking an image from the library (no real picker plugin).
+  Future<List<FilePart>> _pickAttachment() async => [
+        FilePart(
+          mediaType: 'image/png',
+          bytes: sampleImageBytes,
+          name: 'photo.png',
+        ),
+      ];
+
+  // Simulates a spoken prompt arriving from the mic.
+  void _onVoice() => unawaited(controller.sendText('Suggest a dinner recipe'));
 
   // A tiny generative-UI catalog: render each part with the matching element,
   // mapping DataParts to AiChainOfThought / AiTask.
