@@ -113,7 +113,6 @@ class _AiLiveSessionState extends State<AiLiveSession>
                   builder: (context, _) => _Orb(
                     breathe: 0.5 - 0.5 * math.cos(2 * math.pi * _breathe.value),
                     amplitude: widget.muted ? 0 : widget.amplitude.clamp(0, 1),
-                    accent: theme.accentColor,
                     active: widget.status == AiLiveStatus.speaking ||
                         widget.status == AiLiveStatus.listening,
                   ),
@@ -173,13 +172,11 @@ class _Orb extends StatelessWidget {
   const _Orb({
     required this.breathe,
     required this.amplitude,
-    required this.accent,
     required this.active,
   });
 
   final double breathe;
   final double amplitude;
-  final Color accent;
   final bool active;
 
   @override
@@ -187,22 +184,29 @@ class _Orb extends StatelessWidget {
     const base = 150.0;
     final react = active ? amplitude : amplitude * 0.3;
     final scale = 1 + 0.05 * breathe + 0.22 * react;
-    final glow = 0.12 + 0.32 * react;
 
     return Container(
       width: base * scale,
       height: base * scale,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
+        // A graded graphite sphere with a soft top-left highlight — dimensional
+        // rather than a flat black disc.
         gradient: const RadialGradient(
-          center: Alignment(-0.3, -0.3),
-          colors: [Color(0xFF3A3A40), Color(0xFF0D0D0D)],
+          center: Alignment(-0.4, -0.45),
+          radius: 1.05,
+          colors: [
+            Color(0xFF8A8A95),
+            Color(0xFF45454D),
+            Color(0xFF20202A),
+          ],
+          stops: [0.0, 0.45, 1.0],
         ),
         boxShadow: [
           BoxShadow(
-            color: accent.withValues(alpha: glow),
-            blurRadius: 28 + 48 * react,
-            spreadRadius: 2 + 10 * react,
+            color: const Color(0xFF1B1B20).withValues(alpha: 0.10 + 0.18 * react),
+            blurRadius: 30 + 44 * react,
+            spreadRadius: 1 + 6 * react,
           ),
         ],
       ),
