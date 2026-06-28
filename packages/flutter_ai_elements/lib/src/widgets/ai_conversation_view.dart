@@ -70,7 +70,11 @@ class AiConversationView extends StatelessWidget {
         }
         final message = messages[index];
         return messageBuilder?.call(context, message) ??
-            AiMessageBubble(message: message, textRenderer: textRenderer);
+            AiMessageBubble(
+              key: ValueKey(message.id),
+              message: message,
+              textRenderer: textRenderer,
+            );
       },
     );
     if (maxContentWidth == null) return list;

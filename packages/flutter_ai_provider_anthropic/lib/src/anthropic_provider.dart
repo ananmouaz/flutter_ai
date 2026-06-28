@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_ai_core/flutter_ai_core.dart';
@@ -33,6 +34,8 @@ class AnthropicProvider implements LlmProvider {
   /// to the public Anthropic v1 endpoint; override it for a proxy or gateway.
   /// [client] is injectable (defaults to a new [http.Client]). [defaultModel]
   /// and [defaultMaxTokens] are used when [AiRequestOptions] omits them.
+  /// [timeout] bounds both the initial connection and the idle gap between
+  /// streamed chunks.
   AnthropicProvider({
     required this.apiKey,
     Uri? baseUrl,
@@ -41,7 +44,9 @@ class AnthropicProvider implements LlmProvider {
     this.defaultMaxTokens = 4096,
     this.anthropicVersion = '2023-06-01',
     this.maxRetries = 2,
+    this.timeout = const Duration(seconds: 60),
   })  : _baseUrl = baseUrl ?? Uri.parse('https://api.anthropic.com/v1'),
+        _ownsClient = client == null,
         _client = client ?? http.Client();
 
   /// The API key sent as the `x-api-key` header.
@@ -60,8 +65,17 @@ class AnthropicProvider implements LlmProvider {
   /// (network error, 429, or 5xx), with backoff honoring `Retry-After`.
   final int maxRetries;
 
+  /// Bounds the initial connection (a connect timeout is retried like a network
+  /// error) and the idle gap between streamed chunks (a mid-stream stall yields
+  /// a terminal error instead of hanging forever).
+  final Duration timeout;
+
   final Uri _baseUrl;
   final http.Client _client;
+
+  /// Whether this provider created [_client] itself (vs. an injected one).
+  /// [close] only closes a client it owns.
+  final bool _ownsClient;
 
   @override
   Stream<AiStreamEvent> send(
@@ -87,6 +101,7 @@ class AnthropicProvider implements LlmProvider {
         client: _client,
         maxRetries: maxRetries,
         label: 'Anthropic',
+        timeout: timeout,
         build: () => http.Request('POST', _endpoint())
           ..headers['x-api-key'] = apiKey
           ..headers['anthropic-version'] = anthropicVersion
@@ -99,24 +114,44 @@ class AnthropicProvider implements LlmProvider {
     }
 
     final parser = AnthropicEventParser();
-    final lines =
-        response.stream.transform(utf8.decoder).transform(const LineSplitter());
-    await for (final line in lines) {
-      final trimmed = line.trim();
-      // Anthropic SSE interleaves `event:` and `data:` lines; the JSON on the
-      // `data:` line carries its own `type`, so we only need the data lines.
-      if (!trimmed.startsWith('data:')) continue;
-      final data = trimmed.substring(5).trim();
-      if (data.isEmpty) continue;
-      final Map<String, Object?> chunk;
-      try {
-        chunk = (jsonDecode(data) as Map).cast<String, Object?>();
-      } on FormatException {
-        continue; // skip malformed keep-alive or partial lines
+    // Idle timeout: a stall longer than [timeout] between chunks aborts the
+    // `await for` with a TimeoutException instead of hanging forever.
+    final lines = response.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .timeout(timeout);
+    try {
+      await for (final line in lines) {
+        final trimmed = line.trim();
+        // Anthropic SSE interleaves `event:` and `data:` lines; the JSON on the
+        // `data:` line carries its own `type`, so we only need the data lines.
+        if (!trimmed.startsWith('data:')) continue;
+        final data = trimmed.substring(5).trim();
+        if (data.isEmpty) continue;
+        try {
+          final Map<String, Object?> chunk;
+          try {
+            chunk = (jsonDecode(data) as Map).cast<String, Object?>();
+          } on FormatException {
+            continue; // skip malformed keep-alive or partial lines
+          }
+          for (final event in parser.parse(chunk)) {
+            yield event;
+          }
+        } on Object catch (error) {
+          // A valid-JSON-but-wrong-shape chunk must not kill the whole stream;
+          // surface it as a StreamErrorEvent and skip the bad chunk.
+          yield StreamErrorEvent(error: error);
+          continue;
+        }
       }
-      for (final event in parser.parse(chunk)) {
+    } on TimeoutException catch (error) {
+      // A mid-stream stall: surface the error, finalize, and stop.
+      yield StreamErrorEvent(error: error);
+      for (final event in parser.finalize()) {
         yield event;
       }
+      return;
     }
     // Stream ended — emit a terminal event if no `message_stop` arrived.
     for (final event in parser.finalize()) {
@@ -124,9 +159,12 @@ class AnthropicProvider implements LlmProvider {
     }
   }
 
-  /// Closes the underlying HTTP client. Call when the provider is discarded if
-  /// it created its own client.
-  void close() => _client.close();
+  /// Closes the underlying HTTP client, but only if this provider created it.
+  /// When a `client` was injected, `close` is a no-op so a shared client isn't
+  /// torn out from under its owner.
+  void close() {
+    if (_ownsClient) _client.close();
+  }
 
   Uri _endpoint() {
     final base = _baseUrl.toString().replaceAll(RegExp(r'/+$'), '');
@@ -185,7 +223,29 @@ class AnthropicProvider implements LlmProvider {
     }
 
     final system = systemBuffer.isEmpty ? null : systemBuffer.toString();
-    return (system, messages);
+    return (system, _mergeAdjacentRoles(messages));
+  }
+
+  /// Anthropic requires strict user/assistant alternation; consecutive entries
+  /// with the same `role` (e.g. a tool-result `user` turn following a normal
+  /// `user` turn, or two tool turns in a row) 400 with "roles must alternate".
+  /// Merge adjacent same-role messages by concatenating their `content` arrays.
+  static List<Map<String, Object?>> _mergeAdjacentRoles(
+    List<Map<String, Object?>> messages,
+  ) {
+    final merged = <Map<String, Object?>>[];
+    for (final message in messages) {
+      if (merged.isNotEmpty && merged.last['role'] == message['role']) {
+        final content = [
+          ...(merged.last['content']! as List),
+          ...(message['content']! as List),
+        ];
+        merged.last['content'] = content;
+      } else {
+        merged.add({...message});
+      }
+    }
+    return merged;
   }
 
   static Iterable<FilePart> _images(AiMessage message) => message.parts

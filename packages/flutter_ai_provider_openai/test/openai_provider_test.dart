@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -280,6 +281,91 @@ void main() {
     final image =
         parts.firstWhere((p) => (p as Map)['type'] == 'image_url') as Map;
     expect((image['image_url'] as Map)['url'], 'data:image/png;base64,AQID');
+  });
+
+  test('emits a StreamErrorEvent on a wrong-shape chunk without throwing',
+      () async {
+    // Valid JSON, wrong shape: `choices: [null]` makes the parser's cast throw.
+    final provider = OpenAiProvider(
+      apiKey: 'k',
+      client: _sseClient([
+        'data: ${jsonEncode({
+              'id': 'c1',
+              'choices': [null],
+            })}',
+        'data: ${jsonEncode({
+              'id': 'c1',
+              'choices': [
+                {
+                  'delta': {'content': 'ok'},
+                  'finish_reason': 'stop',
+                },
+              ],
+            })}',
+        'data: [DONE]',
+      ]),
+    );
+    final events = await provider
+        .send(const AiConversation(id: 'c', messages: []))
+        .toList();
+    expect(events.whereType<StreamErrorEvent>(), isNotEmpty);
+    // The stream continued past the bad chunk rather than throwing.
+    expect(events.whereType<TextDelta>().map((e) => e.delta), contains('ok'));
+  });
+
+  test('finalizes a stream that ends without a finish_reason', () async {
+    final provider = OpenAiProvider(
+      apiKey: 'k',
+      client: _sseClient([
+        'data: ${jsonEncode({
+              'id': 'c1',
+              'choices': [
+                {
+                  'delta': {'content': 'hi'},
+                },
+              ],
+            })}',
+      ]),
+    );
+    final processor = MessageProcessor();
+    for (final e in await provider
+        .send(const AiConversation(id: 'c', messages: []))
+        .toList()) {
+      processor.apply(e);
+    }
+    expect(
+      processor.conversation.messages.single.status,
+      AiMessageStatus.complete,
+    );
+  });
+
+  test('emits StreamErrorEvent + MessageFinished when the stream stalls',
+      () async {
+    // A body stream that emits one chunk then never completes (no [DONE]),
+    // simulating a mid-stream stall. The short idle timeout fires.
+    final controller = StreamController<List<int>>();
+    controller.add(utf8.encode('data: ${jsonEncode({
+          'id': 'c1',
+          'choices': [
+            {
+              'delta': {'content': 'hi'},
+            },
+          ],
+        })}\n'));
+    // Never closed — the stream idles forever until the timeout fires.
+    final provider = OpenAiProvider(
+      apiKey: 'k',
+      timeout: const Duration(milliseconds: 50),
+      client: MockClient.streaming((request, _) async {
+        return http.StreamedResponse(controller.stream, 200);
+      }),
+    );
+    final events = await provider
+        .send(const AiConversation(id: 'c', messages: []))
+        .toList();
+    await controller.close();
+    expect(events.whereType<StreamErrorEvent>(), isNotEmpty);
+    expect(events.whereType<MessageFinished>(), isNotEmpty);
   });
 
   test('retries a transient 503 then succeeds', () async {

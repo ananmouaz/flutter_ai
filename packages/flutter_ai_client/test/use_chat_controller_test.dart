@@ -242,6 +242,61 @@ void main() {
       expect(controller.status, ChatStatus.error);
       expect(controller.error, 'upstream timeout');
     });
+
+    test('captures the stack trace alongside a thrown provider error',
+        () async {
+      final provider = _ThrowingProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hi');
+      expect(controller.error, isNotNull);
+      expect(controller.stackTrace, isNotNull);
+
+      // A new turn resets both error and stack trace.
+      controller.setProvider(ManualProvider());
+      unawaited(controller.sendText('again'));
+      expect(controller.error, isNull);
+      expect(controller.stackTrace, isNull);
+    });
+
+    test('a fatal in-band error tears down the turn and ignores later deltas',
+        () async {
+      // Message-scoped error, followed by more deltas the provider keeps
+      // pushing. The fatal error must cancel the subscription so the later
+      // deltas never reach the conversation, and the turn future must complete.
+      final provider = ManualProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u1',
+      );
+      addTearDown(controller.dispose);
+
+      final turn = controller.sendText('hi');
+      provider.current
+        ..add(const MessageStarted(messageId: 'a1', role: AiRole.assistant))
+        ..add(const TextDelta(messageId: 'a1', delta: 'before'));
+      await Future<void>.delayed(Duration.zero);
+
+      provider.current
+        ..add(const StreamErrorEvent(error: 'fatal', messageId: 'a1'))
+        // These arrive after the fatal error and must be ignored.
+        ..add(const TextDelta(messageId: 'a1', delta: ' AFTER'))
+        ..add(
+            const MessageFinished(messageId: 'a1', reason: FinishReason.stop));
+
+      // The turn future completes despite the stream never closing.
+      await turn;
+
+      expect(controller.status, ChatStatus.error);
+      expect(controller.error, 'fatal');
+      expect(controller.messages.last.text, 'before');
+      expect(controller.messages.last.text, isNot(contains('AFTER')));
+    });
   });
 
   group('addToolResults', () {

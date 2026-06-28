@@ -14,6 +14,12 @@ Initial release.
   (function name recovered from the matching call). Streams text, thinking,
   function calls, citations, and finish reasons as `AiStreamEvent`s.
 - `GeminiEventParser` — the chunk→event mapping, unit-tested against recorded SSE.
+- Robustness: configurable connect + idle `timeout` (a stalled stream surfaces a
+  `StreamErrorEvent` instead of hanging); a wrong-shape chunk emits a
+  `StreamErrorEvent` instead of crashing the stream; `close()` only closes a
+  client it created; retry backoff is now capped and jittered. When function
+  tools and `enableGrounding` are both set, grounding is omitted (the API
+  rejects combining them) rather than 400-ing.
 - Re-exports `flutter_ai_core`.
 
 > The mapping is unit-tested against recorded SSE chunks; it has not been run

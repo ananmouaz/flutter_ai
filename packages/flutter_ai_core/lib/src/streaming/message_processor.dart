@@ -155,8 +155,13 @@ class MessageProcessor {
         // The call lives in the assistant message it was started on, which is
         // usually *not* the message carrying the result (e.g. a separate
         // tool-role message). Advance the call's state in its owning message.
+        // After a reset()/rehydration the in-memory map is empty, so fall back
+        // to scanning the conversation for the message that actually holds the
+        // matching ToolCallPart before using the result's own message id.
         _updateToolCall(
-          _toolCallToMessage[toolCallId] ?? messageId,
+          _toolCallToMessage[toolCallId] ??
+              _messageIdForToolCall(toolCallId) ??
+              messageId,
           toolCallId,
           (p) => p.copyWith(
             state:
@@ -241,6 +246,21 @@ class MessageProcessor {
           status: AiMessageStatus.streaming,
         );
     _conversation = _conversation.replace(transform(existing));
+  }
+
+  /// Finds the id of the message whose parts contain a [ToolCallPart] with
+  /// [toolCallId], or `null` if no such message exists. Used to recover the
+  /// call→message mapping that lives only in memory when results arrive after a
+  /// [reset] or against a seeded conversation.
+  String? _messageIdForToolCall(String toolCallId) {
+    for (final message in _conversation.messages) {
+      for (final part in message.parts) {
+        if (part is ToolCallPart && part.toolCallId == toolCallId) {
+          return message.id;
+        }
+      }
+    }
+    return null;
   }
 
   void _updateToolCall(

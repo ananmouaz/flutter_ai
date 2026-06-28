@@ -13,6 +13,11 @@ Initial release.
   calls, and finish reasons back as `AiStreamEvent`s.
 - `AnthropicEventParser` — the SSE-event→event mapping, unit-tested against
   recorded events.
+- Robustness: configurable connect + idle `timeout` (a stalled stream surfaces a
+  `StreamErrorEvent` instead of hanging); a wrong-shape event emits a
+  `StreamErrorEvent` instead of crashing the stream; `close()` only closes a
+  client it created; retry backoff is now capped and jittered; adjacent
+  same-role turns are merged so the API's strict alternation isn't violated.
 - Re-exports `flutter_ai_core`.
 
 > The mapping is unit-tested against recorded SSE events; it has not been run

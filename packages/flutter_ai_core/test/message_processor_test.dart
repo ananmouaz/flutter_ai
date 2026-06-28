@@ -228,6 +228,37 @@ void main() {
       expect(callOf(r, 'a1', 'c1').state, ToolCallState.outputAvailable);
     });
 
+    test('result advances a call seeded from a rehydrated conversation', () {
+      // Seed a conversation that already holds an assistant message with a tool
+      // call (e.g. loaded from persistence), so the in-memory call→message map
+      // is empty. A result must still find the owning message by scanning.
+      const seed = AiConversation(
+        id: 'c1',
+        messages: [
+          AiMessage(
+            id: 'a1',
+            role: AiRole.assistant,
+            parts: [
+              ToolCallPart(
+                toolCallId: 'c1',
+                toolName: 'get_weather',
+                state: ToolCallState.inputAvailable,
+              ),
+            ],
+          ),
+        ],
+      );
+      final processor = MessageProcessor(conversation: seed);
+      final r = processor.apply(
+        const ToolResultReceived(
+          messageId: 't1',
+          toolCallId: 'c1',
+          result: {'tempC': 18},
+        ),
+      );
+      expect(callOf(r, 'a1', 'c1').state, ToolCallState.outputAvailable);
+    });
+
     test('a tool-scoped error marks only the call, not the whole message', () {
       final processor = MessageProcessor();
       processor.apply(

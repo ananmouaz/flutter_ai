@@ -25,13 +25,58 @@ class AiResponse extends StatefulWidget {
 }
 
 class _AiResponseState extends State<AiResponse> {
+  // Heading font sizes by level; hoisted so we don't rebuild the map per block.
+  static const Map<int, double> _headingSizes = {1: 24.0, 2: 20.0, 3: 17.0};
+
+  // Matches an alphanumeric char; used to skip intraword `_` emphasis.
+  static final RegExp _intraword = RegExp(r'[A-Za-z0-9]');
+
   final List<TapGestureRecognizer> _recognizers = [];
+
+  // The parsed/built content, computed once per unique (text, onLinkTap) — never
+  // in build(). Recognizers are created here and disposed when text changes.
+  List<_Block>? _blocks;
+
+  // The theme/base style the cached widget was built against. If the inherited
+  // style changes we re-resolve in build() without re-parsing the Markdown.
+  AiThemeExtension? _builtTheme;
+  TextStyle? _builtBase;
+  Widget? _built;
 
   void _disposeRecognizers() {
     for (final r in _recognizers) {
       r.dispose();
     }
     _recognizers.clear();
+  }
+
+  // Parses the Markdown source once and caches the block list. Recognizers from
+  // the previous parse are disposed first. Does NOT build widgets (those depend
+  // on the inherited theme, resolved lazily in build()).
+  void _parse() {
+    _disposeRecognizers();
+    _blocks = _parseBlocks(widget.text);
+    // Invalidate the built widget so it's rebuilt against the current theme.
+    _built = null;
+    _builtTheme = null;
+    _builtBase = null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _parse();
+  }
+
+  @override
+  void didUpdateWidget(AiResponse oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-parse (and rebuild recognizers) only when the inputs that affect them
+    // change — never every frame.
+    if (oldWidget.text != widget.text ||
+        oldWidget.onLinkTap != widget.onLinkTap) {
+      _parse();
+    }
   }
 
   @override
@@ -42,12 +87,16 @@ class _AiResponseState extends State<AiResponse> {
 
   @override
   Widget build(BuildContext context) {
-    _disposeRecognizers();
     final theme = AiThemeExtension.of(context);
     final base = DefaultTextStyle.of(context).style.merge(theme.textStyle);
-    final blocks = _parseBlocks(widget.text);
 
-    return Column(
+    // Return the cached widget unless the inherited theme/base style changed.
+    if (_built != null && theme == _builtTheme && base == _builtBase) {
+      return _built!;
+    }
+
+    final blocks = _blocks!;
+    final built = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -57,14 +106,17 @@ class _AiResponseState extends State<AiResponse> {
         ],
       ],
     );
+    _built = built;
+    _builtTheme = theme;
+    _builtBase = base;
+    return built;
   }
 
   Widget _buildBlock(_Block block, AiThemeExtension theme, TextStyle base) {
     switch (block.type) {
       case _BlockType.heading:
-        final sizes = {1: 24.0, 2: 20.0, 3: 17.0};
         final style = base.copyWith(
-          fontSize: sizes[block.level] ?? 16,
+          fontSize: _headingSizes[block.level] ?? 16,
           fontWeight: FontWeight.w700,
           height: 1.3,
         );
@@ -258,7 +310,7 @@ class _AiResponseState extends State<AiResponse> {
         // opening marker (so "2 * 3" isn't italic), and for `_` skip intraword
         // use (so identifiers like `snake_case` aren't italicized).
         final prev = i > 0 ? text[i - 1] : ' ';
-        final intraword = char == '_' && RegExp(r'[A-Za-z0-9]').hasMatch(prev);
+        final intraword = char == '_' && _intraword.hasMatch(prev);
         if (!intraword && end > i + 1 && text[i + 1] != ' ') {
           flush();
           spans.addAll(

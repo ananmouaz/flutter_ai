@@ -72,38 +72,43 @@ class _AiTaskState extends State<AiTask> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(Icons.checklist_rtl, size: 16, color: color),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: theme.textStyle.copyWith(
-                        color: color,
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
+          Semantics(
+            button: true,
+            expanded: _expanded,
+            child: InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.checklist_rtl, size: 16, color: color),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: theme.textStyle.copyWith(
+                          color: color,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    '${done.length}/${widget.items.length}',
-                    style: theme.codeStyle.copyWith(
+                    Text(
+                      '${done.length}/${widget.items.length}',
+                      style: theme.codeStyle.copyWith(
+                        color: color?.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                    Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                      size: 18,
                       color: color?.withValues(alpha: 0.6),
-                      fontSize: 12,
                     ),
-                  ),
-                  Icon(
-                    _expanded ? Icons.expand_less : Icons.expand_more,
-                    size: 18,
-                    color: color?.withValues(alpha: 0.6),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

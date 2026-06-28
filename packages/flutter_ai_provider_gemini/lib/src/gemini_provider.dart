@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_ai_core/flutter_ai_core.dart';
@@ -31,7 +32,9 @@ class GeminiProvider implements LlmProvider {
   /// [apiKey] authenticates requests (sent as `x-goog-api-key`). [baseUrl]
   /// defaults to the public Generative Language v1beta endpoint. [client] is
   /// injectable. [defaultModel] is used when [AiRequestOptions.model] is unset.
-  /// [enableGrounding] adds the Google Search tool to every request.
+  /// [enableGrounding] adds the Google Search tool to every request. [timeout]
+  /// bounds both the initial connection and the idle gap between streamed
+  /// chunks.
   GeminiProvider({
     required this.apiKey,
     Uri? baseUrl,
@@ -39,8 +42,10 @@ class GeminiProvider implements LlmProvider {
     this.defaultModel = 'gemini-2.5-flash',
     this.enableGrounding = false,
     this.maxRetries = 2,
+    this.timeout = const Duration(seconds: 60),
   })  : _baseUrl = baseUrl ??
             Uri.parse('https://generativelanguage.googleapis.com/v1beta'),
+        _ownsClient = client == null,
         _client = client ?? http.Client();
 
   /// The API key sent as the `x-goog-api-key` header.
@@ -50,14 +55,28 @@ class GeminiProvider implements LlmProvider {
   final String defaultModel;
 
   /// Whether to attach the Google Search grounding tool to every request.
+  ///
+  /// Note: the Gemini API rejects a request that contains **both** the
+  /// `googleSearch` grounding tool and `functionDeclarations` (a 400). When
+  /// function tools are supplied to `send`, the explicit tools take precedence
+  /// and grounding is omitted for that request even if this is set.
   final bool enableGrounding;
 
   /// How many times to retry the initial connection on a transient failure
   /// (network error, 429, or 5xx), with backoff honoring `Retry-After`.
   final int maxRetries;
 
+  /// Bounds the initial connection (a connect timeout is retried like a network
+  /// error) and the idle gap between streamed chunks (a mid-stream stall yields
+  /// a terminal error instead of hanging forever).
+  final Duration timeout;
+
   final Uri _baseUrl;
   final http.Client _client;
+
+  /// Whether this provider created [_client] itself (vs. an injected one).
+  /// [close] only closes a client it owns.
+  final bool _ownsClient;
 
   // Mints a unique message id per response — Gemini's stream carries no id of
   // its own, and a fixed id would make multi-turn replies fold into one message.
@@ -98,6 +117,7 @@ class GeminiProvider implements LlmProvider {
         client: _client,
         maxRetries: maxRetries,
         label: 'Gemini',
+        timeout: timeout,
         build: () => http.Request('POST', _endpoint(model))
           ..headers['x-goog-api-key'] = apiKey
           ..headers['content-type'] = 'application/json'
@@ -109,22 +129,42 @@ class GeminiProvider implements LlmProvider {
     }
 
     final parser = GeminiEventParser(messageId: 'gemini-${_responseSeq++}');
-    final lines =
-        response.stream.transform(utf8.decoder).transform(const LineSplitter());
-    await for (final line in lines) {
-      final trimmed = line.trim();
-      if (!trimmed.startsWith('data:')) continue;
-      final data = trimmed.substring(5).trim();
-      if (data.isEmpty) continue;
-      final Map<String, Object?> chunk;
-      try {
-        chunk = (jsonDecode(data) as Map).cast<String, Object?>();
-      } on FormatException {
-        continue;
+    // Idle timeout: a stall longer than [timeout] between chunks aborts the
+    // `await for` with a TimeoutException instead of hanging forever.
+    final lines = response.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .timeout(timeout);
+    try {
+      await for (final line in lines) {
+        final trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        final data = trimmed.substring(5).trim();
+        if (data.isEmpty) continue;
+        try {
+          final Map<String, Object?> chunk;
+          try {
+            chunk = (jsonDecode(data) as Map).cast<String, Object?>();
+          } on FormatException {
+            continue;
+          }
+          for (final event in parser.parse(chunk)) {
+            yield event;
+          }
+        } on Object catch (error) {
+          // A valid-JSON-but-wrong-shape chunk must not kill the whole stream;
+          // surface it as a StreamErrorEvent and skip the bad chunk.
+          yield StreamErrorEvent(error: error);
+          continue;
+        }
       }
-      for (final event in parser.parse(chunk)) {
+    } on TimeoutException catch (error) {
+      // A mid-stream stall: surface the error, finalize, and stop.
+      yield StreamErrorEvent(error: error);
+      for (final event in parser.finalize()) {
         yield event;
       }
+      return;
     }
     // Stream ended — emit a terminal event if Gemini didn't send a finishReason.
     for (final event in parser.finalize()) {
@@ -132,9 +172,12 @@ class GeminiProvider implements LlmProvider {
     }
   }
 
-  /// Closes the underlying HTTP client. Call when the provider is discarded if
-  /// it created its own client.
-  void close() => _client.close();
+  /// Closes the underlying HTTP client, but only if this provider created it.
+  /// When a `client` was injected, `close` is a no-op so a shared client isn't
+  /// torn out from under its owner.
+  void close() {
+    if (_ownsClient) _client.close();
+  }
 
   Uri _endpoint(String model) {
     final base = _baseUrl.toString().replaceAll(RegExp(r'/+$'), '');
@@ -234,7 +277,10 @@ class GeminiProvider implements LlmProvider {
               },
           ],
         },
-      if (enableGrounding) {'googleSearch': <String, Object?>{}},
+      // Gemini 400s when `googleSearch` and `functionDeclarations` appear
+      // together, so when explicit function tools are present we drop grounding
+      // for this request rather than send an invalid combination.
+      if (enableGrounding && !hasFns) {'googleSearch': <String, Object?>{}},
     ];
   }
 }

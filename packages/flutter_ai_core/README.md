@@ -57,6 +57,6 @@ See [`example/`](example/) for a fuller walkthrough including tool calls.
 
 ## Status
 
-`0.1.0` — initial release. Part of the `flutter_ai` ecosystem; the UI layer
+`0.1.1`. Part of the `flutter_ai` ecosystem; the UI layer
 (`flutter_ai_elements`) and provider/controller layer (`flutter_ai_client`) build
 on these types.

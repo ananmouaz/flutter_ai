@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_ai_provider_anthropic/flutter_ai_provider_anthropic.dart';
@@ -234,6 +236,174 @@ void main() {
       final messages = body['messages']! as List;
       expect(messages, hasLength(1)); // system is hoisted out of messages
       expect((messages.single as Map)['role'], 'user');
+    });
+
+    test('emits a StreamErrorEvent when the transport throws', () async {
+      final provider = AnthropicProvider(
+        apiKey: 'test',
+        client: MockClient.streaming((request, bodyStream) async {
+          throw const SocketException('connection refused');
+        }),
+      );
+      final events = await provider
+          .send(const AiConversation(id: 'c', messages: []))
+          .toList();
+      expect(events.single, isA<StreamErrorEvent>());
+    });
+
+    test('retries a transient 503 then succeeds', () async {
+      var calls = 0;
+      final provider = AnthropicProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, _) async {
+          calls++;
+          if (calls == 1) {
+            return http.StreamedResponse(
+              Stream<List<int>>.value(utf8.encode('busy')),
+              503,
+            );
+          }
+          return http.StreamedResponse(
+            Stream<List<int>>.value(
+              utf8.encode('data: ${jsonEncode({'type': 'message_stop'})}\n'),
+            ),
+            200,
+          );
+        }),
+      );
+      final events = await provider
+          .send(const AiConversation(id: 'c', messages: []))
+          .toList();
+      expect(calls, 2);
+      expect(events.whereType<StreamErrorEvent>(), isEmpty);
+    });
+
+    test('emits a StreamErrorEvent on a wrong-shape chunk without throwing',
+        () async {
+      // Valid JSON, wrong shape: a content_block whose value is a String makes
+      // the parser's `as Map?` cast throw; the stream must continue, not die.
+      final provider = AnthropicProvider(
+        apiKey: 'k',
+        client: _sseClient(_dataLines([
+          {
+            'type': 'message_start',
+            'message': {'id': 'msg_1', 'role': 'assistant'},
+          },
+          {'type': 'content_block_start', 'index': 0, 'content_block': 'oops'},
+          {
+            'type': 'content_block_delta',
+            'index': 0,
+            'delta': {'type': 'text_delta', 'text': 'ok'},
+          },
+          {'type': 'message_stop'},
+        ])),
+      );
+      final events = await provider
+          .send(const AiConversation(id: 'c', messages: []))
+          .toList();
+      expect(events.whereType<StreamErrorEvent>(), isNotEmpty);
+      expect(events.whereType<TextDelta>().map((e) => e.delta), contains('ok'));
+    });
+
+    test('finalizes a stream that ends without a message_stop', () async {
+      final provider = AnthropicProvider(
+        apiKey: 'k',
+        client: _sseClient(_dataLines([
+          {
+            'type': 'message_start',
+            'message': {'id': 'msg_1', 'role': 'assistant'},
+          },
+          {
+            'type': 'content_block_delta',
+            'index': 0,
+            'delta': {'type': 'text_delta', 'text': 'hi'},
+          },
+        ])),
+      );
+      final processor = MessageProcessor();
+      for (final e in await provider
+          .send(const AiConversation(id: 'c', messages: []))
+          .toList()) {
+        processor.apply(e);
+      }
+      expect(
+        processor.conversation.messages.single.status,
+        AiMessageStatus.complete,
+      );
+    });
+
+    test('emits StreamErrorEvent + MessageFinished when the stream stalls',
+        () async {
+      final controller = StreamController<List<int>>();
+      controller.add(utf8.encode(_dataLines([
+        {
+          'type': 'message_start',
+          'message': {'id': 'msg_1', 'role': 'assistant'},
+        },
+      ]).map((l) => '$l\n').join()));
+      final provider = AnthropicProvider(
+        apiKey: 'k',
+        timeout: const Duration(milliseconds: 50),
+        client: MockClient.streaming((request, _) async {
+          return http.StreamedResponse(controller.stream, 200);
+        }),
+      );
+      final events = await provider
+          .send(const AiConversation(id: 'c', messages: []))
+          .toList();
+      await controller.close();
+      expect(events.whereType<StreamErrorEvent>(), isNotEmpty);
+      expect(events.whereType<MessageFinished>(), isNotEmpty);
+    });
+
+    test('merges adjacent same-role turns so roles alternate', () async {
+      late http.Request captured;
+      final provider = AnthropicProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, _) async {
+          captured = request as http.Request;
+          return http.StreamedResponse(
+            Stream<List<int>>.value(
+              utf8.encode('data: ${jsonEncode({'type': 'message_stop'})}\n'),
+            ),
+            200,
+          );
+        }),
+      );
+      // A normal user turn immediately followed by a tool-result turn (also
+      // mapped to role `user`) would otherwise produce two user turns in a row.
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(
+                  id: 'u',
+                  role: AiRole.user,
+                  parts: [TextPart('Hi')],
+                ),
+                AiMessage(
+                  id: 't',
+                  role: AiRole.tool,
+                  parts: [
+                    ToolResultPart(
+                      toolCallId: 'call_1',
+                      result: 'done',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          )
+          .toList();
+      final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+      final messages = (body['messages']! as List).cast<Map<String, Object?>>();
+      expect(messages, hasLength(1));
+      expect(messages.single['role'], 'user');
+      // Both the text and the tool_result are concatenated into one content[].
+      final content = messages.single['content'] as List;
+      expect(content.any((p) => (p as Map)['type'] == 'text'), isTrue);
+      expect(content.any((p) => (p as Map)['type'] == 'tool_result'), isTrue);
     });
   });
 

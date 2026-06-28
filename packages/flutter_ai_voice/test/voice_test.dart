@@ -25,6 +25,45 @@ void main() {
       expect(decoded.text, 'hello world');
       expect(decoded.segments, transcript.segments);
     });
+
+    test('has value equality (deep-comparing segments)', () {
+      const a = Transcript(
+        text: 'hi',
+        segments: [
+          TranscriptSegment(
+            text: 'hi',
+            start: Duration.zero,
+            end: Duration(milliseconds: 200),
+          ),
+        ],
+      );
+      const b = Transcript(
+        text: 'hi',
+        segments: [
+          TranscriptSegment(
+            text: 'hi',
+            start: Duration.zero,
+            end: Duration(milliseconds: 200),
+          ),
+        ],
+      );
+      const differentSegment = Transcript(
+        text: 'hi',
+        segments: [
+          TranscriptSegment(
+            text: 'bye',
+            start: Duration.zero,
+            end: Duration(milliseconds: 200),
+          ),
+        ],
+      );
+      const differentText = Transcript(text: 'yo');
+
+      expect(a, equals(b));
+      expect(a.hashCode, equals(b.hashCode));
+      expect(a, isNot(equals(differentSegment)));
+      expect(a, isNot(equals(differentText)));
+    });
   });
 
   group('CallbackSpeechToText', () {

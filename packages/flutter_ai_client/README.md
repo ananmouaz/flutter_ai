@@ -70,5 +70,4 @@ class MyProvider implements LlmProvider {
 
 ## Status
 
-`0.1.0`. Depends on `flutter_ai_core` via a local path until that package is
-published; not itself publishable yet (`publish_to: none`).
+`0.1.0`. Published on pub.dev; depends on `flutter_ai_core`.

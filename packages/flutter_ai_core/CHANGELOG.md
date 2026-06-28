@@ -12,6 +12,12 @@ Bug fixes in `MessageProcessor`:
   errored and lets generation continue, instead of failing the whole message —
   matching `UseChatController`.
 - Doc fix: corrected a stale reference to `flutter_markdown_plus`.
+- `JsonAccumulator` no longer surfaces an unterminated trailing number/keyword
+  (e.g. `1234` from `{"n": 1234`) as a complete value — a literal must be
+  delimiter-terminated, preserving the "a partial is always a prefix" contract.
+- `MessageProcessor` resolves a tool result to its owning call by scanning the
+  conversation when the in-memory map misses (after `reset()`/rehydration).
+- `deepHash` uses order-independent hashing for maps (better distribution).
 
 ## 0.1.0
 

@@ -58,29 +58,35 @@ class AiMessageBubble extends StatelessWidget {
     if (bubbled) {
       // Size the bubble relative to its container (so it stays correct inside a
       // centered, max-width column on tablets/desktop), not the whole screen.
-      final available = MediaQuery.sizeOf(context).width;
       body = LayoutBuilder(
-        builder: (context, constraints) => Align(
-          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: (constraints.maxWidth.isFinite
-                      ? constraints.maxWidth
-                      : available) *
-                  theme.maxBubbleWidthFraction,
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                color:
-                    isUser ? theme.userBubbleColor : theme.assistantBubbleColor,
-                borderRadius: theme.bubbleRadius,
-                boxShadow: theme.bubbleShadow,
+        builder: (context, constraints) {
+          // Only fall back to the window width when the incoming constraints are
+          // unbounded; in the common bounded case never subscribe to media size.
+          final available = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.sizeOf(context).width;
+          return Align(
+            alignment: isUser
+                ? AlignmentDirectional.centerEnd
+                : AlignmentDirectional.centerStart,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: available * theme.maxBubbleWidthFraction,
               ),
-              padding: theme.bubblePadding,
-              child: content,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isUser
+                      ? theme.userBubbleColor
+                      : theme.assistantBubbleColor,
+                  borderRadius: theme.bubbleRadius,
+                  boxShadow: theme.bubbleShadow,
+                ),
+                padding: theme.bubblePadding,
+                child: content,
+              ),
             ),
-          ),
-        ),
+          );
+        },
       );
     } else {
       // Plain assistant: full-width, no container.

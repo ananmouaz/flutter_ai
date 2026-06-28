@@ -36,27 +36,31 @@ class _AiReasoningState extends State<AiReasoning> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        InkWell(
-          onTap: () => setState(() => _expanded = !_expanded),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.psychology_outlined, size: 16, color: subdued),
-              const SizedBox(width: 6),
-              Text(
-                'Reasoning',
-                style: TextStyle(
-                  color: subdued,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+        Semantics(
+          button: true,
+          expanded: _expanded,
+          child: InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.psychology_outlined, size: 16, color: subdued),
+                const SizedBox(width: 6),
+                Text(
+                  'Reasoning',
+                  style: TextStyle(
+                    color: subdued,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              Icon(
-                _expanded ? Icons.expand_less : Icons.expand_more,
-                size: 18,
-                color: subdued,
-              ),
-            ],
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                  color: subdued,
+                ),
+              ],
+            ),
           ),
         ),
         AnimatedSize(
