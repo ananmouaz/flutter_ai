@@ -36,15 +36,20 @@ class AiImage extends StatelessWidget {
     final theme = AiThemeExtension.of(context);
     final image = _image(fit: BoxFit.cover);
 
-    return GestureDetector(
-      onTap: enableZoom ? () => _openViewer(context) : null,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: AspectRatio(
-          aspectRatio: aspectRatio,
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: theme.assistantBubbleColor),
-            child: image,
+    return Semantics(
+      image: true,
+      button: enableZoom,
+      label: enableZoom ? 'Image, double tap to zoom' : 'Image',
+      child: GestureDetector(
+        onTap: enableZoom ? () => _openViewer(context) : null,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: AspectRatio(
+            aspectRatio: aspectRatio,
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: theme.assistantBubbleColor),
+              child: image,
+            ),
           ),
         ),
       ),
@@ -112,6 +117,7 @@ class _FullScreenImage extends StatelessWidget {
             right: 8,
             child: IconButton(
               icon: const Icon(Icons.close, color: Colors.white),
+              tooltip: 'Close',
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),

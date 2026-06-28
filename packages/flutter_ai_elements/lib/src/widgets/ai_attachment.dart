@@ -27,11 +27,15 @@ class AiAttachment extends StatelessWidget {
     if (_isImage) {
       final image = _buildImage();
       if (image != null) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxImageHeight),
-            child: image,
+        return Semantics(
+          image: true,
+          label: file.name ?? 'Image attachment',
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxImageHeight),
+              child: image,
+            ),
           ),
         );
       }

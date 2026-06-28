@@ -54,24 +54,28 @@ class AiModelSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
     final color = DefaultTextStyle.of(context).style.color;
-    return GestureDetector(
-      onTap: () => unawaited(_open(context)),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.borderColor),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _selected.label,
-              style: theme.textStyle.copyWith(fontSize: 13, color: color),
-            ),
-            const SizedBox(width: 2),
-            Icon(Icons.expand_more, size: 16, color: color),
-          ],
+    return Semantics(
+      button: true,
+      label: 'Select model, ${_selected.label}',
+      child: GestureDetector(
+        onTap: () => unawaited(_open(context)),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.borderColor),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _selected.label,
+                style: theme.textStyle.copyWith(fontSize: 13, color: color),
+              ),
+              const SizedBox(width: 2),
+              Icon(Icons.expand_more, size: 16, color: color),
+            ],
+          ),
         ),
       ),
     );

@@ -4,8 +4,15 @@ description: >-
   run tool calls into results, and expose web search as a tool — all in pure
   Dart with no Flutter dependency.
 version: 0.1.0
+homepage: https://github.com/ananmouaz/flutter_ai
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_tools
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues
+topics:
+  - ai
+  - llm
+  - tool-calling
+  - chat
+  - flutter
 
 # Not publishable yet: depends on flutter_ai_core via a local path. Switch to a
 # hosted version constraint once that package is on pub.dev.

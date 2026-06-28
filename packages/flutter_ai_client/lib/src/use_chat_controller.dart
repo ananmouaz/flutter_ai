@@ -145,7 +145,11 @@ class UseChatController extends ChangeNotifier {
     _error = null;
     _processor.reset(
       _processor.conversation.append(
-        AiMessage(id: _newId(), role: AiRole.tool, parts: List<AiPart>.of(results)),
+        AiMessage(
+          id: _newId(),
+          role: AiRole.tool,
+          parts: List<AiPart>.of(results),
+        ),
       ),
     );
     _status = ChatStatus.submitted;

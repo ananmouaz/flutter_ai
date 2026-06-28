@@ -475,6 +475,29 @@ void main() {
       expect(chosen, 'smart');
     });
 
+    testWidgets('AiModelSelector exposes a labelled button to a11y',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _wrap(
+          AiModelSelector(
+            selectedId: 'fast',
+            onSelected: (_) {},
+            models: const [AiModelOption(id: 'fast', label: 'Fast')],
+          ),
+        ),
+      );
+      expect(
+        tester.getSemantics(find.text('Fast')),
+        matchesSemantics(
+          isButton: true,
+          hasTapAction: true,
+          label: 'Select model, Fast\nFast',
+        ),
+      );
+      handle.dispose();
+    });
+
     testWidgets('AiConfirmation fires confirm/deny', (tester) async {
       var allowed = false;
       await tester.pumpWidget(

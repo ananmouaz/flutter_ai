@@ -43,6 +43,7 @@ class AiAvatar extends StatelessWidget {
         isUser ? userIcon : assistantIcon,
         size: size * 0.56,
         color: foreground,
+        semanticLabel: isUser ? 'You' : 'Assistant',
       ),
     );
   }

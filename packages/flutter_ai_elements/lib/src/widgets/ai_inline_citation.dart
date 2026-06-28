@@ -22,21 +22,25 @@ class AiInlineCitation extends StatelessWidget {
     final color = DefaultTextStyle.of(context).style.color;
     // Sizes to its content. (Note: a Container with `alignment` set expands to
     // fill bounded parents — so this badge intentionally has none.)
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-        decoration: BoxDecoration(
-          color: theme.assistantBubbleColor,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: theme.borderColor),
-        ),
-        child: Text(
-          '$number',
-          style: theme.codeStyle.copyWith(
-            fontSize: 11,
-            height: 1.3,
-            color: color?.withValues(alpha: 0.75),
+    return Semantics(
+      button: onTap != null,
+      label: 'Citation $number',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+          decoration: BoxDecoration(
+            color: theme.assistantBubbleColor,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: theme.borderColor),
+          ),
+          child: Text(
+            '$number',
+            style: theme.codeStyle.copyWith(
+              fontSize: 11,
+              height: 1.3,
+              color: color?.withValues(alpha: 0.75),
+            ),
           ),
         ),
       ),

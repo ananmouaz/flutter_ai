@@ -6,6 +6,14 @@ description: >-
 version: 0.1.0
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_client
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues
+homepage: https://github.com/ananmouaz/flutter_ai
+
+topics:
+  - ai
+  - llm
+  - chat
+  - streaming
+  - flutter
 
 # Not publishable yet: it depends on flutter_ai_core via a local path. Switch to
 # a hosted version constraint and remove this line once flutter_ai_core is on

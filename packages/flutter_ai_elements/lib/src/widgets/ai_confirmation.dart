@@ -120,24 +120,29 @@ class _Button extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 40,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: filled ? theme.accentColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: filled ? null : Border.all(color: theme.borderColor),
-        ),
-        child: Text(
-          label,
-          style: theme.textStyle.copyWith(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: filled
-                ? theme.onAccentColor
-                : DefaultTextStyle.of(context).style.color,
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: filled ? theme.accentColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: filled ? null : Border.all(color: theme.borderColor),
+          ),
+          child: Text(
+            label,
+            style: theme.textStyle.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: filled
+                  ? theme.onAccentColor
+                  : DefaultTextStyle.of(context).style.color,
+            ),
           ),
         ),
       ),
