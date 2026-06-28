@@ -45,8 +45,11 @@ final controller = UseChatController(
 - **Extended thinking**: pass it through `AiRequestOptions.extra`, e.g.
   `extra: {'thinking': {'type': 'adaptive'}}`. Thinking text streams as
   `ReasoningDelta` events (`AiReasoning` in the UI).
-- This release maps **text and tool content**. Image/document parts are not yet
-  sent.
+- **Images**: user-message image attachments (`FilePart` with an `image/*`
+  media type) are sent as base64 or URL image blocks. Other document types are
+  not yet sent.
+- **Retry**: transient failures (429/5xx, network) are retried with backoff
+  honoring `Retry-After` (`maxRetries`, default 2).
 
 ## Status
 

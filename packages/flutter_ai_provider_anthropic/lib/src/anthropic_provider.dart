@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_ai_core/flutter_ai_core.dart';
 import 'package:flutter_ai_provider_anthropic/src/anthropic_event_parser.dart';
+import 'package:flutter_ai_provider_anthropic/src/http_retry.dart';
 import 'package:http/http.dart' as http;
 
 /// An `LlmProvider` backed by the Anthropic **Messages API**
@@ -39,6 +40,7 @@ class AnthropicProvider implements LlmProvider {
     this.defaultModel = 'claude-opus-4-8',
     this.defaultMaxTokens = 4096,
     this.anthropicVersion = '2023-06-01',
+    this.maxRetries = 2,
   })  : _baseUrl = baseUrl ?? Uri.parse('https://api.anthropic.com/v1'),
         _client = client ?? http.Client();
 
@@ -53,6 +55,10 @@ class AnthropicProvider implements LlmProvider {
 
   /// The `anthropic-version` header value.
   final String anthropicVersion;
+
+  /// How many times to retry the initial connection on a transient failure
+  /// (network error, 429, or 5xx), with backoff honoring `Retry-After`.
+  final int maxRetries;
 
   final Uri _baseUrl;
   final http.Client _client;
@@ -75,25 +81,20 @@ class AnthropicProvider implements LlmProvider {
       if (tools != null && tools.isNotEmpty) 'tools': _buildTools(tools),
     };
 
-    final request = http.Request('POST', _endpoint())
-      ..headers['x-api-key'] = apiKey
-      ..headers['anthropic-version'] = anthropicVersion
-      ..headers['content-type'] = 'application/json'
-      ..body = jsonEncode(payload);
-
     final http.StreamedResponse response;
     try {
-      response = await _client.send(request);
+      response = await connectWithRetry(
+        client: _client,
+        maxRetries: maxRetries,
+        label: 'Anthropic',
+        build: () => http.Request('POST', _endpoint())
+          ..headers['x-api-key'] = apiKey
+          ..headers['anthropic-version'] = anthropicVersion
+          ..headers['content-type'] = 'application/json'
+          ..body = jsonEncode(payload),
+      );
     } on Object catch (error) {
       yield StreamErrorEvent(error: error);
-      return;
-    }
-
-    if (response.statusCode != 200) {
-      final body = await response.stream.bytesToString();
-      yield StreamErrorEvent(
-        error: 'Anthropic request failed (${response.statusCode}): $body',
-      );
       return;
     }
 
@@ -150,6 +151,8 @@ class AnthropicProvider implements LlmProvider {
         case AiRole.user:
           addContent('user', [
             if (message.text.isNotEmpty) {'type': 'text', 'text': message.text},
+            for (final image in _images(message))
+              {'type': 'image', 'source': _imageSource(image)},
           ]);
         case AiRole.assistant:
           addContent('assistant', [
@@ -178,6 +181,20 @@ class AnthropicProvider implements LlmProvider {
     final system = systemBuffer.isEmpty ? null : systemBuffer.toString();
     return (system, messages);
   }
+
+  static Iterable<FilePart> _images(AiMessage message) => message.parts
+      .whereType<FilePart>()
+      .where((f) => f.mediaType.startsWith('image/'));
+
+  /// Anthropic image source: base64 for inline bytes, else a URL source.
+  static Map<String, Object?> _imageSource(FilePart image) =>
+      image.bytes != null
+          ? {
+              'type': 'base64',
+              'media_type': image.mediaType,
+              'data': base64Encode(image.bytes!),
+            }
+          : {'type': 'url', 'url': image.url.toString()};
 
   List<Map<String, Object?>> _buildTools(List<ToolDefinition> tools) => [
         for (final tool in tools)

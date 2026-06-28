@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_ai_provider_gemini/flutter_ai_provider_gemini.dart';
 import 'package:http/http.dart' as http;
@@ -233,5 +234,45 @@ void main() {
           .toList();
       expect(events.single, isA<StreamErrorEvent>());
     });
+  });
+
+  test('encodes image attachments as inlineData', () async {
+    late http.Request captured;
+    const stop =
+        'data: {"candidates":[{"content":{},"finishReason":"STOP"}]}\n';
+    final provider = GeminiProvider(
+      apiKey: 'k',
+      client: MockClient.streaming((request, _) async {
+        captured = request as http.Request;
+        return http.StreamedResponse(
+          Stream<List<int>>.value(utf8.encode(stop)),
+          200,
+        );
+      }),
+    );
+    await provider
+        .send(
+          AiConversation(
+            id: 'c',
+            messages: [
+              AiMessage(
+                id: 'u',
+                role: AiRole.user,
+                parts: [
+                  const TextPart('what is this?'),
+                  FilePart(
+                      mediaType: 'image/png',
+                      bytes: Uint8List.fromList([1, 2, 3])),
+                ],
+              ),
+            ],
+          ),
+        )
+        .toList();
+    final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+    final parts = ((body['contents']! as List).first as Map)['parts'] as List;
+    final inline =
+        parts.firstWhere((p) => (p as Map).containsKey('inlineData')) as Map;
+    expect((inline['inlineData'] as Map)['data'], 'AQID');
   });
 }

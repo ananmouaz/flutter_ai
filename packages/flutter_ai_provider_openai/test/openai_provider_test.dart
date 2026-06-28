@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_ai_provider_openai/flutter_ai_provider_openai.dart';
 import 'package:http/http.dart' as http;
@@ -240,5 +241,69 @@ void main() {
 
       expect(payload['model'], 'gpt-4o-mini');
     });
+  });
+
+  test('encodes image attachments as image_url parts', () async {
+    late http.Request captured;
+    final provider = OpenAiProvider(
+      apiKey: 'k',
+      client: MockClient.streaming((request, _) async {
+        captured = request as http.Request;
+        return http.StreamedResponse(
+          Stream<List<int>>.value(utf8.encode('data: [DONE]\n')),
+          200,
+        );
+      }),
+    );
+    await provider
+        .send(
+          AiConversation(
+            id: 'c',
+            messages: [
+              AiMessage(
+                id: 'u',
+                role: AiRole.user,
+                parts: [
+                  const TextPart('what is this?'),
+                  FilePart(
+                      mediaType: 'image/png',
+                      bytes: Uint8List.fromList([1, 2, 3])),
+                ],
+              ),
+            ],
+          ),
+        )
+        .toList();
+    final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+    final content = (body['messages']! as List).first as Map;
+    final parts = content['content']! as List;
+    final image =
+        parts.firstWhere((p) => (p as Map)['type'] == 'image_url') as Map;
+    expect((image['image_url'] as Map)['url'], 'data:image/png;base64,AQID');
+  });
+
+  test('retries a transient 503 then succeeds', () async {
+    var calls = 0;
+    final provider = OpenAiProvider(
+      apiKey: 'k',
+      client: MockClient.streaming((request, _) async {
+        calls++;
+        if (calls == 1) {
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode('busy')),
+            503,
+          );
+        }
+        return http.StreamedResponse(
+          Stream<List<int>>.value(utf8.encode('data: [DONE]\n')),
+          200,
+        );
+      }),
+    );
+    final events = await provider
+        .send(const AiConversation(id: 'c', messages: []))
+        .toList();
+    expect(calls, 2);
+    expect(events.whereType<StreamErrorEvent>(), isEmpty);
   });
 }
