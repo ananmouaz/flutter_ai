@@ -1,6 +1,6 @@
 # flutter_ai_voice
 
-<p align="center"><img src="../../demo/screenshots/live_orb.png" width="240" alt="Live voice orb"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/live_orb.png" width="240" alt="Live voice orb"/></p>
 
 Speech-to-text contracts and models for the [`flutter_ai`](../../README.md)
 family. Dependency-free; concrete engines plug in behind the interface.
