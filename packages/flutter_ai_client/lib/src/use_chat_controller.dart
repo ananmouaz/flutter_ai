@@ -132,6 +132,27 @@ class UseChatController extends ChangeNotifier {
     return _startStream();
   }
 
+  /// Appends tool [results] as an [AiRole.tool] message and streams the model's
+  /// continuation — call this after executing the tool calls the model
+  /// requested. A no-op if [results] is empty.
+  ///
+  /// Every [ToolCallPart] in the preceding assistant message should have a
+  /// matching [ToolResultPart] here before continuing, as providers require a
+  /// result per call.
+  Future<void> addToolResults(List<ToolResultPart> results) {
+    if (results.isEmpty) return Future<void>.value();
+    _stopActiveStream();
+    _error = null;
+    _processor.reset(
+      _processor.conversation.append(
+        AiMessage(id: _newId(), role: AiRole.tool, parts: List<AiPart>.of(results)),
+      ),
+    );
+    _status = ChatStatus.submitted;
+    _scheduleNotify();
+    return _startStream();
+  }
+
   /// Cancels the in-flight turn, finalizing the streaming message as stopped.
   void stop() {
     _stopActiveStream();

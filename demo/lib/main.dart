@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/demo_provider.dart';
+import 'package:flutter_ai_demo/demo_tools.dart';
 import 'package:flutter_ai_demo/live_demo.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 import 'package:flutter_ai_provider_openai/flutter_ai_provider_openai.dart';
@@ -95,9 +96,24 @@ class _HomePageState extends State<_HomePage> {
   final UseChatController _controller = UseChatController(
     provider: _buildProvider(),
   );
+  late final ToolRunner _toolRunner = ToolRunner(_controller);
+
+  @override
+  void initState() {
+    super.initState();
+    // Advertise tools to the model and rebuild when a confirmation is pending.
+    _controller.setTools(demoTools);
+    _toolRunner.addListener(_onToolChange);
+  }
+
+  void _onToolChange() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
+    _toolRunner.removeListener(_onToolChange);
+    _toolRunner.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -188,7 +204,7 @@ class _HomePageState extends State<_HomePage> {
             child: IndexedStack(
               index: _tab,
               children: [
-                ChatScreen(controller: _controller),
+                ChatScreen(controller: _controller, toolRunner: _toolRunner),
                 const GalleryScreen(),
               ],
             ),
@@ -202,10 +218,17 @@ class _HomePageState extends State<_HomePage> {
 /// A live chat backed by a [UseChatController] (owned by the parent).
 class ChatScreen extends StatelessWidget {
   /// Creates the chat screen bound to [controller].
-  const ChatScreen({super.key, required this.controller});
+  const ChatScreen({
+    super.key,
+    required this.controller,
+    required this.toolRunner,
+  });
 
   /// The chat controller driving the conversation.
   final UseChatController controller;
+
+  /// Runs model tool calls (auto-exec + confirmations).
+  final ToolRunner toolRunner;
 
   @override
   Widget build(BuildContext context) {
@@ -300,10 +323,15 @@ class ChatScreen extends StatelessWidget {
   // mapping DataParts to AiChainOfThought / AiTask.
   Widget _buildMessage(BuildContext context, AiMessage message) {
     if (message.role == AiRole.user) return AiMessageBubble(message: message);
+    // Tool-result messages are folded into the assistant turn's tool cards.
+    if (message.role == AiRole.tool) return const SizedBox.shrink();
 
+    // Resolve tool results across the whole transcript: with real function
+    // calling the result arrives in a separate tool message, not this one.
     final results = <String, ToolResultPart>{
-      for (final p in message.parts)
-        if (p is ToolResultPart) p.toolCallId: p,
+      for (final m in controller.messages)
+        for (final p in m.parts)
+          if (p is ToolResultPart) p.toolCallId: p,
     };
     final sources = message.parts.whereType<SourcePart>().toList();
     final toolCalls = message.parts.whereType<ToolCallPart>().toList();
@@ -396,6 +424,23 @@ class ChatScreen extends StatelessWidget {
             );
           }
       }
+    }
+
+    // Real tool calls awaiting approval (e.g. book_hotel) get a confirm card.
+    for (final call in toolCalls) {
+      final pending = toolRunner.pending[call.toolCallId];
+      if (pending == null) continue;
+      final info = toolRunner.confirmationFor(pending);
+      add(
+        AiConfirmation(
+          title: info.title,
+          description: info.description,
+          onConfirm: () =>
+              toolRunner.resolveConfirmation(call.toolCallId, approved: true),
+          onDeny: () =>
+              toolRunner.resolveConfirmation(call.toolCallId, approved: false),
+        ),
+      );
     }
 
     if (sources.isNotEmpty) {
