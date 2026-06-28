@@ -18,6 +18,19 @@ class GeminiEventParser {
   bool _started = false;
   int _toolSeq = 0;
   bool _sawToolCall = false;
+  bool _finished = false;
+
+  /// Emits a terminal [MessageFinished] if the stream ended after starting but
+  /// without a `finishReason` (e.g. a dropped connection), so the message isn't
+  /// left streaming forever. Call once after the SSE stream completes.
+  List<AiStreamEvent> finalize() => _started && !_finished
+      ? [
+          MessageFinished(
+            messageId: _messageId,
+            reason: _sawToolCall ? FinishReason.toolCalls : FinishReason.stop,
+          ),
+        ]
+      : const [];
 
   /// Returns the events implied by one decoded `GenerateContentResponse` chunk.
   List<AiStreamEvent> parse(Map<String, Object?> chunk) {
@@ -92,6 +105,7 @@ class GeminiEventParser {
 
     final finishReason = candidate['finishReason'];
     if (finishReason is String) {
+      _finished = true;
       events.add(
         MessageFinished(
           messageId: _messageId,

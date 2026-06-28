@@ -8,8 +8,16 @@ import 'package:flutter_ai_core/flutter_ai_core.dart';
 /// can be unit-tested against recorded chunks.
 class OpenAiChunkParser {
   bool _started = false;
+  bool _finished = false;
   String _messageId = 'assistant';
   final Map<int, String> _toolCallIdByIndex = {};
+
+  /// Emits a terminal [MessageFinished] if the stream ended after starting but
+  /// without a `finish_reason` (e.g. a dropped connection or missing `[DONE]`),
+  /// so the message isn't left streaming forever. Call once after the stream.
+  List<AiStreamEvent> finalize() => _started && !_finished
+      ? [MessageFinished(messageId: _messageId, reason: FinishReason.stop)]
+      : const [];
 
   /// Returns the events implied by one decoded `chat.completion.chunk`.
   List<AiStreamEvent> parse(Map<String, Object?> chunk) {
@@ -42,6 +50,7 @@ class OpenAiChunkParser {
 
     final finishReason = choice['finish_reason'];
     if (finishReason is String) {
+      _finished = true;
       if (finishReason == 'tool_calls') {
         for (final toolCallId in _toolCallIdByIndex.values) {
           events.add(ToolCallReady(toolCallId: toolCallId));

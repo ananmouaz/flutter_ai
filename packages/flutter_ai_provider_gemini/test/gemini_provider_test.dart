@@ -275,4 +275,55 @@ void main() {
         parts.firstWhere((p) => (p as Map).containsKey('inlineData')) as Map;
     expect((inline['inlineData'] as Map)['data'], 'AQID');
   });
+
+  group('GeminiProvider multi-turn & finalize', () {
+    test('mints a unique message id per turn (no cross-turn folding)',
+        () async {
+      const body = 'data: {"candidates":[{"content":{"parts":[{"text":"hi"}]},'
+          '"finishReason":"STOP"}]}\n';
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, _) async {
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode(body)),
+            200,
+          );
+        }),
+      );
+      final processor = MessageProcessor();
+      for (final e
+          in await provider.send(const AiConversation(id: 'c')).toList()) {
+        processor.apply(e);
+      }
+      for (final e
+          in await provider.send(const AiConversation(id: 'c')).toList()) {
+        processor.apply(e);
+      }
+      // Two turns → two distinct assistant messages, not one merged bubble.
+      expect(processor.conversation.messages.length, 2);
+    });
+
+    test('finalizes a stream that ends without a finishReason', () async {
+      const body =
+          'data: {"candidates":[{"content":{"parts":[{"text":"hi"}]}}]}\n';
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, _) async {
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode(body)),
+            200,
+          );
+        }),
+      );
+      final processor = MessageProcessor();
+      for (final e
+          in await provider.send(const AiConversation(id: 'c')).toList()) {
+        processor.apply(e);
+      }
+      expect(
+        processor.conversation.messages.single.status,
+        AiMessageStatus.complete,
+      );
+    });
+  });
 }

@@ -112,6 +112,17 @@ class MessageProcessor {
               state: ToolCallState.inputAvailable,
             ),
           );
+        } else if (accumulator.raw.trim().isEmpty) {
+          // No arguments were streamed — a legitimate zero-argument tool call
+          // (e.g. `get_current_time`). Treat as empty args, not an error.
+          _updateToolCall(
+            messageId,
+            toolCallId,
+            (p) => p.copyWith(
+              args: const {},
+              state: ToolCallState.inputAvailable,
+            ),
+          );
         } else {
           // Malformed arguments: halt this call without crashing the stream.
           _updateToolCall(
@@ -141,8 +152,11 @@ class MessageProcessor {
           :final result,
           :final isError,
         ):
+        // The call lives in the assistant message it was started on, which is
+        // usually *not* the message carrying the result (e.g. a separate
+        // tool-role message). Advance the call's state in its owning message.
         _updateToolCall(
-          messageId,
+          _toolCallToMessage[toolCallId] ?? messageId,
           toolCallId,
           (p) => p.copyWith(
             state:
@@ -186,7 +200,19 @@ class MessageProcessor {
         );
         return _changed(messageId);
 
-      case StreamErrorEvent(:final messageId):
+      case StreamErrorEvent(:final messageId, :final toolCallId):
+        // A tool-scoped error fails only that call; generation continues, so
+        // don't mark the whole message errored (matches UseChatController).
+        if (toolCallId != null) {
+          final callMessageId = _toolCallToMessage[toolCallId];
+          if (callMessageId == null) return _none();
+          _updateToolCall(
+            callMessageId,
+            toolCallId,
+            (p) => p.copyWith(state: ToolCallState.error),
+          );
+          return _changed(callMessageId);
+        }
         if (messageId == null) return _none();
         _mutate(
           messageId,

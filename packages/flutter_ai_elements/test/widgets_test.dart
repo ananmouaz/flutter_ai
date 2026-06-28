@@ -498,6 +498,18 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('AiModelSelector renders nothing (no crash) with no models',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          AiModelSelector(
+              selectedId: 'x', onSelected: (_) {}, models: const []),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.byType(AiModelSelector), findsOneWidget);
+    });
+
     testWidgets('AiConfirmation fires confirm/deny', (tester) async {
       var allowed = false;
       await tester.pumpWidget(

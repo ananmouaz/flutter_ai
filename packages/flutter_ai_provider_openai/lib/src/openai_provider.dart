@@ -95,6 +95,10 @@ class OpenAiProvider implements LlmProvider {
         yield event;
       }
     }
+    // Stream ended — emit a terminal event if no finish_reason/[DONE] arrived.
+    for (final event in parser.finalize()) {
+      yield event;
+    }
   }
 
   /// Closes the underlying HTTP client. Call when the provider is discarded if it
@@ -168,7 +172,9 @@ class OpenAiProvider implements LlmProvider {
             (result) => {
               'role': 'tool',
               'tool_call_id': result.toolCallId,
-              'content': jsonEncode(result.result),
+              'content': result.result is String
+                  ? result.result as String
+                  : jsonEncode(result.result),
             },
           );
 

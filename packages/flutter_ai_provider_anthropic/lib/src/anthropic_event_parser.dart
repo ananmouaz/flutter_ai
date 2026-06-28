@@ -16,11 +16,24 @@ class AnthropicEventParser {
   String _messageId = 'assistant';
   final Map<int, String> _toolCallIdByIndex = {};
   String _stopReason = 'end_turn';
+  bool _started = false;
+  bool _finished = false;
+
+  /// Emits a terminal [MessageFinished] if the stream ended after starting but
+  /// without a `message_stop` (e.g. a dropped connection), so the message isn't
+  /// left streaming forever. Call once after the SSE stream completes.
+  List<AiStreamEvent> finalize() => _started && !_finished
+      ? [
+          MessageFinished(
+              messageId: _messageId, reason: _mapFinish(_stopReason))
+        ]
+      : const [];
 
   /// Returns the events implied by one decoded Anthropic stream event.
   List<AiStreamEvent> parse(Map<String, Object?> event) {
     switch (event['type']) {
       case 'message_start':
+        _started = true;
         final message = (event['message'] as Map?)?.cast<String, Object?>();
         final id = message?['id'];
         if (id is String && id.isNotEmpty) _messageId = id;
@@ -79,6 +92,7 @@ class AnthropicEventParser {
         return const [];
 
       case 'message_stop':
+        _finished = true;
         return [
           MessageFinished(
               messageId: _messageId, reason: _mapFinish(_stopReason)),
