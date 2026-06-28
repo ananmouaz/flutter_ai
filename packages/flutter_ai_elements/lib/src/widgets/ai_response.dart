@@ -254,7 +254,12 @@ class _AiResponseState extends State<AiResponse> {
       }
       if (char == '*' || char == '_') {
         final end = text.indexOf(char, i + 1);
-        if (end != -1 && end > i + 1) {
+        // Avoid false emphasis on prose: require non-space right after the
+        // opening marker (so "2 * 3" isn't italic), and for `_` skip intraword
+        // use (so identifiers like `snake_case` aren't italicized).
+        final prev = i > 0 ? text[i - 1] : ' ';
+        final intraword = char == '_' && RegExp(r'[A-Za-z0-9]').hasMatch(prev);
+        if (!intraword && end > i + 1 && text[i + 1] != ' ') {
           flush();
           spans.addAll(
             _inline(

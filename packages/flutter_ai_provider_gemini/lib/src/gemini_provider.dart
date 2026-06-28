@@ -59,6 +59,10 @@ class GeminiProvider implements LlmProvider {
   final Uri _baseUrl;
   final http.Client _client;
 
+  // Mints a unique message id per response — Gemini's stream carries no id of
+  // its own, and a fixed id would make multi-turn replies fold into one message.
+  int _responseSeq = 0;
+
   @override
   Stream<AiStreamEvent> send(
     AiConversation conversation, {
@@ -104,7 +108,7 @@ class GeminiProvider implements LlmProvider {
       return;
     }
 
-    final parser = GeminiEventParser();
+    final parser = GeminiEventParser(messageId: 'gemini-${_responseSeq++}');
     final lines =
         response.stream.transform(utf8.decoder).transform(const LineSplitter());
     await for (final line in lines) {
@@ -121,6 +125,10 @@ class GeminiProvider implements LlmProvider {
       for (final event in parser.parse(chunk)) {
         yield event;
       }
+    }
+    // Stream ended — emit a terminal event if Gemini didn't send a finishReason.
+    for (final event in parser.finalize()) {
+      yield event;
     }
   }
 

@@ -118,6 +118,10 @@ class AnthropicProvider implements LlmProvider {
         yield event;
       }
     }
+    // Stream ended — emit a terminal event if no `message_stop` arrived.
+    for (final event in parser.finalize()) {
+      yield event;
+    }
   }
 
   /// Closes the underlying HTTP client. Call when the provider is discarded if
@@ -171,7 +175,9 @@ class AnthropicProvider implements LlmProvider {
               {
                 'type': 'tool_result',
                 'tool_use_id': result.toolCallId,
-                'content': jsonEncode(result.result),
+                'content': result.result is String
+                    ? result.result as String
+                    : jsonEncode(result.result),
                 if (result.isError) 'is_error': true,
               },
           ]);

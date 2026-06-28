@@ -172,8 +172,85 @@ void main() {
       expect(processor.conversation.messages.map((m) => m.id), ['m1', 'm2']);
     });
   });
+
+  group('MessageProcessor tool fixes', () {
+    ToolCallPart callOf(MutationResult r, String mid, String cid) =>
+        r.conversation
+            .messageById(mid)!
+            .parts
+            .whereType<ToolCallPart>()
+            .firstWhere((p) => p.toolCallId == cid);
+
+    test('a zero-argument tool call becomes inputAvailable, not error', () {
+      final processor = MessageProcessor();
+      processor.apply(
+        const MessageStarted(messageId: 'm1', role: AiRole.assistant),
+      );
+      processor.apply(
+        const ToolCallStarted(
+          messageId: 'm1',
+          toolCallId: 'c1',
+          toolName: 'refresh',
+        ),
+      );
+      final r = processor.apply(const ToolCallReady(toolCallId: 'c1'));
+      final call = callOf(r, 'm1', 'c1');
+      expect(call.state, ToolCallState.inputAvailable);
+      expect(call.args, isEmpty);
+      expect(
+        r.conversation.messageById('m1')!.parts.whereType<ToolResultPart>(),
+        isEmpty,
+      );
+    });
+
+    test('a result in a separate message advances the call to outputAvailable',
+        () {
+      final processor = MessageProcessor();
+      processor.apply(
+        const MessageStarted(messageId: 'a1', role: AiRole.assistant),
+      );
+      processor.apply(
+        const ToolCallStarted(
+          messageId: 'a1',
+          toolCallId: 'c1',
+          toolName: 'get_weather',
+        ),
+      );
+      processor.apply(const ToolCallReady(toolCallId: 'c1'));
+      // Result arrives in a separate tool-role message (as addToolResults does).
+      final r = processor.apply(
+        const ToolResultReceived(
+          messageId: 't1',
+          toolCallId: 'c1',
+          result: {'tempC': 18},
+        ),
+      );
+      expect(callOf(r, 'a1', 'c1').state, ToolCallState.outputAvailable);
+    });
+
+    test('a tool-scoped error marks only the call, not the whole message', () {
+      final processor = MessageProcessor();
+      processor.apply(
+        const MessageStarted(messageId: 'a1', role: AiRole.assistant),
+      );
+      processor.apply(
+        const ToolCallStarted(
+          messageId: 'a1',
+          toolCallId: 'c1',
+          toolName: 'get_weather',
+        ),
+      );
+      final r = processor.apply(
+        const StreamErrorEvent(error: 'tool failed', toolCallId: 'c1'),
+      );
+      final message = r.conversation.messageById('a1')!;
+      expect(callOf(r, 'a1', 'c1').state, ToolCallState.error);
+      expect(message.status, AiMessageStatus.streaming); // message not killed
+    });
+  });
 }
 
+/// The first tool call across the processor's conversation.
 ToolCallPart _firstToolCall(MessageProcessor processor) =>
     processor.conversation.messages
         .expand((m) => m.parts)

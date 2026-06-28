@@ -2,9 +2,9 @@
 ///
 /// Declared in the core — without a Flutter dependency — so models and contracts
 /// can reference the seam, while UI packages provide the concrete widget-
-/// producing implementation (the default being Markdown via
-/// `flutter_markdown_plus`). Hosts inject a custom [TextRenderer] to swap in
-/// their own parser or to support dialects such as LaTeX or custom tags.
+/// producing implementation (the default in `flutter_ai_elements` is a
+/// dependency-free Markdown renderer). Hosts inject a custom [TextRenderer] to
+/// swap in their own parser or to support dialects such as LaTeX or custom tags.
 ///
 /// The type parameter [T] is the rendered output — a `Widget` in the UI layer,
 /// or any representation in non-UI contexts (tests, server-side rendering).

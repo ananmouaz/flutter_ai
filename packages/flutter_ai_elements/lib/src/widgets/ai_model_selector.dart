@@ -45,18 +45,24 @@ class AiModelSelector extends StatelessWidget {
   /// Called with the chosen model id.
   final ValueChanged<String> onSelected;
 
-  AiModelOption get _selected => models.firstWhere(
-        (m) => m.id == selectedId,
-        orElse: () => models.first,
-      );
+  AiModelOption? get _selected {
+    if (models.isEmpty) return null;
+    return models.firstWhere(
+      (m) => m.id == selectedId,
+      orElse: () => models.first,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
+    // Nothing to select yet (e.g. models still loading) — render nothing.
+    final selected = _selected;
+    if (selected == null) return const SizedBox.shrink();
     final color = DefaultTextStyle.of(context).style.color;
     return Semantics(
       button: true,
-      label: 'Select model, ${_selected.label}',
+      label: 'Select model, ${selected.label}',
       child: GestureDetector(
         onTap: () => unawaited(_open(context)),
         child: Container(
@@ -69,7 +75,7 @@ class AiModelSelector extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _selected.label,
+                selected.label,
                 style: theme.textStyle.copyWith(fontSize: 13, color: color),
               ),
               const SizedBox(width: 2),

@@ -78,6 +78,17 @@ class _AiComposerState extends State<AiComposer> {
       widget.controller ?? (_internalController ??= TextEditingController());
 
   @override
+  void didUpdateWidget(AiComposer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If a parent starts supplying its own controller, drop the internal one we
+    // lazily created so it doesn't leak (and we stop driving a stale field).
+    if (widget.controller != null && _internalController != null) {
+      _internalController!.dispose();
+      _internalController = null;
+    }
+  }
+
+  @override
   void dispose() {
     _internalController?.dispose();
     super.dispose();

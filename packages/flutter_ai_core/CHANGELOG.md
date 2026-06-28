@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.1
+
+Bug fixes in `MessageProcessor`:
+- Zero-argument tool calls (a `ToolCallReady` with no streamed arguments) now
+  resolve to empty args + `inputAvailable` instead of being marked errored.
+- A `ToolResultReceived` whose `messageId` differs from the call's message (the
+  normal case — results arrive in a separate tool-role message) now correctly
+  advances the original call to `outputAvailable`.
+- A tool-scoped `StreamErrorEvent` (with `toolCallId`) now marks only that call
+  errored and lets generation continue, instead of failing the whole message —
+  matching `UseChatController`.
+- Doc fix: corrected a stale reference to `flutter_markdown_plus`.
+
 ## 0.1.0
 
 Initial release.
