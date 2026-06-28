@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.41.5
+          channel: stable
+          cache: true
+
+      - run: flutter --version
+
+      # One resolve for the whole pub workspace.
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: dart analyze
+
+      # Test every package that has a test/ dir. Flutter packages use
+      # `flutter test`; pure-Dart packages use `dart test`.
+      - name: Test packages
+        run: |
+          set -euo pipefail
+          for pkg in packages/*/; do
+            [ -d "${pkg}test" ] || continue
+            echo "::group::test ${pkg}"
+            if grep -q "sdk: flutter" "${pkg}pubspec.yaml"; then
+              (cd "$pkg" && flutter test)
+            else
+              (cd "$pkg" && dart test)
+            fi
+            echo "::endgroup::"
+          done

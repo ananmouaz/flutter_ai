@@ -15,10 +15,6 @@ topics:
   - streaming
   - widgets
 
-# Not publishable yet: depends on sibling packages via local paths. Switch to
-# hosted version constraints once they are on pub.dev.
-publish_to: none
-
 environment:
   sdk: ^3.6.0
   flutter: ">=3.27.0"
@@ -28,10 +24,8 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  flutter_ai_client:
-    path: ../flutter_ai_client
-  flutter_ai_core:
-    path: ../flutter_ai_core
+  flutter_ai_client: ^0.1.0
+  flutter_ai_core: ^0.1.0
 
 dev_dependencies:
   flutter_test:

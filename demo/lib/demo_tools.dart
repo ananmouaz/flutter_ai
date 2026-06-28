@@ -11,7 +11,8 @@ import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 const List<ToolDefinition> demoTools = [
   ToolDefinition(
     name: 'get_weather',
-    description: 'Get the current weather for a city. Call this whenever the '
+    description:
+        'Get the current weather for a city. Call this whenever the '
         'user asks about weather.',
     parametersSchema: {
       'type': 'object',
@@ -23,7 +24,8 @@ const List<ToolDefinition> demoTools = [
   ),
   ToolDefinition(
     name: 'book_hotel',
-    description: 'Book a hotel room in a city for a number of nights. This '
+    description:
+        'Book a hotel room in a city for a number of nights. This '
         'charges the user, so it must be confirmed first.',
     parametersSchema: {
       'type': 'object',
@@ -83,7 +85,8 @@ class ToolRunner extends ChangeNotifier {
     final city = call.args['city'] as String? ?? 'the city';
     final nights = (call.args['nights'] as num?)?.toInt() ?? 1;
     return (
-      title: 'Book Hotel Lisboa in $city for $nights night${nights == 1 ? '' : 's'}?',
+      title:
+          'Book Hotel Lisboa in $city for $nights night${nights == 1 ? '' : 's'}?',
       description: 'Estimated total €${nights * 210} · free cancellation',
     );
   }
