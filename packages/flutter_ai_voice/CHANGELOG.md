@@ -11,3 +11,5 @@ Initial release.
   a buffering fallback for streaming.
 - Dependency-free; concrete engines (Whisper, cloud, platform) plug in behind
   the interface.
+- `Transcript` has value equality (`==`/`hashCode`), consistent with its
+  segments.

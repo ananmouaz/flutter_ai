@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_ai_core/flutter_ai_core.dart';
@@ -20,14 +21,17 @@ class OpenAiProvider implements LlmProvider {
   /// [apiKey] authenticates requests. [baseUrl] defaults to the public OpenAI
   /// v1 endpoint; override it for Azure OpenAI, a proxy, or a compatible server.
   /// [client] is injectable (defaults to a new [http.Client]). [defaultModel] is
-  /// used when [AiRequestOptions.model] is not set.
+  /// used when [AiRequestOptions.model] is not set. [timeout] bounds both the
+  /// initial connection and the idle gap between streamed chunks.
   OpenAiProvider({
     required this.apiKey,
     Uri? baseUrl,
     http.Client? client,
     this.defaultModel = 'gpt-4o-mini',
     this.maxRetries = 2,
+    this.timeout = const Duration(seconds: 60),
   })  : _baseUrl = baseUrl ?? Uri.parse('https://api.openai.com/v1'),
+        _ownsClient = client == null,
         _client = client ?? http.Client();
 
   /// The API key sent as a bearer token.
@@ -41,8 +45,17 @@ class OpenAiProvider implements LlmProvider {
   /// `Retry-After` header. Retries happen before any events stream.
   final int maxRetries;
 
+  /// Bounds the initial connection (a connect timeout is retried like a network
+  /// error) and the idle gap between streamed chunks (a mid-stream stall yields
+  /// a terminal error instead of hanging forever).
+  final Duration timeout;
+
   final Uri _baseUrl;
   final http.Client _client;
+
+  /// Whether this provider created [_client] itself (vs. an injected one).
+  /// [close] only closes a client it owns.
+  final bool _ownsClient;
 
   @override
   Stream<AiStreamEvent> send(
@@ -67,6 +80,7 @@ class OpenAiProvider implements LlmProvider {
         client: _client,
         maxRetries: maxRetries,
         label: 'OpenAI',
+        timeout: timeout,
         build: () => http.Request('POST', _endpoint())
           ..headers['authorization'] = 'Bearer $apiKey'
           ..headers['content-type'] = 'application/json'
@@ -78,22 +92,42 @@ class OpenAiProvider implements LlmProvider {
     }
 
     final parser = OpenAiChunkParser();
-    final lines =
-        response.stream.transform(utf8.decoder).transform(const LineSplitter());
-    await for (final line in lines) {
-      final trimmed = line.trim();
-      if (!trimmed.startsWith('data:')) continue;
-      final data = trimmed.substring(5).trim();
-      if (data == '[DONE]') break;
-      final Map<String, Object?> chunk;
-      try {
-        chunk = (jsonDecode(data) as Map).cast<String, Object?>();
-      } on FormatException {
-        continue; // skip malformed keep-alive or partial lines
+    // Idle timeout: a stall longer than [timeout] between chunks aborts the
+    // `await for` with a TimeoutException instead of hanging forever.
+    final lines = response.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .timeout(timeout);
+    try {
+      await for (final line in lines) {
+        final trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        final data = trimmed.substring(5).trim();
+        if (data == '[DONE]') break;
+        try {
+          final Map<String, Object?> chunk;
+          try {
+            chunk = (jsonDecode(data) as Map).cast<String, Object?>();
+          } on FormatException {
+            continue; // skip malformed keep-alive or partial lines
+          }
+          for (final event in parser.parse(chunk)) {
+            yield event;
+          }
+        } on Object catch (error) {
+          // A valid-JSON-but-wrong-shape chunk must not kill the whole stream;
+          // surface it as a StreamErrorEvent and skip the bad chunk.
+          yield StreamErrorEvent(error: error);
+          continue;
+        }
       }
-      for (final event in parser.parse(chunk)) {
+    } on TimeoutException catch (error) {
+      // A mid-stream stall: surface the error, finalize, and stop.
+      yield StreamErrorEvent(error: error);
+      for (final event in parser.finalize()) {
         yield event;
       }
+      return;
     }
     // Stream ended — emit a terminal event if no finish_reason/[DONE] arrived.
     for (final event in parser.finalize()) {
@@ -101,9 +135,12 @@ class OpenAiProvider implements LlmProvider {
     }
   }
 
-  /// Closes the underlying HTTP client. Call when the provider is discarded if it
-  /// created its own client.
-  void close() => _client.close();
+  /// Closes the underlying HTTP client, but only if this provider created it.
+  /// When a `client` was injected, `close` is a no-op so a shared client isn't
+  /// torn out from under its owner.
+  void close() {
+    if (_ownsClient) _client.close();
+  }
 
   Uri _endpoint() {
     final base = _baseUrl.toString().replaceAll(RegExp(r'/+$'), '');

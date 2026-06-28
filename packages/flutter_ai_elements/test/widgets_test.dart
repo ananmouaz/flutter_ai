@@ -56,7 +56,8 @@ void main() {
       );
       expect(find.text('Hello there'), findsOneWidget);
       final align = tester.widget<Align>(find.byType(Align).first);
-      expect(align.alignment, Alignment.centerRight);
+      // Directional so it mirrors correctly under RTL (end == right in LTR).
+      expect(align.alignment, AlignmentDirectional.centerEnd);
     });
 
     testWidgets('excludes semantics while streaming', (tester) async {
@@ -359,6 +360,46 @@ void main() {
       expect(find.text('Model'), findsOneWidget); // header cell
       expect(find.text('Flash'), findsOneWidget); // body cell
       expect(find.text('Slower'), findsOneWidget);
+    });
+
+    testWidgets('AiResponse updates when its text changes (cache refresh)',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(const SingleChildScrollView(child: AiResponse(text: 'first'))),
+      );
+      expect(find.text('first'), findsOneWidget);
+      // Re-pump with new text: the cached tree must be rebuilt (didUpdateWidget).
+      await tester.pumpWidget(
+        _wrap(const SingleChildScrollView(child: AiResponse(text: 'second'))),
+      );
+      expect(find.text('first'), findsNothing);
+      expect(find.text('second'), findsOneWidget);
+    });
+
+    testWidgets('AiResponse does not italicize "2 * 3" or snake_case',
+        (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        _wrap(
+          SingleChildScrollView(
+            child: AiResponse(
+              text: 'compute 2 * 3 with snake_case and a '
+                  '[link](https://example.com)',
+              onLinkTap: (_) => taps++,
+            ),
+          ),
+        ),
+      );
+      final rich = tester.widget<RichText>(find.byType(RichText).first);
+      var sawItalic = false;
+      rich.text.visitChildren((span) {
+        if (span is TextSpan && span.style?.fontStyle == FontStyle.italic) {
+          sawItalic = true;
+        }
+        return true;
+      });
+      expect(sawItalic, isFalse);
+      expect(taps, 0); // sanity: link present, callback wired but untapped
     });
 
     testWidgets('AiChainOfThought reveals steps when expanded', (tester) async {

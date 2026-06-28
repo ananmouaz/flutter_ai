@@ -27,8 +27,27 @@ final class Transcript {
       };
 
   @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Transcript &&
+          other.text == text &&
+          _segmentsEqual(other.segments, segments));
+
+  @override
+  int get hashCode => Object.hash(text, Object.hashAll(segments));
+
+  @override
   String toString() => 'Transcript(${text.length} chars, '
       '${segments.length} segments)';
+}
+
+bool _segmentsEqual(List<TranscriptSegment> a, List<TranscriptSegment> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 /// A time-aligned slice of a [Transcript].

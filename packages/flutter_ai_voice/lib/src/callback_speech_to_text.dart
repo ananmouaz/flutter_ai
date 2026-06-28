@@ -51,6 +51,22 @@ class CallbackSpeechToText implements SpeechToText {
     return _transcribe(bytes, language: language);
   }
 
+  /// Transcribes a stream of audio chunks.
+  ///
+  /// **WARNING — this is a batch approximation, NOT real streaming.** It buffers
+  /// the *entire* [audio] stream in memory and emits **nothing** until the
+  /// stream closes, at which point it transcribes the whole buffer in one call
+  /// and yields a single final [TranscriptPartial]. There are no incremental
+  /// (interim) results.
+  ///
+  /// Consequences:
+  /// - **Unbounded memory**: the full audio is held in RAM, so this is unsuitable
+  ///   for long or open-ended live sessions — it will grow without limit.
+  /// - **No live feedback**: callers expecting interim transcripts as the user
+  ///   speaks will see results only after the stream ends.
+  ///
+  /// For genuine live transcription, back [SpeechToText] with an engine that
+  /// supports streaming directly instead of this callback adapter.
   @override
   Stream<TranscriptPartial> transcribeStream(Stream<Uint8List> audio) async* {
     final buffer = <int>[];

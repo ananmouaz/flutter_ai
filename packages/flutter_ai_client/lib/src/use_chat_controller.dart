@@ -68,6 +68,7 @@ class UseChatController extends ChangeNotifier {
 
   ChatStatus _status = ChatStatus.idle;
   Object? _error;
+  StackTrace? _stackTrace;
   StreamSubscription<AiStreamEvent>? _subscription;
   Completer<void>? _turn;
   bool _notifyScheduled = false;
@@ -84,6 +85,9 @@ class UseChatController extends ChangeNotifier {
 
   /// The error from the last failed turn, or `null`.
   Object? get error => _error;
+
+  /// The stack trace captured alongside [error], or `null`.
+  StackTrace? get stackTrace => _stackTrace;
 
   /// How many regenerated versions exist for the latest turn (1 = no
   /// alternatives). Drive an `AiBranch` with this and [branchIndex].
@@ -124,6 +128,7 @@ class UseChatController extends ChangeNotifier {
   Future<void> submit(AiMessage userMessage) {
     _stopActiveStream();
     _error = null;
+    _stackTrace = null;
     _capture = _Capture.reset; // a new user turn starts a fresh branch set
     _processor.reset(_processor.conversation.append(userMessage));
     _status = ChatStatus.submitted;
@@ -139,6 +144,7 @@ class UseChatController extends ChangeNotifier {
     if (lastUser == -1) return Future<void>.value();
     _stopActiveStream();
     _error = null;
+    _stackTrace = null;
     _capture = _Capture.append; // keep the prior version, add a new one
     _processor.reset(
       _processor.conversation.copyWith(messages: all.sublist(0, lastUser + 1)),
@@ -177,6 +183,7 @@ class UseChatController extends ChangeNotifier {
     if (results.isEmpty) return Future<void>.value();
     _stopActiveStream();
     _error = null;
+    _stackTrace = null;
     _capture = _Capture.update; // continuation of the current version's turn
     _processor.reset(
       _processor.conversation.append(
@@ -230,6 +237,7 @@ class UseChatController extends ChangeNotifier {
     _stopActiveStream();
     _processor.reset(AiConversation.empty(_processor.conversation.id));
     _error = null;
+    _stackTrace = null;
     _status = ChatStatus.idle;
     _branches = [];
     _branchIndex = 0;
@@ -276,11 +284,19 @@ class UseChatController extends ChangeNotifier {
       (event) {
         _processor.apply(event);
         if (!_events.isClosed) _events.add(event);
-        // A message-level error event puts the turn into the error state (a
-        // tool-scoped error is left to the tool result instead).
+        // A message-scoped error event is fatal: record the error and tear the
+        // turn down so a misbehaving provider cannot keep mutating the
+        // conversation past the failure. A tool-scoped error is left to the
+        // tool result instead and streaming continues.
         if (event is StreamErrorEvent && event.toolCallId == null) {
           _error = event.error;
           _status = ChatStatus.error;
+          final sub = _subscription;
+          _subscription = null;
+          if (sub != null) unawaited(sub.cancel());
+          _completeTurn();
+          _scheduleNotify();
+          return;
         } else if (_status == ChatStatus.submitted) {
           _status = ChatStatus.streaming;
         }
@@ -288,6 +304,7 @@ class UseChatController extends ChangeNotifier {
       },
       onError: (Object error, StackTrace stackTrace) {
         _error = error;
+        _stackTrace = stackTrace;
         _status = ChatStatus.error;
         final last = _processor.conversation.lastMessage;
         if (last != null && last.status == AiMessageStatus.streaming) {

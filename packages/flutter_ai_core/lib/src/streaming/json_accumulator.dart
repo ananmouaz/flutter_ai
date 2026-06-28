@@ -175,11 +175,15 @@ String? _repair(String source) {
           state = _afterValue;
           markSafe(i);
         } else {
-          // A number or keyword. If it runs to the end of the buffer we treat
-          // it as complete (best effort); should it turn out to be a partial
-          // token like "tru", the repaired string simply fails to decode and
-          // the caller keeps its last good partial.
-          i = _scanLiteral(source, i);
+          // A number or keyword. It only counts as complete once a structural
+          // delimiter or whitespace terminates it — otherwise a buffer like
+          // `1234` might be a truncated prefix of `123456`, a *different*
+          // scalar, which would violate the prefix contract. An unterminated
+          // trailing literal is therefore excluded from the safe cut, exactly
+          // as an unterminated string is.
+          final end = _scanLiteral(source, i);
+          if (end == length) break scan; // literal runs to the buffer end
+          i = end;
           state = _afterValue;
           markSafe(i);
         }

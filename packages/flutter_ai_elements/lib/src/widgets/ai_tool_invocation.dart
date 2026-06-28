@@ -52,34 +52,39 @@ class _AiToolInvocationState extends State<AiToolInvocation> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(icon, size: 16, color: iconColor),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.call.toolName,
-                      style: theme.codeStyle.copyWith(color: baseColor),
-                      overflow: TextOverflow.ellipsis,
+          Semantics(
+            button: true,
+            expanded: _expanded,
+            child: InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 16, color: iconColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.call.toolName,
+                        style: theme.codeStyle.copyWith(color: baseColor),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  Text(
-                    _stateLabel(widget.call.state),
-                    style: theme.codeStyle.copyWith(
+                    Text(
+                      _stateLabel(widget.call.state),
+                      style: theme.codeStyle.copyWith(
+                        color: baseColor?.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                    Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                      size: 18,
                       color: baseColor?.withValues(alpha: 0.6),
-                      fontSize: 12,
                     ),
-                  ),
-                  Icon(
-                    _expanded ? Icons.expand_less : Icons.expand_more,
-                    size: 18,
-                    color: baseColor?.withValues(alpha: 0.6),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

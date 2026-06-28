@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_ai_provider_anthropic/flutter_ai_provider_anthropic.dart';
 import 'package:test/test.dart';
 
-/// Live smoke test against the real Gemini API. Skipped unless ANTHROPIC_API_KEY
+/// Live smoke test against the real Anthropic API. Skipped unless ANTHROPIC_API_KEY
 /// is set, so it's safe in CI. Run with:
 ///   ANTHROPIC_API_KEY=... dart test test/live_test.dart
 void main() {

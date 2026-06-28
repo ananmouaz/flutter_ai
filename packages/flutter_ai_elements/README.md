@@ -93,5 +93,5 @@ AiChat(controller: controller, textRenderer: MyMarkdownRenderer());
 
 ## Status
 
-`0.1.0`. Depends on sibling packages via local paths (`publish_to: none`) until
-they are published. See [`example/`](example/) for a full app.
+`0.1.0`. Published on pub.dev; depends on the sibling `flutter_ai` packages.
+See [`example/`](example/) for a full app.

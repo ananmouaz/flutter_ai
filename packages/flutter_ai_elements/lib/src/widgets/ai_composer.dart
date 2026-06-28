@@ -135,7 +135,8 @@ class _AiComposerState extends State<AiComposer> {
         text: text,
         style: theme.textStyle.copyWith(color: theme.assistantTextColor),
       ),
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
     )..layout(maxWidth: textWidth);
     return painter.didExceedMaxLines;
@@ -161,7 +162,7 @@ class _AiComposerState extends State<AiComposer> {
                   children: [
                     for (final file in widget.attachments)
                       Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsetsDirectional.only(end: 8),
                         child: _AttachmentPreview(
                           file: file,
                           theme: theme,
@@ -253,8 +254,8 @@ class _AiComposerState extends State<AiComposer> {
                         if (attach != null) attach,
                         Expanded(
                           child: Padding(
-                            padding: EdgeInsets.only(
-                              left: widget.onAttach == null ? 10 : 2,
+                            padding: EdgeInsetsDirectional.only(
+                              start: widget.onAttach == null ? 10 : 2,
                             ),
                             child: field,
                           ),
@@ -403,9 +404,9 @@ class _AttachmentPreview extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         content,
-        Positioned(
+        PositionedDirectional(
           top: -6,
-          right: -6,
+          end: -6,
           child: GestureDetector(
             onTap: onRemove,
             child: Container(

@@ -1,8 +1,15 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:http/http.dart' as http;
 
-/// Sends [build]'s request, retrying transient failures (network errors, HTTP
-/// 429, and 5xx) up to [maxRetries] times with exponential backoff that honors
-/// a `Retry-After` header. A fresh request is built per attempt.
+/// Sends [build]'s request, retrying transient failures (network errors,
+/// connect timeouts, HTTP 429, and 5xx) up to [maxRetries] times with
+/// exponential backoff (capped and jittered) that honors a `Retry-After`
+/// header. A fresh request is built per attempt.
+///
+/// Each `send` attempt is bounded by [timeout]; a connect timeout is treated as
+/// a transient failure and retried like a network error.
 ///
 /// Returns the `200` streamed response. Retries only happen *before* the body
 /// is consumed — once a 200 stream starts, the caller owns it. Throws the
@@ -14,11 +21,12 @@ Future<http.StreamedResponse> connectWithRetry({
   required http.Request Function() build,
   required int maxRetries,
   required String label,
+  required Duration timeout,
 }) async {
   for (var attempt = 0;; attempt++) {
     final http.StreamedResponse response;
     try {
-      response = await client.send(build());
+      response = await client.send(build()).timeout(timeout);
     } on Object {
       if (attempt < maxRetries) {
         await Future<void>.delayed(_backoff(attempt));
@@ -44,7 +52,21 @@ Future<http.StreamedResponse> connectWithRetry({
 
 bool _isRetryable(int code) => code == 429 || (code >= 500 && code < 600);
 
-Duration _backoff(int attempt) => Duration(milliseconds: 400 * (1 << attempt));
+final _random = Random();
+
+/// Exponential backoff, capped at 30s, with randomized jitter so retries from
+/// many clients don't synchronize. The base doubles per attempt up to the cap,
+/// then a random 0–100% jitter of the (capped) base is added on top.
+Duration _backoff(int attempt) {
+  const base = Duration(milliseconds: 400);
+  const cap = Duration(seconds: 30);
+  // Guard against overflow on large attempt counts before comparing to the cap.
+  final shift = attempt.clamp(0, 30);
+  final scaledMs = base.inMilliseconds * (1 << shift);
+  final cappedMs = min(cap.inMilliseconds, scaledMs);
+  final jitterMs = _random.nextInt(cappedMs + 1);
+  return Duration(milliseconds: cappedMs + jitterMs);
+}
 
 Duration? _retryAfter(String? header) {
   final seconds = int.tryParse(header?.trim() ?? '');

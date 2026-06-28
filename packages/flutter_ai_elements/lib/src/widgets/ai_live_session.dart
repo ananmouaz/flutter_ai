@@ -139,9 +139,47 @@ class _AiLiveSessionState extends State<AiLiveSession>
           builder: (context, constraints) {
             final w = constraints.maxWidth;
             final h = constraints.maxHeight;
+
+            // Static subtree — does NOT depend on the animation, so it is built
+            // once and handed to the AnimatedBuilder via `child:` instead of
+            // rebuilding at 60fps with the orb.
+            final controls = Positioned(
+              left: 0,
+              right: 0,
+              bottom: 28,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (widget.onKeyboard != null)
+                    _CircleButton(
+                      icon: Icons.keyboard_outlined,
+                      label: 'Keyboard',
+                      onTap: widget.onKeyboard,
+                    ),
+                  if (widget.onMute != null)
+                    _CircleButton(
+                      icon:
+                          widget.muted ? Icons.mic_off : Icons.mic_none_rounded,
+                      label: widget.muted ? 'Unmute' : 'Mute',
+                      onTap: widget.onMute,
+                    ),
+                  if (widget.onEnd != null)
+                    _CircleButton(
+                      icon: Icons.close,
+                      label: 'End',
+                      onTap: widget.onEnd,
+                      filled: true,
+                    ),
+                ],
+              ),
+            );
+
             return AnimatedBuilder(
               animation: Listenable.merge([_breathe, _intro, _dock]),
-              builder: (context, _) {
+              // The conversation/control subtree is the static child; only the
+              // orb and the animated opacities/positions are rebuilt per frame.
+              child: controls,
+              builder: (context, child) {
                 final intro = Curves.easeOut.transform(_intro.value);
                 final dock = Curves.easeOutCubic.transform(_dock.value);
                 final breathe =
@@ -200,7 +238,9 @@ class _AiLiveSessionState extends State<AiLiveSession>
                       height: orb,
                       child: Opacity(
                         opacity: intro,
-                        child: _Orb(breathe: breathe, react: react),
+                        child: RepaintBoundary(
+                          child: _Orb(breathe: breathe, react: react),
+                        ),
                       ),
                     ),
                     // Live transcript under the centered orb (pre-dock only).
@@ -224,38 +264,8 @@ class _AiLiveSessionState extends State<AiLiveSession>
                           ),
                         ),
                       ),
-                    // Controls.
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 28,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (widget.onKeyboard != null)
-                            _CircleButton(
-                              icon: Icons.keyboard_outlined,
-                              label: 'Keyboard',
-                              onTap: widget.onKeyboard,
-                            ),
-                          if (widget.onMute != null)
-                            _CircleButton(
-                              icon: widget.muted
-                                  ? Icons.mic_off
-                                  : Icons.mic_none_rounded,
-                              label: widget.muted ? 'Unmute' : 'Mute',
-                              onTap: widget.onMute,
-                            ),
-                          if (widget.onEnd != null)
-                            _CircleButton(
-                              icon: Icons.close,
-                              label: 'End',
-                              onTap: widget.onEnd,
-                              filled: true,
-                            ),
-                        ],
-                      ),
-                    ),
+                    // Controls (static child, not rebuilt per frame).
+                    child!,
                   ],
                 );
               },

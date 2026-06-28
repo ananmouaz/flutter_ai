@@ -93,40 +93,44 @@ Future<void> showAiMessageActions(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
     builder: (sheetContext) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.copy),
-            title: const Text('Copy'),
-            onTap: () {
-              if (onCopy != null) {
-                onCopy();
-              } else {
-                unawaited(Clipboard.setData(ClipboardData(text: message.text)));
-              }
-              Navigator.of(sheetContext).pop();
-            },
-          ),
-          if (onRegenerate != null)
+      // Scrollable so the actions never overflow in landscape / small heights.
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             ListTile(
-              leading: const Icon(Icons.refresh),
-              title: const Text('Regenerate'),
+              leading: const Icon(Icons.copy),
+              title: const Text('Copy'),
               onTap: () {
-                onRegenerate();
+                if (onCopy != null) {
+                  onCopy();
+                } else {
+                  unawaited(
+                      Clipboard.setData(ClipboardData(text: message.text)));
+                }
                 Navigator.of(sheetContext).pop();
               },
             ),
-          if (onEdit != null)
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit'),
-              onTap: () {
-                onEdit();
-                Navigator.of(sheetContext).pop();
-              },
-            ),
-        ],
+            if (onRegenerate != null)
+              ListTile(
+                leading: const Icon(Icons.refresh),
+                title: const Text('Regenerate'),
+                onTap: () {
+                  onRegenerate();
+                  Navigator.of(sheetContext).pop();
+                },
+              ),
+            if (onEdit != null)
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit'),
+                onTap: () {
+                  onEdit();
+                  Navigator.of(sheetContext).pop();
+                },
+              ),
+          ],
+        ),
       ),
     ),
   );

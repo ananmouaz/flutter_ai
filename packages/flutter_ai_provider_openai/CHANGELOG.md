@@ -11,6 +11,10 @@ Initial release.
   tool results) into the request, and streams text, tool calls, and finish
   reasons back as `AiStreamEvent`s.
 - `OpenAiChunkParser` — the chunk→event mapping, unit-tested against recorded SSE.
+- Robustness: configurable connect + idle `timeout` (a stalled stream surfaces a
+  `StreamErrorEvent` instead of hanging); a wrong-shape chunk emits a
+  `StreamErrorEvent` instead of crashing the stream; `close()` only closes a
+  client it created; retry backoff is now capped and jittered.
 - Re-exports `flutter_ai_core`.
 
 > The mapping is unit-tested against recorded SSE chunks; it has not been run

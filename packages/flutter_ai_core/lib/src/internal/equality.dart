@@ -42,12 +42,12 @@ int deepHash(Object? value) {
     return Object.hashAll(value.map(deepHash));
   }
   if (value is Map) {
-    var hash = 0;
-    for (final entry in value.entries) {
-      // XOR makes the combination commutative, so ordering does not matter.
-      hash ^= Object.hash(deepHash(entry.key), deepHash(entry.value));
-    }
-    return hash;
+    // Hash the per-entry pairs unordered so insertion order does not matter,
+    // while giving better distribution than XOR-folding the entry hashes.
+    return Object.hashAllUnordered([
+      for (final entry in value.entries)
+        Object.hash(deepHash(entry.key), deepHash(entry.value)),
+    ]);
   }
   return value.hashCode;
 }

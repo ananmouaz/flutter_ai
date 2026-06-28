@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_ai_provider_gemini/flutter_ai_provider_gemini.dart';
@@ -233,6 +235,131 @@ void main() {
           .send(const AiConversation(id: 'c', messages: []))
           .toList();
       expect(events.single, isA<StreamErrorEvent>());
+    });
+
+    test('emits a StreamErrorEvent when the transport throws', () async {
+      final provider = GeminiProvider(
+        apiKey: 'test',
+        client: MockClient.streaming((request, bodyStream) async {
+          throw const SocketException('connection refused');
+        }),
+      );
+      final events = await provider
+          .send(const AiConversation(id: 'c', messages: []))
+          .toList();
+      expect(events.single, isA<StreamErrorEvent>());
+    });
+
+    test('retries a transient 503 then succeeds', () async {
+      var calls = 0;
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, _) async {
+          calls++;
+          if (calls == 1) {
+            return http.StreamedResponse(
+              Stream<List<int>>.value(utf8.encode('busy')),
+              503,
+            );
+          }
+          const body =
+              'data: {"candidates":[{"content":{},"finishReason":"STOP"}]}\n';
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode(body)),
+            200,
+          );
+        }),
+      );
+      final events = await provider
+          .send(const AiConversation(id: 'c', messages: []))
+          .toList();
+      expect(calls, 2);
+      expect(events.whereType<StreamErrorEvent>(), isEmpty);
+    });
+
+    test('emits a StreamErrorEvent on a wrong-shape chunk without throwing',
+        () async {
+      // Valid JSON, wrong shape: `candidates: [null]` makes the parser's cast
+      // throw; the stream must continue past the bad chunk, not die.
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: _sseClient(_dataLines([
+          {
+            'candidates': [null],
+          },
+          {
+            'candidates': [
+              {
+                'content': {
+                  'parts': [
+                    {'text': 'ok'},
+                  ],
+                },
+                'finishReason': 'STOP',
+              },
+            ],
+          },
+        ])),
+      );
+      final events = await provider
+          .send(const AiConversation(id: 'c', messages: []))
+          .toList();
+      expect(events.whereType<StreamErrorEvent>(), isNotEmpty);
+      expect(events.whereType<TextDelta>().map((e) => e.delta), contains('ok'));
+    });
+
+    test('emits StreamErrorEvent + MessageFinished when the stream stalls',
+        () async {
+      final controller = StreamController<List<int>>();
+      controller.add(utf8.encode(
+        'data: {"candidates":[{"content":{"parts":[{"text":"hi"}]}}]}\n',
+      ));
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        timeout: const Duration(milliseconds: 50),
+        client: MockClient.streaming((request, _) async {
+          return http.StreamedResponse(controller.stream, 200);
+        }),
+      );
+      final events = await provider
+          .send(const AiConversation(id: 'c', messages: []))
+          .toList();
+      await controller.close();
+      expect(events.whereType<StreamErrorEvent>(), isNotEmpty);
+      expect(events.whereType<MessageFinished>(), isNotEmpty);
+    });
+
+    test('omits googleSearch when function tools are present with grounding',
+        () async {
+      late http.Request captured;
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        enableGrounding: true,
+        client: MockClient.streaming((request, _) async {
+          captured = request as http.Request;
+          const body =
+              'data: {"candidates":[{"content":{},"finishReason":"STOP"}]}\n';
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode(body)),
+            200,
+          );
+        }),
+      );
+      await provider.send(
+        const AiConversation(id: 'c', messages: []),
+        tools: [
+          const ToolDefinition(
+            name: 'get_weather',
+            description: 'Look up weather',
+            parametersSchema: {'type': 'object'},
+          ),
+        ],
+      ).toList();
+      final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+      final tools = (body['tools']! as List).cast<Map<String, Object?>>();
+      // Function declarations win; googleSearch is dropped to avoid a 400.
+      expect(tools.any((t) => t.containsKey('functionDeclarations')), isTrue);
+      expect(tools.any((t) => t.containsKey('googleSearch')), isFalse);
     });
   });
 

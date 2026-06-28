@@ -94,24 +94,30 @@ class AiModelSelector extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      // Bounded + scrollable so a long model list (or landscape) doesn't
+      // overflow the sheet.
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final model in models)
-              ListTile(
-                title: Text(model.label),
-                subtitle:
-                    model.description == null ? null : Text(model.description!),
-                trailing: model.id == selectedId
-                    ? const Icon(Icons.check, color: Color(0xFF16A34A))
-                    : null,
-                onTap: () {
-                  onSelected(model.id);
-                  Navigator.of(sheetContext).pop();
-                },
-              ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final model in models)
+                ListTile(
+                  title: Text(model.label),
+                  subtitle: model.description == null
+                      ? null
+                      : Text(model.description!),
+                  trailing: model.id == selectedId
+                      ? const Icon(Icons.check, color: Color(0xFF16A34A))
+                      : null,
+                  onTap: () {
+                    onSelected(model.id);
+                    Navigator.of(sheetContext).pop();
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
