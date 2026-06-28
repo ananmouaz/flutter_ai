@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a problem with a flutter_ai package
+labels: [bug]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - flutter_ai_core
+        - flutter_ai_client
+        - flutter_ai_elements
+        - flutter_ai_tools
+        - flutter_ai_voice
+        - flutter_ai_provider_openai
+        - flutter_ai_provider_anthropic
+        - flutter_ai_provider_gemini
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: A minimal code snippet or steps. The smaller, the faster we can help.
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Output of `flutter --version`, target platform(s), package version(s).
+      render: text
+    validations:
+      required: true

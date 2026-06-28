@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & discussion
+    url: https://github.com/ananmouaz/flutter_ai/discussions
+    about: Ask questions or share ideas here.
