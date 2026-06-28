@@ -92,7 +92,10 @@ void main() {
         ...parser.parse({
           'type': 'content_block_delta',
           'index': 1,
-          'delta': {'type': 'input_json_delta', 'partial_json': 'ty":"London"}'},
+          'delta': {
+            'type': 'input_json_delta',
+            'partial_json': 'ty":"London"}'
+          },
         }),
         ...parser.parse({'type': 'content_block_stop', 'index': 1}),
         ...parser.parse({
@@ -102,7 +105,8 @@ void main() {
         ...parser.parse({'type': 'message_stop'}),
       ];
 
-      expect(events.whereType<ToolCallStarted>().single.toolName, 'get_weather');
+      expect(
+          events.whereType<ToolCallStarted>().single.toolName, 'get_weather');
       expect(events.whereType<ToolCallDelta>().map((e) => e.argumentsDelta), [
         '{"ci',
         'ty":"London"}',
@@ -200,23 +204,25 @@ void main() {
         }),
       );
 
-      await provider.send(
-        const AiConversation(
-          id: 'c',
-          messages: [
-            AiMessage(
-              id: 's',
-              role: AiRole.system,
-              parts: [TextPart('Be terse.')],
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(
+                  id: 's',
+                  role: AiRole.system,
+                  parts: [TextPart('Be terse.')],
+                ),
+                AiMessage(
+                  id: 'u',
+                  role: AiRole.user,
+                  parts: [TextPart('Hi')],
+                ),
+              ],
             ),
-            AiMessage(
-              id: 'u',
-              role: AiRole.user,
-              parts: [TextPart('Hi')],
-            ),
-          ],
-        ),
-      ).toList();
+          )
+          .toList();
 
       expect(captured.headers['x-api-key'], 'sk-test');
       expect(captured.headers['anthropic-version'], '2023-06-01');

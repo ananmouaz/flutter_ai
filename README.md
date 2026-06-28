@@ -1,67 +1,173 @@
 # flutter_ai
 
-A family of Flutter/Dart packages for building AI chat and agent experiences —
-the Flutter answer to Vercel AI Elements + AI SDK. It adopts Elements' proven
-component vocabulary while rendering through a mobile-first, 2026-era design
-system, on top of un-opinionated, provider-neutral logic packages.
+[![CI](https://github.com/ananmouaz/flutter_ai/actions/workflows/ci.yml/badge.svg)](https://github.com/ananmouaz/flutter_ai/actions/workflows/ci.yml)
+[![License: BSD-3](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
-> Design stance: copy Vercel Elements' **component contract and behavior**, not
-> its shadcn web skin. Render through a `ThemeExtension`-driven mobile design
-> system. State-manager- and provider-agnostic throughout.
-
-See [`docs/`](docs/) for the full specs (overview, architecture, per-package
-specs, roadmap).
-
-## Demo
-
-A showcase app lives in [`demo/`](demo/) — a live chat plus a gallery of every
-element. The chat streams reasoning → a tool call → the answer → a citation,
-with the composer swapping Send for Stop mid-stream:
+**Build AI chat in Flutter in minutes.** A family of small, focused packages —
+the Flutter answer to Vercel's AI SDK + AI Elements. Drop in a polished chat UI,
+or compose the pieces yourself. Provider-agnostic (OpenAI, Anthropic, Gemini),
+state-manager-agnostic, mobile-first.
 
 <img src="demo/screenshots/chat.gif" width="280" alt="flutter_ai chat demo" />
 
-Browse the full [element gallery](demo/README.md#elements).
+## How it fits together
+
+`core` is the foundation everything stands on · `providers` talk to the AI ·
+`client` runs the conversation · `elements` shows it. Tools & voice are optional.
+
+```
+                          YOUR FLUTTER APP
+                                 │  drops in widgets
+                                 ▼
+        ┌─────────────────────────────────────────────────┐
+        │            flutter_ai_elements   (UI)            │
+        │   AiChat · AiComposer · AiResponse ·             │
+        │   AiLiveSession · AiSources · AiToolGroup ...    │
+        └───────────────────────┬─────────────────────────┘
+                                 │ bound to
+                                 ▼
+        ┌─────────────────────────────────────────────────┐
+        │           flutter_ai_client   (the brain)        │
+        │   UseChatController  — the “useChat” controller  │
+        └───────────────────────┬─────────────────────────┘
+                                 │ calls LlmProvider.send()
+        ┌────────────────┬───────┴────────┬────────────────┐
+        ▼                ▼                ▼
+  provider_openai   provider_anthropic  provider_gemini   ──►  the AI APIs
+        └────────────────┴───────┬────────┴────────────────┘
+                                 │ all speak one contract: LlmProvider → AiStreamEvent
+                                 ▼
+        ┌─────────────────────────────────────────────────┐
+        │          flutter_ai_core   (foundation)          │
+        │  models · AiStreamEvent · LlmProvider ·          │
+        │  MessageProcessor · ToolDefinition               │
+        └─────────────────────────────────────────────────┘
+              ▲                                   ▲
+     optional │                                   │ optional
+     ┌────────┴────────┐                 ┌────────┴────────┐
+     │ flutter_ai_tools│                 │ flutter_ai_voice│
+     │  (tool calling) │                 │ (speech-to-text)│
+     └─────────────────┘                 └─────────────────┘
+```
+
+**What happens when you send a message:**
+
+```
+You type → AiComposer → UseChatController.sendText()
+                              │
+                              ▼
+                  provider.send(conversation)  ───►  LLM API (streams back)
+                              │                            │
+            AiStreamEvents  ◄─┴────────────────────────────┘
+                              │
+            MessageProcessor folds events → updated AiConversation
+                              │
+            controller notifies → AiChat rebuilds → reply streams in
+```
+
+## Quick start
+
+A minimal app is **one UI package + one provider**:
+
+```yaml
+dependencies:
+  flutter_ai_elements: ^0.1.0
+  flutter_ai_provider_openai: ^0.1.0   # or _anthropic / _gemini
+```
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/flutter_ai_elements.dart';
+import 'package:flutter_ai_provider_openai/flutter_ai_provider_openai.dart';
+
+void main() => runApp(const MyApp());
+
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final controller = UseChatController(
+    provider: OpenAiProvider(apiKey: const String.fromEnvironment('OPENAI_API_KEY')),
+  );
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+        home: Scaffold(
+          body: SafeArea(
+            child: Column(
+              children: [
+                Expanded(child: AiChat(controller: controller)),
+                AiPromptInput(controller: controller),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+```
+
+That streams responses, renders Markdown/code/tables, and swaps Send↔Stop while
+generating. Swap `OpenAiProvider` for `AnthropicProvider` or `GeminiProvider` to
+change models — nothing else changes.
+
+## Which package do I need?
+
+| I want to… | Add |
+|---|---|
+| A full chat UI, fast | `flutter_ai_elements` (pulls in client + core) |
+| Talk to a model | a provider: `…_openai`, `…_anthropic`, or `…_gemini` |
+| Drive chat with my own UI | `flutter_ai_client` |
+| Tools / function calling | `flutter_ai_tools` |
+| Voice input | `flutter_ai_voice` (+ an STT plugin) |
+| Build my own provider/widgets | `flutter_ai_core` only |
 
 ## Packages
 
-| Package | Status | Description |
-|---|---|---|
-| [`flutter_ai_core`](packages/flutter_ai_core) | ✅ 0.1.0 | Dependency-free models, streaming `MessageProcessor`, provider/renderer contracts |
-| [`flutter_ai_client`](packages/flutter_ai_client) | ✅ 0.1.0 | Provider abstraction + `UseChatController` (Listenable) |
-| [`flutter_ai_elements`](packages/flutter_ai_elements) | ✅ 0.1.0 | 22 UI components + `AiThemeExtension`: `AiChat`, `AiPromptInput`, `AiMessageBubble`, `AiResponse` (Markdown), `AiToolInvocation`, `AiReasoning`, `AiChainOfThought`, `AiTask`, `AiSources`, `AiInlineCitation`, `AiCodeBlock`, `AiImage`, `AiBranch`, `AiAttachment`, `AiMessageActions`, `AiSuggestions`, `AiAvatar`, `AiEmptyState`, `AiErrorBanner`, … |
-| [`flutter_ai_tools`](packages/flutter_ai_tools) | ✅ 0.1.0 | Tool calling (`ToolSpec`, `ToolRegistry`), web search adapter |
-| [`flutter_ai_provider_openai`](packages/flutter_ai_provider_openai) | ✅ 0.1.0 | OpenAI-compatible streaming `LlmProvider` |
-| [`flutter_ai_voice`](packages/flutter_ai_voice) | ✅ 0.1.0 | Speech-to-text contracts + models (engine-agnostic) |
-| `flutter_ai_provider_local` | ⏳ deferred | On-device inference (FFI; needs native toolchain) |
+| Package | Description |
+|---|---|
+| [`flutter_ai_core`](packages/flutter_ai_core) | Foundation (pure Dart): models, `AiStreamEvent`, `MessageProcessor`, `LlmProvider` & renderer contracts |
+| [`flutter_ai_client`](packages/flutter_ai_client) | `UseChatController` — a `Listenable` chat controller (optimistic send, cancel, regenerate, branches, tool results) |
+| [`flutter_ai_elements`](packages/flutter_ai_elements) | 30+ UI widgets + `AiThemeExtension`: `AiChat`, `AiComposer`, `AiResponse` (Markdown), `AiToolGroup`, `AiReasoning`, `AiSources`, `AiLiveSession`, … |
+| [`flutter_ai_tools`](packages/flutter_ai_tools) | Tool calling (`ToolSpec`, `ToolRegistry`) + web-search adapter |
+| [`flutter_ai_voice`](packages/flutter_ai_voice) | Engine-agnostic speech-to-text contracts |
+| [`flutter_ai_provider_openai`](packages/flutter_ai_provider_openai) | OpenAI-compatible streaming provider (also works with Gemini's OpenAI endpoint) |
+| [`flutter_ai_provider_anthropic`](packages/flutter_ai_provider_anthropic) | Anthropic (Claude) Messages API provider |
+| [`flutter_ai_provider_gemini`](packages/flutter_ai_provider_gemini) | Native Gemini provider with Google Search **grounding → citations** |
 
-## Repository layout
+## Demo
 
-This is a [pub workspace](https://dart.dev/tools/pub/workspaces) (Dart ≥ 3.6):
-one shared dependency resolution and one strict, shared `analysis_options.yaml`
-across all packages.
+A showcase app lives in [`demo/`](demo/) — a live chat (streams reasoning → tool
+call → answer → citation), real function calling, Live voice mode, and a gallery
+of every element. Run it against a real model:
 
-```
-flutter_ai/
-├── analysis_options.yaml   # shared strict lints for every package
-├── pubspec.yaml            # workspace root
-├── docs/                   # specs & roadmap
-└── packages/
-    ├── flutter_ai_core/             # the foundation (pure Dart)
-    ├── flutter_ai_client/           # UseChatController
-    ├── flutter_ai_elements/         # UI + AiThemeExtension
-    ├── flutter_ai_tools/            # tool calling + web search (pure Dart)
-    ├── flutter_ai_provider_openai/  # OpenAI streaming provider
-    └── flutter_ai_voice/            # speech-to-text contracts (pure Dart)
+```bash
+cd demo
+flutter run --dart-define=GEMINI_API_KEY=your_key   # or OPENAI/ANTHROPIC
 ```
 
 ## Development
 
+This is a [pub workspace](https://dart.dev/tools/pub/workspaces) (Dart ≥ 3.6) —
+one resolution, one shared strict `analysis_options.yaml`.
+
 ```bash
-dart pub get                              # resolve the whole workspace
-dart analyze .                            # lint every package
-dart format .                             # format every package
-cd packages/flutter_ai_core && dart test  # run a package's tests
+flutter pub get                 # resolve the whole workspace
+dart format .                   # format every package
+dart analyze                    # lint every package
+# run a package's tests:
+cd packages/flutter_ai_core && dart test
 ```
+
+CI runs format + analyze + every package's tests on each PR.
 
 ## License
 

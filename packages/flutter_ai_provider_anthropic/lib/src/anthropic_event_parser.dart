@@ -80,12 +80,14 @@ class AnthropicEventParser {
 
       case 'message_stop':
         return [
-          MessageFinished(messageId: _messageId, reason: _mapFinish(_stopReason)),
+          MessageFinished(
+              messageId: _messageId, reason: _mapFinish(_stopReason)),
         ];
 
       case 'error':
         final error = (event['error'] as Map?)?.cast<String, Object?>();
-        final message = error?['message'] as String? ?? 'Anthropic stream error';
+        final message =
+            error?['message'] as String? ?? 'Anthropic stream error';
         return [StreamErrorEvent(error: message, messageId: _messageId)];
 
       default:

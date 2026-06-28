@@ -14,18 +14,13 @@ topics:
   - chat
   - flutter
 
-# Not publishable yet: depends on flutter_ai_core via a local path. Switch to a
-# hosted version constraint once that package is on pub.dev.
-publish_to: none
-
 environment:
   sdk: ^3.6.0
 
 resolution: workspace
 
 dependencies:
-  flutter_ai_core:
-    path: ../flutter_ai_core
+  flutter_ai_core: ^0.1.0
 
 dev_dependencies:
   lints: ^5.0.0

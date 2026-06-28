@@ -94,7 +94,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     // Send via the composer (the "Trigger an error" chip may be off-screen).
     await tester.enterText(find.byType(TextField), 'trigger an error');
-    await tester.pump(); // let the composer swap Live → Send now that text exists
+    await tester
+        .pump(); // let the composer swap Live → Send now that text exists
     await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
     await tester.pump();
     for (var i = 0; i < 8; i++) {

@@ -149,13 +149,11 @@ class AnthropicProvider implements LlmProvider {
           systemBuffer.write(message.text);
         case AiRole.user:
           addContent('user', [
-            if (message.text.isNotEmpty)
-              {'type': 'text', 'text': message.text},
+            if (message.text.isNotEmpty) {'type': 'text', 'text': message.text},
           ]);
         case AiRole.assistant:
           addContent('assistant', [
-            if (message.text.isNotEmpty)
-              {'type': 'text', 'text': message.text},
+            if (message.text.isNotEmpty) {'type': 'text', 'text': message.text},
             for (final call in message.parts.whereType<ToolCallPart>())
               {
                 'type': 'tool_use',
