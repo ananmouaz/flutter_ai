@@ -1,5 +1,7 @@
 # flutter_ai_provider_anthropic
 
+<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_message_assistant.png" width="300" alt="Reasoning, tool call, and answer"/></p>
+
 An Anthropic (Claude) [`LlmProvider`](../flutter_ai_core) for the `flutter_ai`
 family. It streams the Anthropic **Messages API** and maps each event to
 `AiStreamEvent`s, so the controllers and UI in `flutter_ai_client` /
