@@ -1,5 +1,9 @@
 # flutter_ai_core
 
+<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/chat.gif" width="300" alt="Streaming chat"/></p>
+
+<sub>The live transcript above is produced by this package's <code>MessageProcessor</code> folding provider events into messages (rendered with <code>flutter_ai_elements</code>).</sub>
+
 Dependency-free Dart foundation for building AI chat experiences — the shared
 contract layer of the [`flutter_ai`](../../README.md) package family.
 

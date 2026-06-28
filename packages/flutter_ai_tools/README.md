@@ -1,5 +1,10 @@
 # flutter_ai_tools
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_tool_group.png" width="240" alt="Tool calls"/>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_confirmation.png" width="240" alt="Confirmation card"/>
+</p>
+
 Provider-neutral tool calling for the [`flutter_ai`](../../README.md) family.
 Pure Dart, no Flutter dependency.
 

@@ -8,7 +8,13 @@ the Flutter answer to Vercel's AI SDK + AI Elements. Drop in a polished chat UI,
 or compose the pieces yourself. Provider-agnostic (OpenAI, Anthropic, Gemini),
 state-manager-agnostic, mobile-first.
 
-<img src="demo/screenshots/chat.gif" width="280" alt="flutter_ai chat demo" />
+<p>
+  <img src="demo/screenshots/chat.gif" width="250" alt="flutter_ai chat demo" />
+  <img src="demo/screenshots/live_orb.png" width="125" alt="Live voice mode" />
+  <img src="demo/screenshots/element_tool_group.png" width="220" alt="Tool calls" />
+</p>
+
+<sub>Streaming chat with reasoning, tool calls, citations · Live voice mode · light & dark.</sub>
 
 ## How it fits together
 

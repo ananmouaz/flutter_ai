@@ -160,6 +160,45 @@ void main() {
       matchesGoldenFile('shots/dark_preview.png'),
     );
   });
+
+  testWidgets('live voice', (tester) async {
+    Widget app() => const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Color(0xFF000000),
+        body: AiLiveSession(
+          status: AiLiveStatus.listening,
+          amplitude: 0.45,
+          transcript: '"Plan a weekend in Lisbon"',
+          conversation: AiConversationView(
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
+            messages: [
+              AiMessage(
+                id: 'u1',
+                role: AiRole.user,
+                parts: [TextPart('Plan a weekend in Lisbon')],
+              ),
+              AiMessage(
+                id: 'a1',
+                role: AiRole.assistant,
+                parts: [
+                  TextPart(
+                    'Belém and Alfama on day one, a Sintra day trip on day two.',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(app());
+    await tester.pump(const Duration(milliseconds: 320)); // centered orb
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('shots/live_orb.png'),
+    );
+  });
 }
 
 /// Renders a single element inside a content-tight white card so the captured

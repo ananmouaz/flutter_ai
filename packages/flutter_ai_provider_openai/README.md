@@ -1,5 +1,9 @@
 # flutter_ai_provider_openai
 
+<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_response.png" width="300" alt="Streamed Markdown response"/></p>
+
+<sub>Streamed responses render through <code>flutter_ai_elements</code> (<code>AiResponse</code>).</sub>
+
 An OpenAI-compatible `LlmProvider` for the [`flutter_ai`](../../README.md) family.
 
 Streams the OpenAI Chat Completions API and maps each chunk to
