@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_ai_core/flutter_ai_core.dart';
 import 'package:flutter_ai_provider_gemini/src/gemini_event_parser.dart';
+import 'package:flutter_ai_provider_gemini/src/http_retry.dart';
 import 'package:http/http.dart' as http;
 
 /// An `LlmProvider` backed by the **native** Google Gemini API
@@ -37,6 +38,7 @@ class GeminiProvider implements LlmProvider {
     http.Client? client,
     this.defaultModel = 'gemini-2.5-flash',
     this.enableGrounding = false,
+    this.maxRetries = 2,
   })  : _baseUrl = baseUrl ??
             Uri.parse('https://generativelanguage.googleapis.com/v1beta'),
         _client = client ?? http.Client();
@@ -49,6 +51,10 @@ class GeminiProvider implements LlmProvider {
 
   /// Whether to attach the Google Search grounding tool to every request.
   final bool enableGrounding;
+
+  /// How many times to retry the initial connection on a transient failure
+  /// (network error, 429, or 5xx), with backoff honoring `Retry-After`.
+  final int maxRetries;
 
   final Uri _baseUrl;
   final http.Client _client;
@@ -82,24 +88,19 @@ class GeminiProvider implements LlmProvider {
     };
 
     final model = options?.model ?? defaultModel;
-    final request = http.Request('POST', _endpoint(model))
-      ..headers['x-goog-api-key'] = apiKey
-      ..headers['content-type'] = 'application/json'
-      ..body = jsonEncode(payload);
-
     final http.StreamedResponse response;
     try {
-      response = await _client.send(request);
+      response = await connectWithRetry(
+        client: _client,
+        maxRetries: maxRetries,
+        label: 'Gemini',
+        build: () => http.Request('POST', _endpoint(model))
+          ..headers['x-goog-api-key'] = apiKey
+          ..headers['content-type'] = 'application/json'
+          ..body = jsonEncode(payload),
+      );
     } on Object catch (error) {
       yield StreamErrorEvent(error: error);
-      return;
-    }
-
-    if (response.statusCode != 200) {
-      final body = await response.stream.bytesToString();
-      yield StreamErrorEvent(
-        error: 'Gemini request failed (${response.statusCode}): $body',
-      );
       return;
     }
 
@@ -156,6 +157,7 @@ class GeminiProvider implements LlmProvider {
         case AiRole.user:
           add('user', [
             if (message.text.isNotEmpty) {'text': message.text},
+            for (final image in _images(message)) _imagePart(image),
           ]);
         case AiRole.assistant:
           final calls = message.parts.whereType<ToolCallPart>();
@@ -189,6 +191,25 @@ class GeminiProvider implements LlmProvider {
   /// Gemini's `functionResponse.response` must be an object; wrap scalars.
   Map<String, Object?> _asObject(Object? result) =>
       result is Map ? result.cast<String, Object?>() : {'result': result};
+
+  static Iterable<FilePart> _images(AiMessage message) => message.parts
+      .whereType<FilePart>()
+      .where((f) => f.mediaType.startsWith('image/'));
+
+  /// A Gemini image part: `inlineData` for inline bytes, else `fileData`.
+  static Map<String, Object?> _imagePart(FilePart image) => image.bytes != null
+      ? {
+          'inlineData': {
+            'mimeType': image.mediaType,
+            'data': base64Encode(image.bytes!),
+          },
+        }
+      : {
+          'fileData': {
+            'mimeType': image.mediaType,
+            'fileUri': image.url.toString(),
+          },
+        };
 
   List<Map<String, Object?>>? _buildTools(List<ToolDefinition>? tools) {
     final hasFns = tools != null && tools.isNotEmpty;

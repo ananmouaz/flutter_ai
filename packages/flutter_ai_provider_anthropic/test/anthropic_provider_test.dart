@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_ai_provider_anthropic/flutter_ai_provider_anthropic.dart';
 import 'package:http/http.dart' as http;
@@ -234,5 +235,47 @@ void main() {
       expect(messages, hasLength(1)); // system is hoisted out of messages
       expect((messages.single as Map)['role'], 'user');
     });
+  });
+
+  test('encodes image attachments as base64 image blocks', () async {
+    late http.Request captured;
+    final provider = AnthropicProvider(
+      apiKey: 'k',
+      client: MockClient.streaming((request, _) async {
+        captured = request as http.Request;
+        return http.StreamedResponse(
+          Stream<List<int>>.value(
+              utf8.encode('data: {"type":"message_stop"}\n')),
+          200,
+        );
+      }),
+    );
+    await provider
+        .send(
+          AiConversation(
+            id: 'c',
+            messages: [
+              AiMessage(
+                id: 'u',
+                role: AiRole.user,
+                parts: [
+                  const TextPart('what is this?'),
+                  FilePart(
+                      mediaType: 'image/png',
+                      bytes: Uint8List.fromList([1, 2, 3])),
+                ],
+              ),
+            ],
+          ),
+        )
+        .toList();
+    final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+    final content =
+        ((body['messages']! as List).first as Map)['content'] as List;
+    final image =
+        content.firstWhere((p) => (p as Map)['type'] == 'image') as Map;
+    final source = image['source'] as Map;
+    expect(source['media_type'], 'image/png');
+    expect(source['data'], 'AQID');
   });
 }

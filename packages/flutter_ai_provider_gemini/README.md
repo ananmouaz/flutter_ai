@@ -36,8 +36,11 @@ final controller = UseChatController(
 - **Config**: `temperature` / `maxOutputTokens` are sent under
   `generationConfig`; arbitrary extra request fields go via
   `AiRequestOptions.extra`.
-- This release maps **text, thinking, tool, and grounding content**. Image/
-  document parts are not yet sent.
+- **Images**: user-message image attachments (`FilePart` with an `image/*`
+  media type) are sent as `inlineData`/`fileData`. Other document types are not
+  yet sent.
+- **Retry**: transient failures (429/5xx, network) are retried with backoff
+  honoring `Retry-After` (`maxRetries`, default 2).
 
 ## Status
 

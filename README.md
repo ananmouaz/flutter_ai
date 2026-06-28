@@ -167,7 +167,23 @@ dart analyze                    # lint every package
 cd packages/flutter_ai_core && dart test
 ```
 
-CI runs format + analyze + every package's tests on each PR.
+CI runs format + analyze + every package's tests on each PR. To publish, see
+[PUBLISHING.md](PUBLISHING.md).
+
+## Stability
+
+Pre-1.0 (`0.1.x`): the API is stabilizing and may change between minor versions —
+breaking changes will be called out in each package's `CHANGELOG.md`. The core
+contracts (`LlmProvider`, `AiStreamEvent`, `UseChatController`) are the most
+settled. We follow [semver](https://semver.org); 1.0 marks an API-stability
+commitment.
+
+## Contributing
+
+Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and our
+[Code of Conduct](CODE_OF_CONDUCT.md). Provider live tests run against real APIs
+when you set the relevant key (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY` /
+`GEMINI_API_KEY`); they're skipped otherwise.
 
 ## License
 

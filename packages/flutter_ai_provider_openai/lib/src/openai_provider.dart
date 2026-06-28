@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_ai_core/flutter_ai_core.dart';
+import 'package:flutter_ai_provider_openai/src/http_retry.dart';
 import 'package:flutter_ai_provider_openai/src/openai_chunk_parser.dart';
 import 'package:http/http.dart' as http;
 
@@ -25,6 +26,7 @@ class OpenAiProvider implements LlmProvider {
     Uri? baseUrl,
     http.Client? client,
     this.defaultModel = 'gpt-4o-mini',
+    this.maxRetries = 2,
   })  : _baseUrl = baseUrl ?? Uri.parse('https://api.openai.com/v1'),
         _client = client ?? http.Client();
 
@@ -33,6 +35,11 @@ class OpenAiProvider implements LlmProvider {
 
   /// The default model when options don't specify one.
   final String defaultModel;
+
+  /// How many times to retry the initial connection on a transient failure
+  /// (network error, 429, or 5xx), with exponential backoff that honors a
+  /// `Retry-After` header. Retries happen before any events stream.
+  final int maxRetries;
 
   final Uri _baseUrl;
   final http.Client _client;
@@ -54,24 +61,19 @@ class OpenAiProvider implements LlmProvider {
       if (tools != null && tools.isNotEmpty) 'tools': _buildTools(tools),
     };
 
-    final request = http.Request('POST', _endpoint())
-      ..headers['authorization'] = 'Bearer $apiKey'
-      ..headers['content-type'] = 'application/json'
-      ..body = jsonEncode(payload);
-
     final http.StreamedResponse response;
     try {
-      response = await _client.send(request);
+      response = await connectWithRetry(
+        client: _client,
+        maxRetries: maxRetries,
+        label: 'OpenAI',
+        build: () => http.Request('POST', _endpoint())
+          ..headers['authorization'] = 'Bearer $apiKey'
+          ..headers['content-type'] = 'application/json'
+          ..body = jsonEncode(payload),
+      );
     } on Object catch (error) {
       yield StreamErrorEvent(error: error);
-      return;
-    }
-
-    if (response.statusCode != 200) {
-      final body = await response.stream.bytesToString();
-      yield StreamErrorEvent(
-        error: 'OpenAI request failed (${response.statusCode}): $body',
-      );
       return;
     }
 
@@ -111,7 +113,7 @@ class OpenAiProvider implements LlmProvider {
         case AiRole.system:
           messages.add({'role': 'system', 'content': message.text});
         case AiRole.user:
-          messages.add({'role': 'user', 'content': message.text});
+          messages.add({'role': 'user', 'content': _userContent(message)});
         case AiRole.assistant:
           final toolCalls = message.parts.whereType<ToolCallPart>().toList();
           messages.add({
@@ -137,6 +139,29 @@ class OpenAiProvider implements LlmProvider {
     }
     return messages;
   }
+
+  /// A user message's content: a plain string when text-only, or a content
+  /// array with `image_url` parts when it carries image attachments.
+  Object? _userContent(AiMessage message) {
+    final images = message.parts
+        .whereType<FilePart>()
+        .where((f) => f.mediaType.startsWith('image/'))
+        .toList();
+    if (images.isEmpty) return message.text;
+    return [
+      if (message.text.isNotEmpty) {'type': 'text', 'text': message.text},
+      for (final image in images)
+        {
+          'type': 'image_url',
+          'image_url': {'url': _imageUrl(image)},
+        },
+    ];
+  }
+
+  /// A data: URI for inline bytes, else the remote URL.
+  static String _imageUrl(FilePart image) => image.bytes != null
+      ? 'data:${image.mediaType};base64,${base64Encode(image.bytes!)}'
+      : image.url.toString();
 
   Iterable<Map<String, Object?>> _toolResults(AiMessage message) =>
       message.parts.whereType<ToolResultPart>().map(
