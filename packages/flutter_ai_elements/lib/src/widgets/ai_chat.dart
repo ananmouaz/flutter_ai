@@ -58,10 +58,12 @@ class AiChat extends StatefulWidget {
 
 class _AiChatState extends State<AiChat> {
   final ScrollController _scrollController = ScrollController();
+  int _lastCount = 0;
 
   @override
   void initState() {
     super.initState();
+    _lastCount = widget.controller.messages.length;
     widget.controller.addListener(_onChange);
   }
 
@@ -83,13 +85,25 @@ class _AiChatState extends State<AiChat> {
 
   void _onChange() {
     if (!widget.autoScroll) return;
+    final count = widget.controller.messages.length;
+    // A new message (the user's, or a fresh assistant turn) always jumps to the
+    // end; streaming tokens only stick if the user hasn't scrolled away.
+    final newMessage = count > _lastCount;
+    _lastCount = count;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
       final position = _scrollController.position;
-      // Only stick to the bottom if the user hasn't scrolled away.
       final nearBottom = position.maxScrollExtent - position.pixels < 120;
-      if (nearBottom) {
-        _scrollController.jumpTo(position.maxScrollExtent);
+      if (!newMessage && !nearBottom) return;
+      _scrollController.jumpTo(position.maxScrollExtent);
+      // A second pass catches the extent growing as lazy items lay out (a tall
+      // new bubble can exceed the first estimate).
+      if (newMessage) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          }
+        });
       }
     });
   }
