@@ -36,6 +36,20 @@ After publishing a new version, bump the dependents' constraints if you made a
 breaking change, update each `CHANGELOG.md`, and tag the release
 (`git tag vX.Y.Z && git push --tags`).
 
+## README images
+
+Package READMEs use **relative** image paths (`../../demo/screenshots/…`), which
+render on GitHub (including this private repo). **pub.dev does not render relative
+images** — it needs absolute URLs to a public host. Before publishing, either
+make the repo public and rewrite the image links to
+`https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/…`,
+or copy the few hero images into each package and reference them locally. A quick
+rewrite:
+
+```bash
+sed -i '' 's#../../demo/screenshots/#https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/#g' packages/*/README.md
+```
+
 ## Notes
 
 - `flutter_ai_core` already passes `dart pub publish --dry-run` with 0 warnings.

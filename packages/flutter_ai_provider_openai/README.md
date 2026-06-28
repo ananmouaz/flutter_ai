@@ -1,6 +1,6 @@
 # flutter_ai_provider_openai
 
-<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_response.png" width="300" alt="Streamed Markdown response"/></p>
+<p align="center"><img src="../../demo/screenshots/element_response.png" width="300" alt="Streamed Markdown response"/></p>
 
 <sub>Streamed responses render through <code>flutter_ai_elements</code> (<code>AiResponse</code>).</sub>
 

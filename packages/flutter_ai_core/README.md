@@ -1,6 +1,6 @@
 # flutter_ai_core
 
-<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/chat.gif" width="300" alt="Streaming chat"/></p>
+<p align="center"><img src="../../demo/screenshots/chat.gif" width="300" alt="Streaming chat"/></p>
 
 <sub>The live transcript above is produced by this package's <code>MessageProcessor</code> folding provider events into messages (rendered with <code>flutter_ai_elements</code>).</sub>
 

@@ -1,6 +1,6 @@
 # flutter_ai_client
 
-<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/chat.gif" width="300" alt="Live chat driven by UseChatController"/></p>
+<p align="center"><img src="../../demo/screenshots/chat.gif" width="300" alt="Live chat driven by UseChatController"/></p>
 
 Provider-agnostic chat controller for the [`flutter_ai`](../../README.md) family.
 

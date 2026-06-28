@@ -1,6 +1,6 @@
 # flutter_ai_provider_gemini
 
-<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_sources.png" width="300" alt="Grounded source citations"/></p>
+<p align="center"><img src="../../demo/screenshots/element_sources.png" width="300" alt="Grounded source citations"/></p>
 
 <sub>With grounding enabled, answers stream <b>source citations</b> (<code>AiSources</code> / <code>AiInlineCitation</code>).</sub>
 
