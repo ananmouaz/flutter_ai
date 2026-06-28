@@ -467,11 +467,17 @@ class ChatScreen extends StatelessWidget {
               onRegenerate: () => unawaited(controller.regenerate()),
             ),
             const Spacer(),
-            AiBranch(
-              index: 0,
-              total: 2,
-              onNext: () => unawaited(controller.regenerate()),
-            ),
+            // Real regeneration history: only the latest turn has branches.
+            if (message == controller.messages.last &&
+                controller.branchCount > 1)
+              AiBranch(
+                index: controller.branchIndex,
+                total: controller.branchCount,
+                onPrevious: () =>
+                    controller.selectBranch(controller.branchIndex - 1),
+                onNext: () =>
+                    controller.selectBranch(controller.branchIndex + 1),
+              ),
           ],
         ),
       );

@@ -329,6 +329,57 @@ void main() {
       expect(controller.status, ChatStatus.idle);
     });
   });
+
+  group('regeneration branches', () {
+    test('regenerate keeps prior versions; selectBranch navigates them',
+        () async {
+      final provider = _CountingProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u1',
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hi');
+      expect(controller.branchCount, 1);
+      expect(controller.messages.last.text, 'reply 1');
+
+      await controller.regenerate();
+      expect(controller.branchCount, 2);
+      expect(controller.branchIndex, 1);
+      expect(controller.messages.last.text, 'reply 2');
+
+      // Navigate back to the first version.
+      controller.selectBranch(0);
+      expect(controller.branchIndex, 0);
+      expect(controller.messages.last.text, 'reply 1');
+
+      // A new user message resets the branch set.
+      await controller.sendText('again');
+      expect(controller.branchCount, 1);
+      expect(controller.branchIndex, 0);
+    });
+  });
+}
+
+/// A provider whose reply text increments on every call, so regenerated
+/// versions are distinguishable.
+class _CountingProvider implements LlmProvider {
+  int _n = 0;
+
+  @override
+  Stream<AiStreamEvent> send(
+    AiConversation conversation, {
+    List<ToolDefinition>? tools,
+    AiRequestOptions? options,
+  }) async* {
+    _n++;
+    final id = 'a$_n';
+    yield MessageStarted(messageId: id, role: AiRole.assistant);
+    yield TextDelta(messageId: id, delta: 'reply $_n');
+    yield MessageFinished(messageId: id, reason: FinishReason.stop);
+  }
 }
 
 class _ThrowingProvider implements LlmProvider {
