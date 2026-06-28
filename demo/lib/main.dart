@@ -7,7 +7,7 @@ import 'package:flutter_ai_demo/demo_provider.dart';
 import 'package:flutter_ai_demo/demo_tools.dart';
 import 'package:flutter_ai_demo/live_demo.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
-import 'package:flutter_ai_provider_openai/flutter_ai_provider_openai.dart';
+import 'package:flutter_ai_provider_gemini/flutter_ai_provider_gemini.dart';
 
 /// Supply a real Gemini key to talk to live models:
 ///
@@ -16,17 +16,16 @@ import 'package:flutter_ai_provider_openai/flutter_ai_provider_openai.dart';
 /// With no key, the scripted [DemoChatProvider] is used.
 const String _geminiKey = String.fromEnvironment('GEMINI_API_KEY');
 
-/// Gemini exposes an OpenAI-compatible endpoint, so the OpenAI provider works
-/// as-is — just point it at Google's base URL.
+/// Whether the live session runs the native Gemini provider with Google Search
+/// grounding (so answers come back with real source citations). Gemini doesn't
+/// allow grounding + function tools in one request, so when this is on the demo
+/// tools are not advertised.
+const bool _useLiveGemini = _geminiKey != '';
+
+/// The native Gemini provider with grounding enabled, or the scripted demo.
 LlmProvider _buildProvider() {
-  if (_geminiKey.isEmpty) return const DemoChatProvider();
-  return OpenAiProvider(
-    apiKey: _geminiKey,
-    baseUrl: Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/openai',
-    ),
-    defaultModel: demoModels.first.id,
-  );
+  if (!_useLiveGemini) return const DemoChatProvider();
+  return GeminiProvider(apiKey: _geminiKey, enableGrounding: true);
 }
 
 void main() => runApp(const FlutterAiDemoApp());
@@ -101,8 +100,9 @@ class _HomePageState extends State<_HomePage> {
   @override
   void initState() {
     super.initState();
-    // Advertise tools to the model and rebuild when a confirmation is pending.
-    _controller.setTools(demoTools);
+    // Advertise tools, except with live Gemini grounding (Gemini rejects tools +
+    // googleSearch in one request — we showcase grounded citations instead).
+    if (!_useLiveGemini) _controller.setTools(demoTools);
     _toolRunner.addListener(_onToolChange);
   }
 
