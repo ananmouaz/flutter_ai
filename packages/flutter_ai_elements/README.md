@@ -1,16 +1,16 @@
 # flutter_ai_elements
 
-<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/chat.gif" width="300" alt="flutter_ai chat"/></p>
+<p align="center"><img src="../../demo/screenshots/chat.gif" width="300" alt="flutter_ai chat"/></p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_response.png" width="210" alt="Markdown response"/>
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_tool_group.png" width="210" alt="Parallel tool calls"/>
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_sources.png" width="210" alt="Sources"/>
+  <img src="../../demo/screenshots/element_response.png" width="210" alt="Markdown response"/>
+  <img src="../../demo/screenshots/element_tool_group.png" width="210" alt="Parallel tool calls"/>
+  <img src="../../demo/screenshots/element_sources.png" width="210" alt="Sources"/>
 </p>
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_reasoning.png" width="210" alt="Reasoning"/>
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_chain_of_thought.png" width="210" alt="Chain of thought"/>
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_confirmation.png" width="210" alt="Confirmation"/>
+  <img src="../../demo/screenshots/element_reasoning.png" width="210" alt="Reasoning"/>
+  <img src="../../demo/screenshots/element_chain_of_thought.png" width="210" alt="Chain of thought"/>
+  <img src="../../demo/screenshots/element_confirmation.png" width="210" alt="Confirmation"/>
 </p>
 
 Composable, themeable Flutter UI for AI chat — the UI layer of the
