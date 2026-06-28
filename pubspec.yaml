@@ -15,5 +15,6 @@ workspace:
   - packages/flutter_ai_elements
   - packages/flutter_ai_tools
   - packages/flutter_ai_provider_openai
+  - packages/flutter_ai_provider_anthropic
   - packages/flutter_ai_voice
   - demo
