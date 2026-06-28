@@ -3,13 +3,12 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_ai_client/flutter_ai_client.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_composer.dart';
-import 'package:flutter_ai_elements/src/widgets/ai_model_selector.dart';
 
 /// A composer bound to a [UseChatController].
 ///
-/// Beyond text + Send/Stop, it can stage attachments (via [onPickAttachment]),
-/// switch models (via [models], wired to `setOptions`), and trigger voice input
-/// (via [onVoice]). Staged attachments are sent with the next message.
+/// Stages attachments (via [onPickAttachment]) to send with the next message,
+/// offers voice dictation ([onVoice]) and a Live entry point ([onLive]). The
+/// model selector lives in the app bar, not here.
 class AiPromptInput extends StatefulWidget {
   /// Creates a prompt input bound to [controller].
   const AiPromptInput({
@@ -18,7 +17,7 @@ class AiPromptInput extends StatefulWidget {
     this.hintText = 'Message',
     this.onPickAttachment,
     this.onVoice,
-    this.models = const [],
+    this.onLive,
   });
 
   /// The chat controller to drive.
@@ -27,16 +26,15 @@ class AiPromptInput extends StatefulWidget {
   /// Placeholder text for the empty input.
   final String hintText;
 
-  /// Host-provided picker; when non-null an attach (+) button is shown. Return
-  /// the chosen files (image/doc) to stage them for the next message.
+  /// Host-provided picker; when non-null an attach (+) button is shown.
   final Future<List<FilePart>> Function()? onPickAttachment;
 
-  /// Called when the voice button is tapped; when non-null a mic button shows.
+  /// Voice dictation; when non-null a mic button shows while the field is empty.
   final VoidCallback? onVoice;
 
-  /// Models to offer; when non-empty a model selector is shown and selection is
-  /// forwarded to `controller.setOptions`.
-  final List<AiModelOption> models;
+  /// Live voice mode; when non-null the main button is Live while the field is
+  /// empty (and Send once the user types).
+  final VoidCallback? onLive;
 
   @override
   State<AiPromptInput> createState() => _AiPromptInputState();
@@ -44,13 +42,6 @@ class AiPromptInput extends StatefulWidget {
 
 class _AiPromptInputState extends State<AiPromptInput> {
   final List<FilePart> _attachments = [];
-  String? _modelId;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.models.isNotEmpty) _modelId = widget.models.first.id;
-  }
 
   void _send(String text) {
     final staged = List<FilePart>.of(_attachments);
@@ -65,11 +56,6 @@ class _AiPromptInputState extends State<AiPromptInput> {
     }
   }
 
-  void _selectModel(String id) {
-    setState(() => _modelId = id);
-    widget.controller.setOptions(AiRequestOptions(model: id));
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -82,15 +68,9 @@ class _AiPromptInputState extends State<AiPromptInput> {
         onAttach:
             widget.onPickAttachment == null ? null : () => unawaited(_pick()),
         onVoice: widget.onVoice,
+        onLive: widget.onLive,
         attachments: _attachments,
         onRemoveAttachment: (f) => setState(() => _attachments.remove(f)),
-        modelSelector: widget.models.isEmpty
-            ? null
-            : AiModelSelector(
-                models: widget.models,
-                selectedId: _modelId ?? widget.models.first.id,
-                onSelected: _selectModel,
-              ),
       ),
     );
   }

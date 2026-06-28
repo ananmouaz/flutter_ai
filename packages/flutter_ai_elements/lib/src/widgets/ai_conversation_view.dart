@@ -19,7 +19,9 @@ class AiConversationView extends StatelessWidget {
     this.textRenderer = const MarkdownTextRenderer(),
     this.messageBuilder,
     this.showLoader = false,
+    this.loadingBuilder,
     this.padding = const EdgeInsets.all(16),
+    this.maxContentWidth,
   });
 
   /// The messages to display, oldest first.
@@ -35,26 +37,34 @@ class AiConversationView extends StatelessWidget {
   final Widget Function(BuildContext context, AiMessage message)?
       messageBuilder;
 
-  /// Whether to append a thinking [AiLoader] after the last message.
+  /// Whether to append a thinking indicator after the last message.
   final bool showLoader;
+
+  /// Builds the thinking indicator shown when [showLoader] is true. Defaults to
+  /// an `AiLoader`; pass one returning `AiShimmer` for a skeleton instead.
+  final WidgetBuilder? loadingBuilder;
 
   /// Padding around the list.
   final EdgeInsets padding;
 
+  /// On wide screens, centers the conversation at this width (like ChatGPT on
+  /// tablet/desktop). `null` means full-width.
+  final double? maxContentWidth;
+
   @override
   Widget build(BuildContext context) {
     final itemCount = messages.length + (showLoader ? 1 : 0);
-    return ListView.builder(
+    final list = ListView.builder(
       controller: scrollController,
       padding: padding,
       itemCount: itemCount,
       itemBuilder: (context, index) {
         if (showLoader && index == messages.length) {
-          return const Align(
+          return Align(
             alignment: Alignment.centerLeft,
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: AiLoader(),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: loadingBuilder?.call(context) ?? const AiLoader(),
             ),
           );
         }
@@ -62,6 +72,13 @@ class AiConversationView extends StatelessWidget {
         return messageBuilder?.call(context, message) ??
             AiMessageBubble(message: message, textRenderer: textRenderer);
       },
+    );
+    if (maxContentWidth == null) return list;
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxContentWidth!),
+        child: list,
+      ),
     );
   }
 }

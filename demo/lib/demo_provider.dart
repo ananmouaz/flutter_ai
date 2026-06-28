@@ -29,6 +29,11 @@ class DemoChatProvider implements LlmProvider {
       return _recipe(id);
     }
     if (prompt.contains('summar')) return _summary(id);
+    if (prompt.contains('center') ||
+        prompt.contains('widget') ||
+        prompt.contains('code')) {
+      return _code(id);
+    }
     return _trip(id);
   }
 
@@ -93,6 +98,10 @@ class DemoChatProvider implements LlmProvider {
       'tempC': 24,
       'condition': 'Sunny',
     });
+    yield* _tool(id, 'find_hotels', '{"city":"Lisbon","nights":2}', {
+      'count': 12,
+      'topRate': 210,
+    }, tag: 't2');
     yield await _step(
       TextDelta(
         messageId: id,
@@ -104,6 +113,18 @@ class DemoChatProvider implements LlmProvider {
             '- Morning: Time Out Market\n'
             '- Afternoon: day trip to Sintra\n\n'
             'The forecast is **sunny, ~24°C** — pack light!',
+      ),
+    );
+    yield await _step(
+      PartReceived(
+        messageId: id,
+        part: const DataPart(
+          dataType: 'confirmation',
+          data: {
+            'title': 'Reserve Hotel Lisboa for €420?',
+            'description': '2 nights · breakfast included · free cancellation',
+          },
+        ),
       ),
     );
     yield* _image(id, 'lisbon');
@@ -209,17 +230,43 @@ class DemoChatProvider implements LlmProvider {
     String id,
     String name,
     String args,
-    Map<String, Object?> result,
-  ) async* {
+    Map<String, Object?> result, {
+    String tag = 't1',
+  }) async* {
+    final callId = '$id-$tag';
     yield await _step(
-      ToolCallStarted(messageId: id, toolCallId: '$id-t1', toolName: name),
+      ToolCallStarted(messageId: id, toolCallId: callId, toolName: name),
+    );
+    yield await _step(ToolCallDelta(toolCallId: callId, argumentsDelta: args));
+    yield await _step(ToolCallReady(toolCallId: callId));
+    yield await _step(
+      ToolResultReceived(messageId: id, toolCallId: callId, result: result),
+    );
+  }
+
+  Stream<AiStreamEvent> _code(String id) async* {
+    yield MessageStarted(messageId: id, role: AiRole.assistant);
+    yield await _step(
+      ReasoningDelta(messageId: id, delta: 'Recalling the idiomatic way.'),
     );
     yield await _step(
-      ToolCallDelta(toolCallId: '$id-t1', argumentsDelta: args),
+      TextDelta(
+        messageId: id,
+        delta:
+            'Wrap the child in a `Center`:\n\n'
+            '```dart\n'
+            'Center(\n'
+            "  child: Text('Hi'),\n"
+            ')\n'
+            '```\n\n'
+            'For finer control, use `Align` with an `alignment`.',
+      ),
     );
-    yield await _step(ToolCallReady(toolCallId: '$id-t1'));
+    yield* _sources(id, const [
+      ('https://docs.flutter.dev/ui/layout', 'docs.flutter.dev'),
+    ]);
     yield await _step(
-      ToolResultReceived(messageId: id, toolCallId: '$id-t1', result: result),
+      MessageFinished(messageId: id, reason: FinishReason.stop),
     );
   }
 

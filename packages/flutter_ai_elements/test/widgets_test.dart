@@ -342,6 +342,25 @@ void main() {
       expect(find.text('one'), findsOneWidget);
     });
 
+    testWidgets('AiResponse renders a Markdown table', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const SingleChildScrollView(
+            child: AiResponse(
+              text: '| Model | Speed |\n'
+                  '| --- | --- |\n'
+                  '| Flash | Fast |\n'
+                  '| Pro | Slower |',
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(Table), findsOneWidget);
+      expect(find.text('Model'), findsOneWidget); // header cell
+      expect(find.text('Flash'), findsOneWidget); // body cell
+      expect(find.text('Slower'), findsOneWidget);
+    });
+
     testWidgets('AiChainOfThought reveals steps when expanded', (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -398,7 +417,7 @@ void main() {
   });
 
   group('input & more', () {
-    testWidgets('AiComposer shows attach, model, and voice affordances',
+    testWidgets('AiComposer shows attach, mic, and live affordances',
         (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -406,7 +425,7 @@ void main() {
             onSend: (_) {},
             onAttach: () {},
             onVoice: () {},
-            modelSelector: const Text('GPT-4o'),
+            onLive: () {},
             attachments: const [
               FilePart(mediaType: 'application/pdf', name: 'a.pdf'),
             ],
@@ -415,9 +434,22 @@ void main() {
         ),
       );
       expect(find.byIcon(Icons.add), findsOneWidget);
+      // Empty field: mic (secondary) + Live (main).
       expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
-      expect(find.text('GPT-4o'), findsOneWidget);
+      expect(find.byIcon(Icons.graphic_eq), findsOneWidget);
       expect(find.text('a.pdf'), findsOneWidget); // staged attachment preview
+    });
+
+    testWidgets('AiComposer swaps Live for Send once typing', (tester) async {
+      await tester.pumpWidget(
+        _wrap(AiComposer(onSend: (_) {}, onVoice: () {}, onLive: () {})),
+      );
+      expect(find.byIcon(Icons.graphic_eq), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.pump();
+      expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.graphic_eq), findsNothing);
+      expect(find.byIcon(Icons.mic_none_rounded), findsNothing); // mic hidden
     });
 
     testWidgets('AiModelSelector shows selection and opens a picker',

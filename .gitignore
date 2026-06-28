@@ -15,3 +15,5 @@ doc/api/
 
 # Regenerable capture frames (committed assets live in demo/screenshots/)
 demo/test/shots/
+# Golden-test failure diffs
+demo/test/failures/

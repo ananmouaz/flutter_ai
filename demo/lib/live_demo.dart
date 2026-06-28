@@ -7,9 +7,15 @@ import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 /// A full-screen Live voice demo that *simulates* a real-time session: it cycles
 /// listening → thinking → speaking with a scripted transcript and a jittery
 /// amplitude, so the [AiLiveSession] UI can be felt without a real audio engine.
+///
+/// When a [controller] is supplied, its conversation is shown behind the orb so
+/// the drop-and-shrink dock animation has something to reveal (like ChatGPT).
 class LiveDemoScreen extends StatefulWidget {
   /// Creates the live demo screen.
-  const LiveDemoScreen({super.key});
+  const LiveDemoScreen({super.key, this.controller});
+
+  /// The chat whose messages are read aloud / shown behind the orb.
+  final UseChatController? controller;
 
   @override
   State<LiveDemoScreen> createState() => _LiveDemoScreenState();
@@ -79,15 +85,33 @@ class _LiveDemoScreenState extends State<LiveDemoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: AiLiveSession(
-          status: _status,
-          amplitude: _amplitude,
-          transcript: _transcript,
-          muted: _muted,
-          onMute: () => setState(() => _muted = !_muted),
-          onKeyboard: () => Navigator.of(context).pop(),
-          onEnd: () => Navigator.of(context).pop(),
+      backgroundColor: const Color(0xFF000000),
+      body: AiLiveSession(
+        status: _status,
+        amplitude: _amplitude,
+        transcript: _transcript,
+        conversation: _conversation(),
+        muted: _muted,
+        onMute: () => setState(() => _muted = !_muted),
+        onKeyboard: () => Navigator.of(context).pop(),
+        onEnd: () => Navigator.of(context).pop(),
+      ),
+    );
+  }
+
+  // The live transcript behind the orb — the real conversation, themed dark and
+  // pinned to the bottom so the latest turn sits just above the orb.
+  Widget? _conversation() {
+    final controller = widget.controller;
+    // With no prior chat there's nothing to read — fall back to the transcript.
+    if (controller == null || controller.messages.isEmpty) return null;
+    return Theme(
+      data: Theme.of(context).copyWith(extensions: [AiThemeExtension.dark()]),
+      child: ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => AiConversationView(
+          messages: controller.messages,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         ),
       ),
     );

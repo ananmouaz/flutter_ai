@@ -6,6 +6,27 @@ import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/demo_provider.dart';
 import 'package:flutter_ai_demo/live_demo.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
+import 'package:flutter_ai_provider_openai/flutter_ai_provider_openai.dart';
+
+/// Supply a real Gemini key to talk to live models:
+///
+///   flutter run --dart-define=GEMINI_API_KEY=your_key_here
+///
+/// With no key, the scripted [DemoChatProvider] is used.
+const String _geminiKey = String.fromEnvironment('GEMINI_API_KEY');
+
+/// Gemini exposes an OpenAI-compatible endpoint, so the OpenAI provider works
+/// as-is — just point it at Google's base URL.
+LlmProvider _buildProvider() {
+  if (_geminiKey.isEmpty) return const DemoChatProvider();
+  return OpenAiProvider(
+    apiKey: _geminiKey,
+    baseUrl: Uri.parse(
+      'https://generativelanguage.googleapis.com/v1beta/openai',
+    ),
+    defaultModel: demoModels.first.id,
+  );
+}
 
 void main() => runApp(const FlutterAiDemoApp());
 
@@ -70,14 +91,20 @@ class _HomePage extends StatefulWidget {
 
 class _HomePageState extends State<_HomePage> {
   int _tab = 0;
+  String _modelId = demoModels.first.id;
   final UseChatController _controller = UseChatController(
-    provider: const DemoChatProvider(),
+    provider: _buildProvider(),
   );
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _selectModel(String id) {
+    setState(() => _modelId = id);
+    _controller.setOptions(AiRequestOptions(model: id));
   }
 
   @override
@@ -94,12 +121,22 @@ class _HomePageState extends State<_HomePage> {
                   const Text(
                     'flutter_ai',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 24,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
                     ),
                   ),
                   const Spacer(),
+                  // Model selector lives in the app bar (Chat tab).
+                  if (_tab == 0)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: AiModelSelector(
+                        models: demoModels,
+                        selectedId: _modelId,
+                        onSelected: _selectModel,
+                      ),
+                    ),
                   IconButton(
                     icon: Icon(
                       widget.isDark
@@ -109,25 +146,12 @@ class _HomePageState extends State<_HomePage> {
                     tooltip: 'Toggle theme',
                     onPressed: widget.onToggleTheme,
                   ),
-                  // Live voice + new-chat buttons (Chat tab only).
-                  if (_tab == 0) ...[
-                    IconButton(
-                      icon: const Icon(Icons.graphic_eq),
-                      tooltip: 'Live voice',
-                      onPressed: () => unawaited(
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const LiveDemoScreen(),
-                          ),
-                        ),
-                      ),
-                    ),
+                  if (_tab == 0)
                     IconButton(
                       icon: const Icon(Icons.edit_square),
                       tooltip: 'New chat',
                       onPressed: _controller.clear,
                     ),
-                  ],
                 ],
               ),
             ),
@@ -187,19 +211,35 @@ class ChatScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Error banner reacts to controller state.
+        // Context-usage meter + error banner react to controller state.
         ListenableBuilder(
           listenable: controller,
           builder: (context, _) {
-            if (controller.status != ChatStatus.error) {
-              return const SizedBox.shrink();
-            }
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: AiErrorBanner(
-                message: '${controller.error}',
-                onRetry: () => unawaited(controller.regenerate()),
-                onDismiss: controller.clear,
+            final messages = controller.messages.length;
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: Column(
+                  children: [
+                    if (messages > 0)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                        child: AiContextMeter(
+                          usedTokens: 1200 + messages * 850,
+                          totalTokens: 128000,
+                        ),
+                      ),
+                    if (controller.status == ChatStatus.error)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: AiErrorBanner(
+                          message: '${controller.error}',
+                          onRetry: () => unawaited(controller.regenerate()),
+                          onDismiss: controller.clear,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             );
           },
@@ -209,15 +249,30 @@ class ChatScreen extends StatelessWidget {
             controller: controller,
             messageBuilder: _buildMessage,
             emptyState: _emptyState(),
+            loadingBuilder: (_) =>
+                const SizedBox(width: 220, child: AiShimmer()),
+            // Center the conversation on tablets/desktop/web.
+            maxContentWidth: 760,
           ),
         ),
         SafeArea(
           top: false,
-          child: AiPromptInput(
-            controller: controller,
-            models: demoModels,
-            onPickAttachment: _pickAttachment,
-            onVoice: _onVoice,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: AiPromptInput(
+                controller: controller,
+                onPickAttachment: _pickAttachment,
+                onVoice: _onVoice,
+                onLive: () => unawaited(
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => LiveDemoScreen(controller: controller),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -236,6 +291,11 @@ class ChatScreen extends StatelessWidget {
   // Simulates a spoken prompt arriving from the mic.
   void _onVoice() => unawaited(controller.sendText('Suggest a dinner recipe'));
 
+  void _snack(BuildContext context, String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(text), duration: const Duration(seconds: 1)),
+      );
+
   // A tiny generative-UI catalog: render each part with the matching element,
   // mapping DataParts to AiChainOfThought / AiTask.
   Widget _buildMessage(BuildContext context, AiMessage message) {
@@ -246,12 +306,36 @@ class ChatScreen extends StatelessWidget {
         if (p is ToolResultPart) p.toolCallId: p,
     };
     final sources = message.parts.whereType<SourcePart>().toList();
+    final toolCalls = message.parts.whereType<ToolCallPart>().toList();
+    final subdued = DefaultTextStyle.of(
+      context,
+    ).style.color?.withValues(alpha: 0.6);
+    var toolsRendered = false;
 
     final children = <Widget>[];
     void add(Widget w) {
       if (children.isNotEmpty) children.add(const SizedBox(height: 12));
       children.add(w);
     }
+
+    // Assistant identity header (shows AiAvatar).
+    add(
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AiAvatar(role: AiRole.assistant, size: 24),
+          const SizedBox(width: 8),
+          Text(
+            'flutter_ai',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: subdued,
+            ),
+          ),
+        ],
+      ),
+    );
 
     for (final part in message.parts) {
       switch (part) {
@@ -260,7 +344,18 @@ class ChatScreen extends StatelessWidget {
         case TextPart(:final text):
           add(AiResponse(text: text));
         case ToolCallPart():
-          add(AiToolInvocation(call: part, result: results[part.toolCallId]));
+          // Render all tool calls once: a group when parallel, else a card.
+          if (!toolsRendered) {
+            toolsRendered = true;
+            add(
+              toolCalls.length > 1
+                  ? AiToolGroup(calls: toolCalls, results: results)
+                  : AiToolInvocation(
+                      call: part,
+                      result: results[part.toolCallId],
+                    ),
+            );
+          }
         case ToolResultPart():
           break;
         case FilePart():
@@ -290,11 +385,33 @@ class ChatScreen extends StatelessWidget {
                 items: _taskItems(data),
               ),
             );
+          } else if (dataType == 'confirmation') {
+            add(
+              AiConfirmation(
+                title: data['title'] as String? ?? 'Confirm?',
+                description: data['description'] as String?,
+                onConfirm: () => _snack(context, 'Done.'),
+                onDeny: () => _snack(context, 'Cancelled.'),
+              ),
+            );
           }
       }
     }
 
-    if (sources.isNotEmpty) add(AiSources(sources: sources));
+    if (sources.isNotEmpty) {
+      // Numbered inline citations + the full source chips.
+      add(
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (var i = 0; i < sources.length; i++)
+              AiInlineCitation(number: i + 1),
+          ],
+        ),
+      );
+      add(AiSources(sources: sources));
+    }
 
     if (message.status == AiMessageStatus.complete) {
       add(
@@ -380,6 +497,7 @@ class ChatScreen extends StatelessWidget {
           suggestions: const [
             'Plan a weekend in Lisbon',
             'Suggest a dinner recipe',
+            'How do I center a widget?',
             'Summarize this article',
           ],
           onSelected: _onSuggestion,

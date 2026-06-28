@@ -94,6 +94,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     // Send via the composer (the "Trigger an error" chip may be off-screen).
     await tester.enterText(find.byType(TextField), 'trigger an error');
+    await tester.pump(); // let the composer swap Live → Send now that text exists
     await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
     await tester.pump();
     for (var i = 0; i < 8; i++) {
@@ -133,7 +134,8 @@ void main() {
                   ),
                   const SizedBox(height: 12),
                   const AiResponse(
-                    text: '## Day 1\n- Belém Tower & pastéis de nata\n'
+                    text:
+                        '## Day 1\n- Belém Tower & pastéis de nata\n'
                         '- Alfama and the castle\n\nSunny, **~24°C** — pack '
                         'light. See the [guide](https://x.test).',
                   ),
@@ -142,11 +144,7 @@ void main() {
                     onSend: (_) {},
                     onAttach: () {},
                     onVoice: () {},
-                    modelSelector: AiModelSelector(
-                      models: demoModels,
-                      selectedId: 'gpt-4o',
-                      onSelected: (_) {},
-                    ),
+                    onLive: () {},
                   ),
                 ],
               ),

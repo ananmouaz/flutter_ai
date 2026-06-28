@@ -22,6 +22,8 @@ class AiChat extends StatefulWidget {
     this.padding = const EdgeInsets.all(16),
     this.autoScroll = true,
     this.emptyState,
+    this.loadingBuilder,
+    this.maxContentWidth,
   });
 
   /// The chat controller to observe.
@@ -42,6 +44,13 @@ class AiChat extends StatefulWidget {
 
   /// Whether to auto-scroll to the newest message when already near the bottom.
   final bool autoScroll;
+
+  /// Builds the thinking indicator (defaults to `AiLoader`).
+  final WidgetBuilder? loadingBuilder;
+
+  /// On wide screens, centers the conversation at this width. `null` is
+  /// full-width.
+  final double? maxContentWidth;
 
   @override
   State<AiChat> createState() => _AiChatState();
@@ -100,6 +109,8 @@ class _AiChatState extends State<AiChat> {
           scrollController: _scrollController,
           textRenderer: widget.textRenderer,
           messageBuilder: widget.messageBuilder,
+          loadingBuilder: widget.loadingBuilder,
+          maxContentWidth: widget.maxContentWidth,
           padding: widget.padding,
           // Show the loader only while awaiting the first streamed token.
           showLoader: widget.controller.status == ChatStatus.submitted,

@@ -34,21 +34,24 @@ class _AiShimmerState extends State<AiShimmer>
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
     final base = theme.borderColor;
-    final highlight = theme.assistantBubbleColor;
+    // A clearly lighter sweep that works in both light and dark themes.
+    final highlight = Color.lerp(base, Colors.white, 0.5)!;
 
     return Semantics(
       label: 'Loading',
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
-          final t = _controller.value;
+          // Travel the highlight fully across (off-left → off-right) so the
+          // loop is seamless — it's off-screen at both ends.
+          final c = -1.5 + 3.0 * _controller.value;
           return ShaderMask(
             blendMode: BlendMode.srcATop,
             shaderCallback: (rect) => LinearGradient(
-              begin: Alignment(-1 - 2 * (1 - t), 0),
-              end: Alignment(1 - 2 * (1 - t), 0),
+              begin: Alignment(c - 0.7, 0),
+              end: Alignment(c + 0.7, 0),
               colors: [base, highlight, base],
-              stops: const [0.35, 0.5, 0.65],
+              stops: const [0.0, 0.5, 1.0],
             ).createShader(rect),
             child: child,
           );

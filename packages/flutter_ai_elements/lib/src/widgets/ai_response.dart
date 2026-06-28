@@ -122,9 +122,67 @@ class _AiResponseState extends State<AiResponse> {
             ),
           ),
         );
+      case _BlockType.table:
+        return _buildTable(block.rows, theme, base);
       case _BlockType.paragraph:
         return Text.rich(TextSpan(children: _inline(block.text, base, theme)));
     }
+  }
+
+  Widget _buildTable(
+    List<List<String>> rows,
+    AiThemeExtension theme,
+    TextStyle base,
+  ) {
+    if (rows.isEmpty) return const SizedBox.shrink();
+    final cols = rows.first.length;
+    final headerStyle = base.copyWith(fontWeight: FontWeight.w700);
+    // Horizontal scroll keeps wide tables from overflowing the bubble.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.borderColor),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Table(
+            defaultColumnWidth: const IntrinsicColumnWidth(),
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            border: TableBorder.symmetric(
+              inside: BorderSide(color: theme.borderColor),
+            ),
+            children: [
+              for (var r = 0; r < rows.length; r++)
+                TableRow(
+                  decoration: BoxDecoration(
+                    color: r == 0 ? theme.assistantBubbleColor : null,
+                  ),
+                  children: [
+                    for (var c = 0; c < cols; c++)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        child: Text.rich(
+                          TextSpan(
+                            children: _inline(
+                              c < rows[r].length ? rows[r][c] : '',
+                              r == 0 ? headerStyle : base,
+                              theme,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // Inline parsing: **bold**, *italic*/_italic_, `code`, [text](url).
@@ -249,37 +307,51 @@ class MarkdownTextRenderer implements AiTextRenderer {
       AiResponse(text: text, onLinkTap: onLinkTap);
 }
 
-enum _BlockType { paragraph, heading, code, bullet, ordered, quote }
+enum _BlockType { paragraph, heading, code, bullet, ordered, quote, table }
 
 class _Block {
   _Block.paragraph(this.text)
       : type = _BlockType.paragraph,
         level = 0,
         language = null,
-        items = const [];
+        items = const [],
+        rows = const [];
   _Block.heading(this.level, this.text)
       : type = _BlockType.heading,
         language = null,
-        items = const [];
+        items = const [],
+        rows = const [];
   _Block.code(this.text, this.language)
       : type = _BlockType.code,
         level = 0,
-        items = const [];
+        items = const [],
+        rows = const [];
   _Block.quote(this.text)
       : type = _BlockType.quote,
         level = 0,
         language = null,
-        items = const [];
+        items = const [],
+        rows = const [];
   _Block.list(this.type, this.items)
       : level = 0,
         language = null,
-        text = '';
+        text = '',
+        rows = const [];
+  _Block.table(this.rows)
+      : type = _BlockType.table,
+        level = 0,
+        language = null,
+        text = '',
+        items = const [];
 
   final _BlockType type;
   final String text;
   final int level;
   final String? language;
   final List<String> items;
+
+  /// Table cells, first row being the header. Empty for non-tables.
+  final List<List<String>> rows;
 }
 
 List<_Block> _parseBlocks(String source) {
@@ -317,6 +389,20 @@ List<_Block> _parseBlocks(String source) {
     if (heading != null) {
       blocks.add(_Block.heading(heading.group(1)!.length, heading.group(2)!));
       i++;
+      continue;
+    }
+
+    // GFM table: a header row, a `---|---` separator, then body rows.
+    if (_isTableHeaderAt(lines, i)) {
+      final rows = <List<String>>[_splitTableRow(trimmed)];
+      i += 2; // header + separator
+      while (i < lines.length &&
+          lines[i].trim().isNotEmpty &&
+          lines[i].contains('|')) {
+        rows.add(_splitTableRow(lines[i].trim()));
+        i++;
+      }
+      blocks.add(_Block.table(rows));
       continue;
     }
 
@@ -362,6 +448,7 @@ List<_Block> _parseBlocks(String source) {
       if (t.startsWith('```') ||
           t.startsWith('#') ||
           t.startsWith('>') ||
+          _isTableHeaderAt(lines, i) ||
           RegExp(r'^[-*+]\s+').hasMatch(t) ||
           RegExp(r'^\d+\.\s+').hasMatch(t)) {
         break;
@@ -373,4 +460,23 @@ List<_Block> _parseBlocks(String source) {
   }
 
   return blocks;
+}
+
+/// True if line [i] is a table header (contains a pipe) followed by a
+/// `---|:--:` separator row.
+bool _isTableHeaderAt(List<String> lines, int i) {
+  if (i + 1 >= lines.length) return false;
+  if (!lines[i].contains('|')) return false;
+  final sep = lines[i + 1].trim();
+  return sep.contains('-') &&
+      sep.contains('|') &&
+      RegExp(r'^[\s|:-]+$').hasMatch(sep);
+}
+
+/// Splits a `| a | b |` row into trimmed cells, dropping the outer pipes.
+List<String> _splitTableRow(String line) {
+  var s = line.trim();
+  if (s.startsWith('|')) s = s.substring(1);
+  if (s.endsWith('|')) s = s.substring(0, s.length - 1);
+  return s.split('|').map((c) => c.trim()).toList();
 }

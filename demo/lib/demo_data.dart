@@ -14,15 +14,24 @@ final Uint8List sampleImageBytes = base64Decode(
   '3NgAAAAASUVORK5CYII=',
 );
 
-/// Models offered by the demo's model selector.
+/// Models offered by the demo's model selector. These are real Gemini model
+/// ids, so selecting one drives the live provider when a key is supplied.
 const List<AiModelOption> demoModels = [
-  AiModelOption(id: 'gpt-4o', label: 'GPT-4o', description: 'Most capable'),
   AiModelOption(
-    id: 'gpt-4o-mini',
-    label: 'GPT-4o mini',
+    id: 'gemini-2.5-flash',
+    label: 'Gemini 2.5 Flash',
+    description: 'Fast and capable',
+  ),
+  AiModelOption(
+    id: 'gemini-2.0-flash',
+    label: 'Gemini 2.0 Flash',
     description: 'Fast and economical',
   ),
-  AiModelOption(id: 'claude', label: 'Claude', description: 'Great at writing'),
+  AiModelOption(
+    id: 'gemini-2.5-pro',
+    label: 'Gemini 2.5 Pro',
+    description: 'Best reasoning',
+  ),
 ];
 
 /// One entry in the element gallery.
@@ -122,6 +131,24 @@ List<GalleryItem> galleryItems() => [
     ),
   ),
   (
+    name: 'tool_error',
+    title: 'AiToolInvocation — error',
+    child: const AiToolInvocation(
+      call: ToolCallPart(
+        toolCallId: 'e1',
+        toolName: 'charge_card',
+        args: {'amountEur': 420},
+        state: ToolCallState.error,
+      ),
+      result: ToolResultPart(
+        toolCallId: 'e1',
+        result: {'message': 'Card declined: insufficient funds'},
+        isError: true,
+      ),
+      initiallyExpanded: true,
+    ),
+  ),
+  (
     name: 'attachment',
     title: 'AiAttachment',
     child: const AiAttachment(
@@ -203,8 +230,8 @@ List<GalleryItem> galleryItems() => [
   ),
   (
     name: 'branch',
-    title: 'AiBranch — versions',
-    child: const AiBranch(index: 1, total: 3),
+    title: 'AiBranch — versions (tap ‹ ›)',
+    child: const _BranchDemo(),
   ),
   (
     name: 'image',
@@ -219,7 +246,7 @@ List<GalleryItem> galleryItems() => [
     title: 'AiModelSelector',
     child: AiModelSelector(
       models: demoModels,
-      selectedId: 'gpt-4o',
+      selectedId: 'gemini-2.5-flash',
       onSelected: (_) {},
     ),
   ),
@@ -309,16 +336,12 @@ List<GalleryItem> galleryItems() => [
   ),
   (
     name: 'composer_idle',
-    title: 'AiComposer — attach · model · voice',
+    title: 'AiComposer — attach · mic · live',
     child: AiComposer(
       onSend: (_) {},
       onAttach: () {},
       onVoice: () {},
-      modelSelector: AiModelSelector(
-        models: demoModels,
-        selectedId: 'gpt-4o',
-        onSelected: (_) {},
-      ),
+      onLive: () {},
     ),
   ),
   (
@@ -327,3 +350,24 @@ List<GalleryItem> galleryItems() => [
     child: AiComposer(onSend: (_) {}, onStop: () {}, isBusy: true),
   ),
 ];
+
+/// A live [AiBranch] whose arrows actually move between versions.
+class _BranchDemo extends StatefulWidget {
+  const _BranchDemo();
+
+  @override
+  State<_BranchDemo> createState() => _BranchDemoState();
+}
+
+class _BranchDemoState extends State<_BranchDemo> {
+  int _index = 0;
+  static const _total = 3;
+
+  @override
+  Widget build(BuildContext context) => AiBranch(
+    index: _index,
+    total: _total,
+    onPrevious: () => setState(() => _index--),
+    onNext: () => setState(() => _index++),
+  );
+}

@@ -5,12 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
-/// A modern message composer: a rounded input box with a bottom toolbar that
-/// can host an attach button, a model selector, a voice button, and the
-/// Send↔Stop button — plus removable previews for staged attachments.
+/// A modern message composer: a rounded input with a leading attach (`+`)
+/// button beside the field, and a trailing pair — a secondary mic and a main
+/// button that is **Live** (voice) while the field is empty and swaps to
+/// **Send** once you type (hiding the mic), or **Stop** while streaming.
 ///
-/// Everything beyond the text field is opt-in: with no [onAttach], [onVoice],
-/// [modelSelector], or [attachments] it's just a clean text input + send.
+/// The model selector is intentionally *not* here — modern apps put it in the
+/// app bar. Everything is opt-in via the callbacks.
 class AiComposer extends StatefulWidget {
   /// Creates a composer.
   const AiComposer({
@@ -23,7 +24,7 @@ class AiComposer extends StatefulWidget {
     this.enabled = true,
     this.onAttach,
     this.onVoice,
-    this.modelSelector,
+    this.onLive,
     this.attachments = const [],
     this.onRemoveAttachment,
   });
@@ -31,35 +32,35 @@ class AiComposer extends StatefulWidget {
   /// Called with the trimmed text when the user submits.
   final ValueChanged<String> onSend;
 
-  /// Called when the user taps Stop while [isBusy]. If `null`, no Stop affordance
-  /// is shown.
+  /// Called when the user taps Stop while [isBusy].
   final VoidCallback? onStop;
 
-  /// Whether a response is in flight; controls the Send↔Stop swap.
+  /// Whether a response is in flight; the main button shows Stop.
   final bool isBusy;
 
-  /// Placeholder text for the empty input.
+  /// Placeholder text.
   final String hintText;
 
-  /// An optional external text controller.
+  /// Optional external text controller.
   final TextEditingController? controller;
 
   /// Whether the input accepts text.
   final bool enabled;
 
-  /// Shows an attach (+) button in the toolbar when non-null.
+  /// Shows a leading attach (`+`) button when non-null.
   final VoidCallback? onAttach;
 
-  /// Shows a microphone button in the toolbar when non-null.
+  /// Shows a secondary mic button (voice dictation) while the field is empty.
   final VoidCallback? onVoice;
 
-  /// An optional widget (e.g. `AiModelSelector`) placed in the toolbar.
-  final Widget? modelSelector;
+  /// When non-null, the main button is a **Live** voice button while the field
+  /// is empty (it becomes Send once the user types).
+  final VoidCallback? onLive;
 
   /// Staged attachments shown as removable previews above the field.
   final List<FilePart> attachments;
 
-  /// Called to remove a staged attachment. If `null`, previews aren't removable.
+  /// Removes a staged attachment. If `null`, previews aren't removable.
   final void Function(FilePart attachment)? onRemoveAttachment;
 
   @override
@@ -68,6 +69,10 @@ class AiComposer extends StatefulWidget {
 
 class _AiComposerState extends State<AiComposer> {
   TextEditingController? _internalController;
+
+  // Keeps the field (and its focus) alive when the layout reparents from the
+  // single-row form to the stacked, full-width form.
+  final GlobalKey _fieldKey = GlobalKey();
 
   TextEditingController get _controller =>
       widget.controller ?? (_internalController ??= TextEditingController());
@@ -95,10 +100,39 @@ class _AiComposerState extends State<AiComposer> {
     widget.onStop?.call();
   }
 
+  // Whether [text] needs more than one line at the *single-row* field width.
+  // Measured against that fixed width (not the current layout's) so the decision
+  // doesn't flip-flop once the buttons drop below.
+  bool _isMultiline(
+    String text,
+    double innerWidth,
+    bool hasText,
+    AiThemeExtension theme,
+  ) {
+    if (text.isEmpty) return false;
+    if (text.contains('\n')) return true;
+    const iconBox = 40.0; // _ToolIcon tap target
+    const mainBtn = 38.0; // main circular button
+    final attachW = widget.onAttach != null ? iconBox : 0.0;
+    final micW = !hasText && widget.onVoice != null ? iconBox : 0.0;
+    final trailingW = micW + 2 + mainBtn;
+    final fieldLeftPad = widget.onAttach == null ? 10.0 : 2.0;
+    final textWidth = innerWidth - attachW - trailingW - fieldLeftPad - 6;
+    if (textWidth <= 0) return false;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: theme.textStyle.copyWith(color: theme.assistantTextColor),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout(maxWidth: textWidth);
+    return painter.didExceedMaxLines;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
-    final showStop = widget.isBusy && widget.onStop != null;
     final subdued = theme.assistantTextColor.withValues(alpha: 0.6);
 
     return Padding(
@@ -132,19 +166,20 @@ class _AiComposerState extends State<AiComposer> {
           Container(
             decoration: BoxDecoration(
               color: theme.assistantBubbleColor,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(26),
               border: Border.all(color: theme.borderColor),
             ),
-            padding: const EdgeInsets.fromLTRB(16, 6, 8, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
+            padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _controller,
+              builder: (context, value, _) {
+                final hasText = value.text.trim().isNotEmpty;
+                final field = TextField(
+                  key: _fieldKey,
                   controller: _controller,
                   enabled: widget.enabled,
                   minLines: 1,
-                  maxLines: 5,
+                  maxLines: 6,
                   cursorColor: theme.accentColor,
                   style: theme.textStyle.copyWith(
                     color: theme.assistantTextColor,
@@ -158,50 +193,120 @@ class _AiComposerState extends State<AiComposer> {
                     ),
                     border: InputBorder.none,
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   ),
-                ),
-                Row(
-                  children: [
-                    if (widget.onAttach != null)
-                      _ToolIcon(
+                );
+                final attach = widget.onAttach == null
+                    ? null
+                    : _ToolIcon(
                         icon: Icons.add,
                         color: subdued,
                         tooltip: 'Attach',
                         onTap: widget.enabled ? widget.onAttach : null,
-                      ),
-                    if (widget.modelSelector != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: widget.modelSelector,
-                      ),
-                    const Spacer(),
-                    if (widget.onVoice != null)
-                      _ToolIcon(
-                        icon: Icons.mic_none_rounded,
-                        color: subdued,
-                        tooltip: 'Voice',
-                        onTap: widget.enabled ? widget.onVoice : null,
-                      ),
-                    const SizedBox(width: 4),
-                    _SendButton(
-                      color: theme.accentColor,
-                      iconColor: theme.onAccentColor,
-                      icon: showStop
-                          ? Icons.stop_rounded
-                          : Icons.arrow_upward_rounded,
-                      tooltip: showStop ? 'Stop' : 'Send',
-                      onPressed: !widget.enabled
-                          ? null
-                          : (showStop ? _handleStop : _handleSend),
-                    ),
-                  ],
-                ),
-              ],
+                      );
+                final trailing = _trailing(theme, hasText, subdued);
+
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    // When the text needs more than one line, give it the full
+                    // width and drop the buttons to a row beneath it.
+                    if (_isMultiline(
+                      value.text,
+                      constraints.maxWidth,
+                      hasText,
+                      theme,
+                    )) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 0, 8, 2),
+                            child: field,
+                          ),
+                          Row(
+                            children: [
+                              if (attach != null) attach,
+                              const Spacer(),
+                              trailing,
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+                    // Single-line inline layout: vertically center the icons
+                    // with the field (multi-line goes to the stacked layout).
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (attach != null) attach,
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              left: widget.onAttach == null ? 10 : 2,
+                            ),
+                            child: field,
+                          ),
+                        ),
+                        trailing,
+                      ],
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _trailing(AiThemeExtension theme, bool hasText, Color subdued) {
+    final showStop = widget.isBusy && widget.onStop != null;
+    final liveWhenEmpty = !hasText && !showStop && widget.onLive != null;
+
+    final IconData mainIcon;
+    final VoidCallback? mainTap;
+    if (showStop) {
+      mainIcon = Icons.stop_rounded;
+      mainTap = _handleStop;
+    } else if (hasText) {
+      mainIcon = Icons.arrow_upward_rounded;
+      mainTap = _handleSend;
+    } else if (liveWhenEmpty) {
+      mainIcon = Icons.graphic_eq;
+      mainTap = widget.onLive;
+    } else {
+      mainIcon = Icons.arrow_upward_rounded;
+      mainTap = _handleSend;
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Secondary mic, only while empty (and not streaming).
+        if (!hasText && !showStop && widget.onVoice != null)
+          _ToolIcon(
+            icon: Icons.mic_none_rounded,
+            color: subdued,
+            tooltip: 'Dictate',
+            onTap: widget.enabled ? widget.onVoice : null,
+          ),
+        const SizedBox(width: 2),
+        _MainButton(
+          color: theme.accentColor,
+          iconColor: theme.onAccentColor,
+          icon: mainIcon,
+          tooltip: showStop
+              ? 'Stop'
+              : hasText
+                  ? 'Send'
+                  : liveWhenEmpty
+                      ? 'Live'
+                      : 'Send',
+          onPressed: widget.enabled ? mainTap : null,
+        ),
+      ],
     );
   }
 }
@@ -227,8 +332,8 @@ class _ToolIcon extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Icon(icon, size: 22, color: color),
+          padding: const EdgeInsets.all(8),
+          child: Icon(icon, size: 24, color: color),
         ),
       ),
     );
@@ -308,9 +413,9 @@ class _AttachmentPreview extends StatelessWidget {
   }
 }
 
-/// A circular action button with a subtle press scale instead of a ripple.
-class _SendButton extends StatefulWidget {
-  const _SendButton({
+/// The circular main action button with a press scale instead of a ripple.
+class _MainButton extends StatefulWidget {
+  const _MainButton({
     required this.color,
     required this.iconColor,
     required this.icon,
@@ -325,10 +430,10 @@ class _SendButton extends StatefulWidget {
   final VoidCallback? onPressed;
 
   @override
-  State<_SendButton> createState() => _SendButtonState();
+  State<_MainButton> createState() => _MainButtonState();
 }
 
-class _SendButtonState extends State<_SendButton> {
+class _MainButtonState extends State<_MainButton> {
   bool _pressed = false;
 
   @override
@@ -346,14 +451,14 @@ class _SendButtonState extends State<_SendButton> {
           scale: _pressed ? 0.9 : 1,
           duration: const Duration(milliseconds: 100),
           child: Container(
-            width: 40,
-            height: 40,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               color:
                   enabled ? widget.color : widget.color.withValues(alpha: 0.4),
               shape: BoxShape.circle,
             ),
-            child: Icon(widget.icon, color: widget.iconColor, size: 22),
+            child: Icon(widget.icon, color: widget.iconColor, size: 20),
           ),
         ),
       ),
