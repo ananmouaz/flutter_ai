@@ -59,6 +59,13 @@ class UseChatController extends ChangeNotifier {
   List<ToolDefinition> _tools;
   AiRequestOptions? _options;
 
+  // Regeneration branches for the latest turn: each version is the slice of
+  // messages after the last user message. `regenerate` appends a version;
+  // navigating swaps which one is shown.
+  List<List<AiMessage>> _branches = [];
+  int _branchIndex = 0;
+  _Capture _capture = _Capture.reset;
+
   ChatStatus _status = ChatStatus.idle;
   Object? _error;
   StreamSubscription<AiStreamEvent>? _subscription;
@@ -77,6 +84,13 @@ class UseChatController extends ChangeNotifier {
 
   /// The error from the last failed turn, or `null`.
   Object? get error => _error;
+
+  /// How many regenerated versions exist for the latest turn (1 = no
+  /// alternatives). Drive an `AiBranch` with this and [branchIndex].
+  int get branchCount => _branches.length;
+
+  /// The 0-based index of the version currently shown for the latest turn.
+  int get branchIndex => _branchIndex;
 
   /// A broadcast stream of every event applied to the conversation.
   ///
@@ -110,6 +124,7 @@ class UseChatController extends ChangeNotifier {
   Future<void> submit(AiMessage userMessage) {
     _stopActiveStream();
     _error = null;
+    _capture = _Capture.reset; // a new user turn starts a fresh branch set
     _processor.reset(_processor.conversation.append(userMessage));
     _status = ChatStatus.submitted;
     _scheduleNotify();
@@ -124,8 +139,53 @@ class UseChatController extends ChangeNotifier {
     if (lastUser == -1) return Future<void>.value();
     _stopActiveStream();
     _error = null;
+    _capture = _Capture.append; // keep the prior version, add a new one
     _processor.reset(
       _processor.conversation.copyWith(messages: all.sublist(0, lastUser + 1)),
+    );
+    _status = ChatStatus.submitted;
+    _scheduleNotify();
+    return _startStream();
+  }
+
+  /// Switches the latest turn to regenerated version [index] (0-based). A no-op
+  /// out of range, while streaming, or if already showing it.
+  void selectBranch(int index) {
+    if (index < 0 || index >= _branches.length || index == _branchIndex) return;
+    if (_status == ChatStatus.streaming || _status == ChatStatus.submitted) {
+      return;
+    }
+    final lastUser = _lastUserIndex();
+    if (lastUser == -1) return;
+    final head = _processor.conversation.messages.sublist(0, lastUser + 1);
+    _branchIndex = index;
+    _processor.reset(
+      _processor.conversation
+          .copyWith(messages: [...head, ..._branches[index]]),
+    );
+    _scheduleNotify();
+  }
+
+  /// Appends tool [results] as an [AiRole.tool] message and streams the model's
+  /// continuation — call this after executing the tool calls the model
+  /// requested. A no-op if [results] is empty.
+  ///
+  /// Every [ToolCallPart] in the preceding assistant message should have a
+  /// matching [ToolResultPart] here before continuing, as providers require a
+  /// result per call.
+  Future<void> addToolResults(List<ToolResultPart> results) {
+    if (results.isEmpty) return Future<void>.value();
+    _stopActiveStream();
+    _error = null;
+    _capture = _Capture.update; // continuation of the current version's turn
+    _processor.reset(
+      _processor.conversation.append(
+        AiMessage(
+          id: _newId(),
+          role: AiRole.tool,
+          parts: List<AiPart>.of(results),
+        ),
+      ),
     );
     _status = ChatStatus.submitted;
     _scheduleNotify();
@@ -171,7 +231,40 @@ class UseChatController extends ChangeNotifier {
     _processor.reset(AiConversation.empty(_processor.conversation.id));
     _error = null;
     _status = ChatStatus.idle;
+    _branches = [];
+    _branchIndex = 0;
+    _capture = _Capture.reset;
     _scheduleNotify();
+  }
+
+  int _lastUserIndex() => _processor.conversation.messages
+      .lastIndexWhere((m) => m.role == AiRole.user);
+
+  /// Snapshots the post-user-message tail as the current branch version. Called
+  /// on each successful turn completion; the [_capture] mode decides whether to
+  /// start fresh, append a new version, or update the in-progress one.
+  void _captureBranch() {
+    final lastUser = _lastUserIndex();
+    if (lastUser == -1) return;
+    final tail = _processor.conversation.messages.sublist(lastUser + 1);
+    if (tail.isEmpty) return;
+    switch (_capture) {
+      case _Capture.reset:
+        _branches = [tail];
+        _branchIndex = 0;
+      case _Capture.append:
+        _branches.add(tail);
+        _branchIndex = _branches.length - 1;
+      case _Capture.update:
+        if (_branches.isEmpty) {
+          _branches = [tail];
+          _branchIndex = 0;
+        } else {
+          _branches[_branchIndex] = tail;
+        }
+    }
+    // Further completions in the same turn (tool rounds) update this version.
+    _capture = _Capture.update;
   }
 
   Future<void> _startStream() {
@@ -207,7 +300,10 @@ class UseChatController extends ChangeNotifier {
         _scheduleNotify();
       },
       onDone: () {
-        if (_status != ChatStatus.error) _status = ChatStatus.idle;
+        if (_status != ChatStatus.error) {
+          _status = ChatStatus.idle;
+          _captureBranch();
+        }
         _subscription = null;
         _completeTurn();
         _scheduleNotify();
@@ -256,3 +352,6 @@ class UseChatController extends ChangeNotifier {
     return () => 'msg-${n++}';
   }
 }
+
+/// How [UseChatController] folds the next completed turn into branch history.
+enum _Capture { reset, append, update }

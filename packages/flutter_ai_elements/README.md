@@ -14,8 +14,8 @@ restyle everything via theme tokens.
 - `AiMessageBubble` — renders one message's parts (text, reasoning, tool calls,
   results, files, sources, data), role-aware, with streaming-safe semantics.
 - `AiConversationView` — a scrolling list of bubbles, optional thinking loader.
-- `AiComposer` — input with a Send button that swaps to Stop while streaming;
-  emits haptics.
+- `AiComposer` — input with a leading attach (`+`) button and a main button that
+  is Live while empty, Send once you type, and Stop while streaming; emits haptics.
 - `AiLoader` — a pulsing three-dot thinking indicator.
 
 **Controller-bound** (wire to a `UseChatController`):

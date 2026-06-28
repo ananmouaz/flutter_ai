@@ -12,6 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  speech_to_text: ^7.0.0
   flutter_ai_elements:
     path: ../packages/flutter_ai_elements
   flutter_ai_provider_openai:

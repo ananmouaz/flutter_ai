@@ -11,6 +11,13 @@ with the composer swapping Send for Stop while streaming:
 
 <img src="screenshots/chat.gif" width="300" alt="flutter_ai chat demo" />
 
+## Dark mode
+
+Every element is theme-driven, so dark mode is just `AiThemeExtension.dark()` on
+a dark `ThemeData` (toggle it with the header icon):
+
+<img src="screenshots/dark_preview.png" width="300" alt="flutter_ai dark mode" />
+
 ## Run it
 
 ```bash
@@ -44,4 +51,5 @@ ffmpeg -y -framerate 8 -i test/shots/chat_%03d.png \
 | <img src="screenshots/element_avatars.png" width="220"/><br/>**AiAvatar** | <img src="screenshots/element_loader.png" width="220"/><br/>**AiLoader** | <img src="screenshots/element_error_banner.png" width="220"/><br/>**AiErrorBanner** |
 | <img src="screenshots/element_empty_state.png" width="220"/><br/>**AiEmptyState** | <img src="screenshots/element_response.png" width="220"/><br/>**AiResponse** (Markdown) | <img src="screenshots/element_chain_of_thought.png" width="220"/><br/>**AiChainOfThought** |
 | <img src="screenshots/element_task.png" width="220"/><br/>**AiTask** | <img src="screenshots/element_inline_citation.png" width="220"/><br/>**AiInlineCitation** | <img src="screenshots/element_branch.png" width="220"/><br/>**AiBranch** |
-| <img src="screenshots/element_image.png" width="220"/><br/>**AiImage** | | |
+| <img src="screenshots/element_image.png" width="220"/><br/>**AiImage** | <img src="screenshots/element_model_selector.png" width="220"/><br/>**AiModelSelector** | <img src="screenshots/element_confirmation.png" width="220"/><br/>**AiConfirmation** |
+| <img src="screenshots/element_context_meter.png" width="220"/><br/>**AiContextMeter** | <img src="screenshots/element_shimmer.png" width="220"/><br/>**AiShimmer** | <img src="screenshots/element_live_session.png" width="220"/><br/>**AiLiveSession** (voice) |

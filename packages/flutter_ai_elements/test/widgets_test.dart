@@ -342,8 +342,26 @@ void main() {
       expect(find.text('one'), findsOneWidget);
     });
 
-    testWidgets('AiChainOfThought reveals steps when expanded',
-        (tester) async {
+    testWidgets('AiResponse renders a Markdown table', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const SingleChildScrollView(
+            child: AiResponse(
+              text: '| Model | Speed |\n'
+                  '| --- | --- |\n'
+                  '| Flash | Fast |\n'
+                  '| Pro | Slower |',
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(Table), findsOneWidget);
+      expect(find.text('Model'), findsOneWidget); // header cell
+      expect(find.text('Flash'), findsOneWidget); // body cell
+      expect(find.text('Slower'), findsOneWidget);
+    });
+
+    testWidgets('AiChainOfThought reveals steps when expanded', (tester) async {
       await tester.pumpWidget(
         _wrap(
           const AiChainOfThought(
@@ -381,7 +399,8 @@ void main() {
       expect(find.text('3'), findsOneWidget);
     });
 
-    testWidgets('AiBranch shows position and hides when single', (tester) async {
+    testWidgets('AiBranch shows position and hides when single',
+        (tester) async {
       await tester.pumpWidget(_wrap(const AiBranch(index: 1, total: 3)));
       expect(find.text('2/3'), findsOneWidget);
 
@@ -394,6 +413,134 @@ void main() {
         _wrap(AiImage(url: Uri.parse('https://example.com/a.png'))),
       );
       expect(find.byType(AiImage), findsOneWidget);
+    });
+  });
+
+  group('input & more', () {
+    testWidgets('AiComposer shows attach, mic, and live affordances',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          AiComposer(
+            onSend: (_) {},
+            onAttach: () {},
+            onVoice: () {},
+            onLive: () {},
+            attachments: const [
+              FilePart(mediaType: 'application/pdf', name: 'a.pdf'),
+            ],
+            onRemoveAttachment: (_) {},
+          ),
+        ),
+      );
+      expect(find.byIcon(Icons.add), findsOneWidget);
+      // Empty field: mic (secondary) + Live (main).
+      expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.graphic_eq), findsOneWidget);
+      expect(find.text('a.pdf'), findsOneWidget); // staged attachment preview
+    });
+
+    testWidgets('AiComposer swaps Live for Send once typing', (tester) async {
+      await tester.pumpWidget(
+        _wrap(AiComposer(onSend: (_) {}, onVoice: () {}, onLive: () {})),
+      );
+      expect(find.byIcon(Icons.graphic_eq), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'hello');
+      await tester.pump();
+      expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.graphic_eq), findsNothing);
+      expect(find.byIcon(Icons.mic_none_rounded), findsNothing); // mic hidden
+    });
+
+    testWidgets('AiModelSelector shows selection and opens a picker',
+        (tester) async {
+      String? chosen;
+      await tester.pumpWidget(
+        _wrap(
+          AiModelSelector(
+            selectedId: 'fast',
+            onSelected: (id) => chosen = id,
+            models: const [
+              AiModelOption(id: 'fast', label: 'Fast'),
+              AiModelOption(id: 'smart', label: 'Smart'),
+            ],
+          ),
+        ),
+      );
+      expect(find.text('Fast'), findsOneWidget);
+      await tester.tap(find.text('Fast'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Smart'));
+      await tester.pumpAndSettle();
+      expect(chosen, 'smart');
+    });
+
+    testWidgets('AiModelSelector exposes a labelled button to a11y',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _wrap(
+          AiModelSelector(
+            selectedId: 'fast',
+            onSelected: (_) {},
+            models: const [AiModelOption(id: 'fast', label: 'Fast')],
+          ),
+        ),
+      );
+      expect(
+        tester.getSemantics(find.text('Fast')),
+        matchesSemantics(
+          isButton: true,
+          hasTapAction: true,
+          label: 'Select model, Fast\nFast',
+        ),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('AiConfirmation fires confirm/deny', (tester) async {
+      var allowed = false;
+      await tester.pumpWidget(
+        _wrap(
+          AiConfirmation(
+            title: 'Send the email?',
+            onConfirm: () => allowed = true,
+          ),
+        ),
+      );
+      expect(find.text('Send the email?'), findsOneWidget);
+      await tester.tap(find.text('Allow'));
+      expect(allowed, isTrue);
+    });
+
+    testWidgets('AiContextMeter formats usage', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const AiContextMeter(usedTokens: 12345, totalTokens: 128000)),
+      );
+      expect(find.text('12.3k / 128.0k'), findsOneWidget);
+    });
+
+    testWidgets('AiShimmer builds', (tester) async {
+      await tester.pumpWidget(_wrap(const AiShimmer(lines: 2)));
+      expect(find.byType(AiShimmer), findsOneWidget);
+    });
+
+    testWidgets('AiLiveSession shows status and ends', (tester) async {
+      var ended = false;
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            height: 500,
+            child: AiLiveSession(
+              onEnd: () => ended = true,
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Listening'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close));
+      expect(ended, isTrue);
     });
   });
 

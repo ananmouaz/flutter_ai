@@ -18,4 +18,12 @@ Initial release.
 - `AiChainOfThought` (stepwise timeline), `AiTask` (agent checklist),
   `AiInlineCitation` (numbered badge), `AiBranch` (version navigation),
   `AiImage` (loading/error/tap-to-zoom).
+- Input upgrades: `AiComposer` gains an attach button, a model-selector slot, a
+  voice button, and removable attachment previews; `AiPromptInput` stages
+  attachments and switches models via the controller. `AiModelSelector`,
+  `AiConfirmation` (approve/deny), `AiContextMeter` (token usage), and
+  `AiShimmer` (loading skeleton).
+- `AiLiveSession` — a full-screen, engine-agnostic Live voice surface (animated
+  orb reacting to amplitude + status, live transcript, mute/keyboard/end). UI
+  only; drive it from a realtime audio engine.
 - Re-exports `flutter_ai_client` (and `flutter_ai_core`).

@@ -45,6 +45,20 @@ void main() {
       expect(registry.isEmpty, isFalse);
     });
 
+    test('register replaces a tool with the same name and [] looks it up', () {
+      final registry = ToolRegistry([
+        const ToolSpec(name: 'a', description: 'first'),
+      ])
+        ..register(const ToolSpec(name: 'a', description: 'second'));
+      expect(registry['a']?.description, 'second');
+      expect(registry['missing'], isNull);
+      expect(registry.definitions, hasLength(1));
+    });
+
+    test('an empty registry reports isEmpty', () {
+      expect(ToolRegistry().isEmpty, isTrue);
+    });
+
     test('run executes the matching tool', () async {
       final registry = ToolRegistry([
         ToolSpec(

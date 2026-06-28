@@ -56,22 +56,29 @@ class AiMessageBubble extends StatelessWidget {
 
     final Widget body;
     if (bubbled) {
-      body = Align(
-        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth:
-                MediaQuery.sizeOf(context).width * theme.maxBubbleWidthFraction,
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color:
-                  isUser ? theme.userBubbleColor : theme.assistantBubbleColor,
-              borderRadius: theme.bubbleRadius,
-              boxShadow: theme.bubbleShadow,
+      // Size the bubble relative to its container (so it stays correct inside a
+      // centered, max-width column on tablets/desktop), not the whole screen.
+      final available = MediaQuery.sizeOf(context).width;
+      body = LayoutBuilder(
+        builder: (context, constraints) => Align(
+          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: (constraints.maxWidth.isFinite
+                      ? constraints.maxWidth
+                      : available) *
+                  theme.maxBubbleWidthFraction,
             ),
-            padding: theme.bubblePadding,
-            child: content,
+            child: Container(
+              decoration: BoxDecoration(
+                color:
+                    isUser ? theme.userBubbleColor : theme.assistantBubbleColor,
+                borderRadius: theme.bubbleRadius,
+                boxShadow: theme.bubbleShadow,
+              ),
+              padding: theme.bubblePadding,
+              child: content,
+            ),
           ),
         ),
       );

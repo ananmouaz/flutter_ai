@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_ai_provider_openai/flutter_ai_provider_openai.dart';
 import 'package:http/http.dart' as http;
@@ -152,6 +153,92 @@ void main() {
           .send(const AiConversation(id: 'c', messages: []))
           .toList();
       expect(events.single, isA<StreamErrorEvent>());
+    });
+
+    test('emits a StreamErrorEvent when the transport throws', () async {
+      final provider = OpenAiProvider(
+        apiKey: 'test',
+        client: MockClient.streaming((request, bodyStream) async {
+          throw const SocketException('connection refused');
+        }),
+      );
+      final events = await provider
+          .send(const AiConversation(id: 'c', messages: []))
+          .toList();
+      expect(events.single, isA<StreamErrorEvent>());
+    });
+
+    test('builds the request payload with model, tools, and messages',
+        () async {
+      late Map<String, Object?> payload;
+      late String authHeader;
+      final provider = OpenAiProvider(
+        apiKey: 'secret',
+        client: MockClient.streaming((request, bodyStream) async {
+          authHeader = request.headers['authorization'] ?? '';
+          final body = await bodyStream.bytesToString();
+          payload = (jsonDecode(body) as Map).cast<String, Object?>();
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode('data: [DONE]\n')),
+            200,
+          );
+        }),
+      );
+
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(
+                  id: 'm1',
+                  role: AiRole.user,
+                  parts: [TextPart('Hi')],
+                ),
+              ],
+            ),
+            tools: [
+              const ToolDefinition(
+                name: 'get_weather',
+                description: 'Look up weather',
+                parametersSchema: {'type': 'object'},
+              ),
+            ],
+            options: const AiRequestOptions(model: 'gpt-4o'),
+          )
+          .toList();
+
+      expect(authHeader, 'Bearer secret');
+      expect(payload['model'], 'gpt-4o');
+      expect(payload['stream'], true);
+      final messages =
+          (payload['messages'] as List).cast<Map<String, Object?>>();
+      expect(messages.single['role'], 'user');
+      expect(messages.single['content'], 'Hi');
+      final tools = (payload['tools'] as List).cast<Map<String, Object?>>();
+      expect(tools.single['type'], 'function');
+      final function =
+          (tools.single['function'] as Map).cast<String, Object?>();
+      expect(function['name'], 'get_weather');
+    });
+
+    test('falls back to the default model when options omit one', () async {
+      late Map<String, Object?> payload;
+      final provider = OpenAiProvider(
+        apiKey: 'test',
+        client: MockClient.streaming((request, bodyStream) async {
+          final body = await bodyStream.bytesToString();
+          payload = (jsonDecode(body) as Map).cast<String, Object?>();
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode('data: [DONE]\n')),
+            200,
+          );
+        }),
+      );
+
+      await provider.send(const AiConversation(id: 'c', messages: [])).toList();
+
+      expect(payload['model'], 'gpt-4o-mini');
     });
   });
 }

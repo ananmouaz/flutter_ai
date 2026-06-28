@@ -79,6 +79,32 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
         enableHaptics: true,
       );
 
+  /// A dark counterpart to [AiThemeExtension.fallback]. Pair it with a dark
+  /// `ThemeData` so ambient text/icon colors are light.
+  factory AiThemeExtension.dark() => const AiThemeExtension(
+        assistantMessageStyle: AiMessageStyle.plain,
+        userBubbleColor: Color(0xFF2F2F33),
+        assistantBubbleColor: Color(0xFF202024),
+        userTextColor: Color(0xFFECECEC),
+        assistantTextColor: Color(0xFFECECEC),
+        accentColor: Color(0xFFFFFFFF),
+        onAccentColor: Color(0xFF0D0D0D),
+        borderColor: Color(0xFF3A3A40),
+        bubbleRadius: BorderRadius.all(Radius.circular(22)),
+        bubbleShadow: [],
+        bubblePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        messageSpacing: 18,
+        maxBubbleWidthFraction: 0.80,
+        composerPadding: EdgeInsets.fromLTRB(14, 8, 14, 12),
+        textStyle: TextStyle(fontSize: 16.5, height: 1.5),
+        codeStyle:
+            TextStyle(fontFamily: 'monospace', fontSize: 14, height: 1.45),
+        loaderColor: Color(0xFF8E8EA0),
+        motionDuration: Duration(milliseconds: 240),
+        motionCurve: Curves.easeOutCubic,
+        enableHaptics: true,
+      );
+
   /// How assistant messages are laid out (plain full-width vs. bubble).
   final AiMessageStyle assistantMessageStyle;
 

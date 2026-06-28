@@ -4,37 +4,87 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/demo_provider.dart';
+import 'package:flutter_ai_demo/demo_tools.dart';
+import 'package:flutter_ai_demo/live_demo.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
+import 'package:flutter_ai_provider_openai/flutter_ai_provider_openai.dart';
+
+/// Supply a real Gemini key to talk to live models:
+///
+///   flutter run --dart-define=GEMINI_API_KEY=your_key_here
+///
+/// With no key, the scripted [DemoChatProvider] is used.
+const String _geminiKey = String.fromEnvironment('GEMINI_API_KEY');
+
+/// Gemini exposes an OpenAI-compatible endpoint, so the OpenAI provider works
+/// as-is — just point it at Google's base URL.
+LlmProvider _buildProvider() {
+  if (_geminiKey.isEmpty) return const DemoChatProvider();
+  return OpenAiProvider(
+    apiKey: _geminiKey,
+    baseUrl: Uri.parse(
+      'https://generativelanguage.googleapis.com/v1beta/openai',
+    ),
+    defaultModel: demoModels.first.id,
+  );
+}
 
 void main() => runApp(const FlutterAiDemoApp());
 
 /// Root of the showcase app.
-class FlutterAiDemoApp extends StatelessWidget {
+class FlutterAiDemoApp extends StatefulWidget {
   /// Creates the demo app.
   const FlutterAiDemoApp({super.key});
+
+  @override
+  State<FlutterAiDemoApp> createState() => _FlutterAiDemoAppState();
+}
+
+class _FlutterAiDemoAppState extends State<FlutterAiDemoApp> {
+  ThemeMode _mode = ThemeMode.light;
+
+  void _toggleTheme() => setState(
+    () => _mode = _mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+  );
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'flutter_ai demo',
       debugShowCheckedModeBanner: false,
+      themeMode: _mode,
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'Roboto',
         colorSchemeSeed: const Color(0xFF0D0D0D),
         scaffoldBackgroundColor: Colors.white,
-        // Suppress Material ripples for a calmer, platform-neutral feel.
         splashFactory: NoSplash.splashFactory,
         highlightColor: Colors.transparent,
-        extensions: [demoTheme],
+        extensions: [AiThemeExtension.fallback()],
       ),
-      home: const _HomePage(),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+        brightness: Brightness.dark,
+        colorSchemeSeed: const Color(0xFF8E8E96),
+        scaffoldBackgroundColor: const Color(0xFF131316),
+        splashFactory: NoSplash.splashFactory,
+        highlightColor: Colors.transparent,
+        extensions: [AiThemeExtension.dark()],
+      ),
+      home: _HomePage(
+        onToggleTheme: _toggleTheme,
+        isDark: _mode == ThemeMode.dark,
+      ),
     );
   }
 }
 
 class _HomePage extends StatefulWidget {
-  const _HomePage();
+  const _HomePage({required this.onToggleTheme, required this.isDark});
+
+  final VoidCallback onToggleTheme;
+  final bool isDark;
 
   @override
   State<_HomePage> createState() => _HomePageState();
@@ -42,13 +92,35 @@ class _HomePage extends StatefulWidget {
 
 class _HomePageState extends State<_HomePage> {
   int _tab = 0;
-  final UseChatController _controller =
-      UseChatController(provider: const DemoChatProvider());
+  String _modelId = demoModels.first.id;
+  final UseChatController _controller = UseChatController(
+    provider: _buildProvider(),
+  );
+  late final ToolRunner _toolRunner = ToolRunner(_controller);
+
+  @override
+  void initState() {
+    super.initState();
+    // Advertise tools to the model and rebuild when a confirmation is pending.
+    _controller.setTools(demoTools);
+    _toolRunner.addListener(_onToolChange);
+  }
+
+  void _onToolChange() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
+    _toolRunner.removeListener(_onToolChange);
+    _toolRunner.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _selectModel(String id) {
+    setState(() => _modelId = id);
+    _controller.setOptions(AiRequestOptions(model: id));
   }
 
   @override
@@ -65,17 +137,34 @@ class _HomePageState extends State<_HomePage> {
                   const Text(
                     'flutter_ai',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 24,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
                     ),
                   ),
                   const Spacer(),
-                  // New-chat button (Chat tab only).
+                  // Model selector lives in the app bar (Chat tab).
+                  if (_tab == 0)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: AiModelSelector(
+                        models: demoModels,
+                        selectedId: _modelId,
+                        onSelected: _selectModel,
+                      ),
+                    ),
+                  IconButton(
+                    icon: Icon(
+                      widget.isDark
+                          ? Icons.light_mode_outlined
+                          : Icons.dark_mode_outlined,
+                    ),
+                    tooltip: 'Toggle theme',
+                    onPressed: widget.onToggleTheme,
+                  ),
                   if (_tab == 0)
                     IconButton(
                       icon: const Icon(Icons.edit_square),
-                      color: const Color(0xFF0D0D0D),
                       tooltip: 'New chat',
                       onPressed: _controller.clear,
                     ),
@@ -87,18 +176,26 @@ class _HomePageState extends State<_HomePage> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: CupertinoSlidingSegmentedControl<int>(
               groupValue: _tab,
-              backgroundColor: const Color(0xFFF0F0F2),
-              thumbColor: Colors.white,
+              backgroundColor: widget.isDark
+                  ? const Color(0xFF2A2A2E)
+                  : const Color(0xFFF0F0F2),
+              thumbColor: widget.isDark
+                  ? const Color(0xFF45454D)
+                  : Colors.white,
               onValueChanged: (value) => setState(() => _tab = value ?? 0),
-              children: const {
-                0: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('Chat'),
-                ),
-                1: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('Elements'),
-                ),
+              children: {
+                for (final entry in const {0: 'Chat', 1: 'Elements'}.entries)
+                  entry.key: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(
+                      entry.value,
+                      style: TextStyle(
+                        color: widget.isDark
+                            ? Colors.white
+                            : const Color(0xFF0D0D0D),
+                      ),
+                    ),
+                  ),
               },
             ),
           ),
@@ -107,7 +204,7 @@ class _HomePageState extends State<_HomePage> {
             child: IndexedStack(
               index: _tab,
               children: [
-                ChatScreen(controller: _controller),
+                ChatScreen(controller: _controller, toolRunner: _toolRunner),
                 const GalleryScreen(),
               ],
             ),
@@ -121,28 +218,51 @@ class _HomePageState extends State<_HomePage> {
 /// A live chat backed by a [UseChatController] (owned by the parent).
 class ChatScreen extends StatelessWidget {
   /// Creates the chat screen bound to [controller].
-  const ChatScreen({super.key, required this.controller});
+  const ChatScreen({
+    super.key,
+    required this.controller,
+    required this.toolRunner,
+  });
 
   /// The chat controller driving the conversation.
   final UseChatController controller;
+
+  /// Runs model tool calls (auto-exec + confirmations).
+  final ToolRunner toolRunner;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Error banner reacts to controller state.
+        // Context-usage meter + error banner react to controller state.
         ListenableBuilder(
           listenable: controller,
           builder: (context, _) {
-            if (controller.status != ChatStatus.error) {
-              return const SizedBox.shrink();
-            }
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: AiErrorBanner(
-                message: '${controller.error}',
-                onRetry: () => unawaited(controller.regenerate()),
-                onDismiss: controller.clear,
+            final messages = controller.messages.length;
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: Column(
+                  children: [
+                    if (messages > 0)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                        child: AiContextMeter(
+                          usedTokens: 1200 + messages * 850,
+                          totalTokens: 128000,
+                        ),
+                      ),
+                    if (controller.status == ChatStatus.error)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: AiErrorBanner(
+                          message: '${controller.error}',
+                          onRetry: () => unawaited(controller.regenerate()),
+                          onDismiss: controller.clear,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             );
           },
@@ -152,29 +272,98 @@ class ChatScreen extends StatelessWidget {
             controller: controller,
             messageBuilder: _buildMessage,
             emptyState: _emptyState(),
+            loadingBuilder: (_) =>
+                const SizedBox(width: 220, child: AiShimmer()),
+            // Center the conversation on tablets/desktop/web.
+            maxContentWidth: 760,
           ),
         ),
-        SafeArea(top: false, child: AiPromptInput(controller: controller)),
+        SafeArea(
+          top: false,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: AiPromptInput(
+                controller: controller,
+                onPickAttachment: _pickAttachment,
+                onVoice: _onVoice,
+                onLive: () => unawaited(
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => LiveDemoScreen(controller: controller),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
+
+  // Simulates picking an image from the library (no real picker plugin).
+  Future<List<FilePart>> _pickAttachment() async => [
+    FilePart(
+      mediaType: 'image/png',
+      bytes: sampleImageBytes,
+      name: 'photo.png',
+    ),
+  ];
+
+  // Simulates a spoken prompt arriving from the mic.
+  void _onVoice() => unawaited(controller.sendText('Suggest a dinner recipe'));
+
+  void _snack(BuildContext context, String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(text), duration: const Duration(seconds: 1)),
+      );
 
   // A tiny generative-UI catalog: render each part with the matching element,
   // mapping DataParts to AiChainOfThought / AiTask.
   Widget _buildMessage(BuildContext context, AiMessage message) {
     if (message.role == AiRole.user) return AiMessageBubble(message: message);
+    // Tool-result messages are folded into the assistant turn's tool cards.
+    if (message.role == AiRole.tool) return const SizedBox.shrink();
 
+    // Resolve tool results across the whole transcript: with real function
+    // calling the result arrives in a separate tool message, not this one.
     final results = <String, ToolResultPart>{
-      for (final p in message.parts)
-        if (p is ToolResultPart) p.toolCallId: p,
+      for (final m in controller.messages)
+        for (final p in m.parts)
+          if (p is ToolResultPart) p.toolCallId: p,
     };
     final sources = message.parts.whereType<SourcePart>().toList();
+    final toolCalls = message.parts.whereType<ToolCallPart>().toList();
+    final subdued = DefaultTextStyle.of(
+      context,
+    ).style.color?.withValues(alpha: 0.6);
+    var toolsRendered = false;
 
     final children = <Widget>[];
     void add(Widget w) {
       if (children.isNotEmpty) children.add(const SizedBox(height: 12));
       children.add(w);
     }
+
+    // Assistant identity header (shows AiAvatar).
+    add(
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AiAvatar(role: AiRole.assistant, size: 24),
+          const SizedBox(width: 8),
+          Text(
+            'flutter_ai',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: subdued,
+            ),
+          ),
+        ],
+      ),
+    );
 
     for (final part in message.parts) {
       switch (part) {
@@ -183,7 +372,18 @@ class ChatScreen extends StatelessWidget {
         case TextPart(:final text):
           add(AiResponse(text: text));
         case ToolCallPart():
-          add(AiToolInvocation(call: part, result: results[part.toolCallId]));
+          // Render all tool calls once: a group when parallel, else a card.
+          if (!toolsRendered) {
+            toolsRendered = true;
+            add(
+              toolCalls.length > 1
+                  ? AiToolGroup(calls: toolCalls, results: results)
+                  : AiToolInvocation(
+                      call: part,
+                      result: results[part.toolCallId],
+                    ),
+            );
+          }
         case ToolResultPart():
           break;
         case FilePart():
@@ -213,11 +413,50 @@ class ChatScreen extends StatelessWidget {
                 items: _taskItems(data),
               ),
             );
+          } else if (dataType == 'confirmation') {
+            add(
+              AiConfirmation(
+                title: data['title'] as String? ?? 'Confirm?',
+                description: data['description'] as String?,
+                onConfirm: () => _snack(context, 'Done.'),
+                onDeny: () => _snack(context, 'Cancelled.'),
+              ),
+            );
           }
       }
     }
 
-    if (sources.isNotEmpty) add(AiSources(sources: sources));
+    // Real tool calls awaiting approval (e.g. book_hotel) get a confirm card.
+    for (final call in toolCalls) {
+      final pending = toolRunner.pending[call.toolCallId];
+      if (pending == null) continue;
+      final info = toolRunner.confirmationFor(pending);
+      add(
+        AiConfirmation(
+          title: info.title,
+          description: info.description,
+          onConfirm: () =>
+              toolRunner.resolveConfirmation(call.toolCallId, approved: true),
+          onDeny: () =>
+              toolRunner.resolveConfirmation(call.toolCallId, approved: false),
+        ),
+      );
+    }
+
+    if (sources.isNotEmpty) {
+      // Numbered inline citations + the full source chips.
+      add(
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (var i = 0; i < sources.length; i++)
+              AiInlineCitation(number: i + 1),
+          ],
+        ),
+      );
+      add(AiSources(sources: sources));
+    }
 
     if (message.status == AiMessageStatus.complete) {
       add(
@@ -228,11 +467,17 @@ class ChatScreen extends StatelessWidget {
               onRegenerate: () => unawaited(controller.regenerate()),
             ),
             const Spacer(),
-            AiBranch(
-              index: 0,
-              total: 2,
-              onNext: () => unawaited(controller.regenerate()),
-            ),
+            // Real regeneration history: only the latest turn has branches.
+            if (message == controller.messages.last &&
+                controller.branchCount > 1)
+              AiBranch(
+                index: controller.branchIndex,
+                total: controller.branchCount,
+                onPrevious: () =>
+                    controller.selectBranch(controller.branchIndex - 1),
+                onNext: () =>
+                    controller.selectBranch(controller.branchIndex + 1),
+              ),
           ],
         ),
       );
@@ -292,24 +537,25 @@ class ChatScreen extends StatelessWidget {
   }
 
   Widget _emptyState() => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const AiEmptyState(
-              title: 'Ask me anything',
-              subtitle: 'Powered by flutter_ai',
-            ),
-            AiSuggestions(
-              suggestions: const [
-                'Plan a weekend in Lisbon',
-                'Suggest a dinner recipe',
-                'Summarize this article',
-              ],
-              onSelected: _onSuggestion,
-            ),
-          ],
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const AiEmptyState(
+          title: 'Ask me anything',
+          subtitle: 'Powered by flutter_ai',
         ),
-      );
+        AiSuggestions(
+          suggestions: const [
+            'Plan a weekend in Lisbon',
+            'Suggest a dinner recipe',
+            'How do I center a widget?',
+            'Summarize this article',
+          ],
+          onSelected: _onSuggestion,
+        ),
+      ],
+    ),
+  );
 }
 
 /// A scrolling gallery of every element with sample data.
@@ -320,12 +566,13 @@ class GalleryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = galleryItems();
+    final divider = AiThemeExtension.of(context).borderColor;
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Divider(height: 1, color: Color(0xFFEEECF5)),
+      separatorBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Divider(height: 1, color: divider),
       ),
       itemBuilder: (context, index) {
         final item = items[index];

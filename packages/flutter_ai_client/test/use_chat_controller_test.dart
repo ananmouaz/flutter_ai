@@ -244,6 +244,44 @@ void main() {
     });
   });
 
+  group('addToolResults', () {
+    test('appends a tool message and continues the turn', () async {
+      final provider = ScriptedProvider(const [
+        MessageStarted(messageId: 'a2', role: AiRole.assistant),
+        TextDelta(messageId: 'a2', delta: 'done'),
+        MessageFinished(messageId: 'a2', reason: FinishReason.stop),
+      ]);
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 't1',
+      );
+      addTearDown(controller.dispose);
+
+      await controller.addToolResults(const [
+        ToolResultPart(toolCallId: 'c1', result: 'ok'),
+      ]);
+
+      expect(provider.sendCount, 1);
+      expect(controller.messages.first.role, AiRole.tool);
+      expect(controller.messages.last.role, AiRole.assistant);
+      expect(controller.messages.last.text, 'done');
+    });
+
+    test('is a no-op with empty results', () async {
+      final provider = ScriptedProvider(const []);
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.addToolResults(const []);
+      expect(provider.sendCount, 0);
+      expect(controller.messages, isEmpty);
+    });
+  });
+
   group('configuration', () {
     test('setOptions forwards new options to the provider', () async {
       final provider = _OptionsCapturingProvider();
@@ -256,6 +294,22 @@ void main() {
       controller.setOptions(const AiRequestOptions(model: 'gpt-4o-mini'));
       await controller.sendText('hi');
       expect(provider.lastOptions?.model, 'gpt-4o-mini');
+    });
+
+    test('setTools forwards new tools to the provider', () async {
+      final provider = _ToolsCapturingProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+      );
+      addTearDown(controller.dispose);
+
+      controller.setTools(const [
+        ToolDefinition(name: 'lookup', description: 'Looks something up'),
+      ]);
+      await controller.sendText('hi');
+      expect(provider.lastTools, hasLength(1));
+      expect(provider.lastTools?.single.name, 'lookup');
     });
 
     test('clear empties the transcript', () async {
@@ -275,6 +329,57 @@ void main() {
       expect(controller.status, ChatStatus.idle);
     });
   });
+
+  group('regeneration branches', () {
+    test('regenerate keeps prior versions; selectBranch navigates them',
+        () async {
+      final provider = _CountingProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u1',
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hi');
+      expect(controller.branchCount, 1);
+      expect(controller.messages.last.text, 'reply 1');
+
+      await controller.regenerate();
+      expect(controller.branchCount, 2);
+      expect(controller.branchIndex, 1);
+      expect(controller.messages.last.text, 'reply 2');
+
+      // Navigate back to the first version.
+      controller.selectBranch(0);
+      expect(controller.branchIndex, 0);
+      expect(controller.messages.last.text, 'reply 1');
+
+      // A new user message resets the branch set.
+      await controller.sendText('again');
+      expect(controller.branchCount, 1);
+      expect(controller.branchIndex, 0);
+    });
+  });
+}
+
+/// A provider whose reply text increments on every call, so regenerated
+/// versions are distinguishable.
+class _CountingProvider implements LlmProvider {
+  int _n = 0;
+
+  @override
+  Stream<AiStreamEvent> send(
+    AiConversation conversation, {
+    List<ToolDefinition>? tools,
+    AiRequestOptions? options,
+  }) async* {
+    _n++;
+    final id = 'a$_n';
+    yield MessageStarted(messageId: id, role: AiRole.assistant);
+    yield TextDelta(messageId: id, delta: 'reply $_n');
+    yield MessageFinished(messageId: id, reason: FinishReason.stop);
+  }
 }
 
 class _ThrowingProvider implements LlmProvider {
@@ -298,6 +403,20 @@ class _OptionsCapturingProvider implements LlmProvider {
     AiRequestOptions? options,
   }) async* {
     lastOptions = options;
+    yield const MessageFinished(messageId: 'a1', reason: FinishReason.stop);
+  }
+}
+
+class _ToolsCapturingProvider implements LlmProvider {
+  List<ToolDefinition>? lastTools;
+
+  @override
+  Stream<AiStreamEvent> send(
+    AiConversation conversation, {
+    List<ToolDefinition>? tools,
+    AiRequestOptions? options,
+  }) async* {
+    lastTools = tools;
     yield const MessageFinished(messageId: 'a1', reason: FinishReason.stop);
   }
 }
