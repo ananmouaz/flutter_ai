@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 
 /// An inline banner surfacing an error, with optional retry and dismiss.
 ///
@@ -25,6 +26,7 @@ class AiErrorBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const errorColor = Color(0xFFDC2626);
+    final l = AiLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -43,13 +45,13 @@ class AiErrorBanner extends StatelessWidget {
             ),
           ),
           if (onRetry != null)
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(l.retry)),
           if (onDismiss != null)
             IconButton(
               icon: const Icon(Icons.close, size: 18),
               color: errorColor,
               onPressed: onDismiss,
-              tooltip: 'Dismiss',
+              tooltip: l.dismiss,
             ),
         ],
       ),

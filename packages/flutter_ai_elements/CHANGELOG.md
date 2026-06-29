@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4
+
+- Internationalization: `AiLocalizations` (+ `AiLocalizationsDelegate`) holds the
+  widgets' user-facing strings (defaults English). Every previously-hardcoded
+  tooltip/label/action now reads from it, so apps can translate the UI by
+  providing a delegate. `AiConversationList.newChatLabel` now defaults to the
+  localized value.
+
 ## 0.1.3
 
 - `AiConversationList`: a ChatGPT-style conversation sidebar (New chat + a list

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 
 /// A compact row of per-message actions: copy, and optionally regenerate and
 /// edit.
@@ -62,6 +63,7 @@ class AiMessageActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AiLocalizations.of(context);
     final color = DefaultTextStyle.of(context).style.color?.withValues(
           alpha: 0.6,
         );
@@ -85,17 +87,17 @@ class AiMessageActions extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        button(Icons.copy_rounded, 'Copy', _copy),
+        button(Icons.copy_rounded, l.copy, _copy),
         if (onSpeak != null)
-          button(Icons.volume_up_outlined, 'Read aloud', onSpeak!),
+          button(Icons.volume_up_outlined, l.readAloud, onSpeak!),
         if (onGood != null)
-          button(Icons.thumb_up_outlined, 'Good response', onGood!),
+          button(Icons.thumb_up_outlined, l.goodResponse, onGood!),
         if (onBad != null)
-          button(Icons.thumb_down_outlined, 'Bad response', onBad!),
-        if (onShare != null) button(Icons.ios_share_rounded, 'Share', onShare!),
+          button(Icons.thumb_down_outlined, l.badResponse, onBad!),
+        if (onShare != null) button(Icons.ios_share_rounded, l.share, onShare!),
         if (onRegenerate != null)
-          button(Icons.refresh_rounded, 'Regenerate', onRegenerate!),
-        if (onEdit != null) button(Icons.edit_outlined, 'Edit', onEdit!),
+          button(Icons.refresh_rounded, l.regenerate, onRegenerate!),
+        if (onEdit != null) button(Icons.edit_outlined, l.edit, onEdit!),
       ],
     );
   }
@@ -110,6 +112,7 @@ Future<void> showAiMessageActions(
   VoidCallback? onRegenerate,
   VoidCallback? onEdit,
 }) {
+  final l = AiLocalizations.of(context);
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -124,7 +127,7 @@ Future<void> showAiMessageActions(
           children: [
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Copy'),
+              title: Text(l.copy),
               onTap: () {
                 if (onCopy != null) {
                   onCopy();
@@ -138,7 +141,7 @@ Future<void> showAiMessageActions(
             if (onRegenerate != null)
               ListTile(
                 leading: const Icon(Icons.refresh),
-                title: const Text('Regenerate'),
+                title: Text(l.regenerate),
                 onTap: () {
                   onRegenerate();
                   Navigator.of(sheetContext).pop();
@@ -147,7 +150,7 @@ Future<void> showAiMessageActions(
             if (onEdit != null)
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('Edit'),
+                title: Text(l.edit),
                 onTap: () {
                   onEdit();
                   Navigator.of(sheetContext).pop();

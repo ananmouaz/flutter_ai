@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// Displays an AI-generated (or attached) image with rounded corners, a loading
@@ -117,7 +118,7 @@ class _FullScreenImage extends StatelessWidget {
             right: 8,
             child: IconButton(
               icon: const Icon(Icons.close, color: Colors.white),
-              tooltip: 'Close',
+              tooltip: AiLocalizations.of(context).close,
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
