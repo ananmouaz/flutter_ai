@@ -1,5 +1,15 @@
 # flutter_ai_provider_anthropic
 
+## ☕ Support this project
+
+<p align="center">
+  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+</p>
+
+<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+
+---
+
 <p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_message_assistant.png" width="300" alt="Reasoning, tool call, and answer"/></p>
 
 An Anthropic (Claude) [`LlmProvider`](../flutter_ai_core) for the `flutter_ai`

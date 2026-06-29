@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Docs: added a "Buy me a coffee" (Ko-fi) support section to the README. No code
+  changes.
+
 ## 0.1.1
 
 Bug fixes in `MessageProcessor`:
