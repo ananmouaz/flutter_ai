@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5
+
+- `AiRequestOptions.cachePrompt`: hint that the stable prompt prefix (system +
+  tools) should be cached. Anthropic applies `cache_control`; OpenAI/Gemini cache
+  automatically (no-op).
+
 ## 0.1.4
 
 - `AiResponseFormat` (+ `AiRequestOptions.responseFormat`): request structured

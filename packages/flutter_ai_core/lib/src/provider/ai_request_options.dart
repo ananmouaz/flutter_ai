@@ -13,6 +13,7 @@ final class AiRequestOptions {
     this.temperature,
     this.maxOutputTokens,
     this.responseFormat,
+    this.cachePrompt = false,
     this.extra = const {},
   });
 
@@ -29,6 +30,13 @@ final class AiRequestOptions {
   /// [AiResponseFormat].
   final AiResponseFormat? responseFormat;
 
+  /// Hints that the stable prompt prefix (system instructions + tools) should be
+  /// cached to cut cost and latency on repeated context.
+  ///
+  /// Anthropic applies explicit `cache_control` markers; OpenAI and Gemini cache
+  /// automatically, so this is a no-op there. Off by default.
+  final bool cachePrompt;
+
   /// Provider-specific parameters passed through verbatim.
   final Map<String, Object?> extra;
 
@@ -38,6 +46,7 @@ final class AiRequestOptions {
     double? temperature,
     int? maxOutputTokens,
     AiResponseFormat? responseFormat,
+    bool? cachePrompt,
     Map<String, Object?>? extra,
   }) =>
       AiRequestOptions(
@@ -45,6 +54,7 @@ final class AiRequestOptions {
         temperature: temperature ?? this.temperature,
         maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
         responseFormat: responseFormat ?? this.responseFormat,
+        cachePrompt: cachePrompt ?? this.cachePrompt,
         extra: extra ?? this.extra,
       );
 
@@ -56,6 +66,7 @@ final class AiRequestOptions {
           other.temperature == temperature &&
           other.maxOutputTokens == maxOutputTokens &&
           other.responseFormat == responseFormat &&
+          other.cachePrompt == cachePrompt &&
           deepEquals(other.extra, extra));
 
   @override
@@ -64,6 +75,7 @@ final class AiRequestOptions {
         temperature,
         maxOutputTokens,
         responseFormat,
+        cachePrompt,
         deepHash(extra),
       );
 

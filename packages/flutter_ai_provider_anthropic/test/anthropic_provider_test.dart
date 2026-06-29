@@ -287,6 +287,53 @@ void main() {
       expect((messages.single as Map)['role'], 'user');
     });
 
+    test('cachePrompt marks system and the last tool with cache_control',
+        () async {
+      late http.Request captured;
+      final provider = AnthropicProvider(
+        apiKey: 'sk',
+        client: MockClient.streaming((request, bodyStream) async {
+          captured = request as http.Request;
+          return http.StreamedResponse(
+            Stream<List<int>>.value(
+              utf8.encode('data: ${jsonEncode({'type': 'message_stop'})}\n'),
+            ),
+            200,
+          );
+        }),
+      );
+
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(
+                  id: 's',
+                  role: AiRole.system,
+                  parts: [TextPart('Be terse.')],
+                ),
+                AiMessage(id: 'u', role: AiRole.user, parts: [TextPart('Hi')]),
+              ],
+            ),
+            tools: [
+              const ToolDefinition(
+                name: 'get_weather',
+                description: 'w',
+                parametersSchema: {'type': 'object'},
+              ),
+            ],
+            options: const AiRequestOptions(cachePrompt: true),
+          )
+          .toList();
+
+      final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+      final system = (body['system'] as List).cast<Map<String, Object?>>();
+      expect(system.single['cache_control'], {'type': 'ephemeral'});
+      final tools = (body['tools'] as List).cast<Map<String, Object?>>();
+      expect(tools.last['cache_control'], {'type': 'ephemeral'});
+    });
+
     test('emits a StreamErrorEvent when the transport throws', () async {
       final provider = AnthropicProvider(
         apiKey: 'test',
