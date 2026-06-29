@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- Docs: added a clear "Scope — what this package is *not*" section to the README
+  (no audio capture, no TTS, no bundled STT engine; `AiLiveSession` is UI-only;
+  `transcribeStream` is best-effort/buffered) so the boundaries aren't
+  discovered late. No code changes.
+
 ## 0.1.0
 
 Initial release.

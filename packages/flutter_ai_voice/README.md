@@ -5,6 +5,26 @@
 Speech-to-text contracts and models for the [`flutter_ai`](../../README.md)
 family. Dependency-free; concrete engines plug in behind the interface.
 
+## Scope — what this package is *not*
+
+This package is **speech-to-text contracts only**. So you know up front, it does
+**not** include:
+
+- **No audio capture / recording.** You record the audio (e.g. with `record`,
+  `flutter_sound`, or the platform mic) and hand the bytes/file to a
+  `SpeechToText`.
+- **No text-to-speech (TTS).** Nothing here speaks responses aloud. Wire a TTS
+  engine yourself (e.g. `flutter_tts`) and drive the `onSpeak` hook on
+  `AiMessageActions`.
+- **No bundled STT engine.** `SpeechToText` is an interface — bring on-device
+  Whisper, a cloud API, or the platform recognizer.
+- **`AiLiveSession` (in `flutter_ai_elements`) is presentational.** The orb,
+  transcript, and amplitude reaction are UI; you connect the mic + a
+  `SpeechToText` behind it.
+- **`transcribeStream` is best-effort, not true live STT.** `CallbackSpeechToText`
+  in particular **buffers the whole stream in memory and emits nothing until it
+  closes** — see its dartdoc. Prefer the record-then-transcribe flow below.
+
 ## Why batch-first
 
 Native OS speech recognition has awkward limits (iOS cuts off after ~1 minute),
@@ -41,5 +61,5 @@ chosen engine in the host app or a dedicated adapter package.
 
 ## Status
 
-`0.1.0`. Interface + models + callback adapter, fully unit-tested. No concrete
-audio engine ships in this package.
+`0.1.1`. Interface + models + callback adapter, fully unit-tested. No concrete
+audio engine, recording, or TTS ships in this package (see **Scope** above).

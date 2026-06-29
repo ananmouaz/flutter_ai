@@ -3,7 +3,7 @@ description: >-
   Speech-to-text contracts and models for flutter_ai: a batch-first SpeechToText
   interface, transcript models, and a callback adapter. Concrete engines (Whisper
   and friends) plug in behind the interface.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/ananmouaz/flutter_ai
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_voice
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues
