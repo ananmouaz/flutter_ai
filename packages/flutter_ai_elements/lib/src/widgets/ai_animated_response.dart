@@ -188,6 +188,13 @@ class _AiAnimatedResponseState extends State<AiAnimatedResponse>
     final theme = AiThemeExtension.of(context);
     final base = DefaultTextStyle.of(context).style.merge(theme.textStyle);
     final text = widget.text;
+
+    // Respect the platform "reduce motion" setting: skip the blur/typewriter
+    // and show the text as-is (an accessibility requirement, WCAG 2.3.3).
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      return Text(text, style: base);
+    }
+
     final visible = math.min(_shown, text.length);
 
     // Index of the last word that is fully revealed; only the trailing
@@ -257,6 +264,10 @@ class _AiAnimatedResponseState extends State<AiAnimatedResponse>
       spans.add(TextSpan(text: settled.toString(), style: base));
     }
 
-    return Text.rich(TextSpan(children: spans, style: base));
+    // Isolate the per-frame repaint of the animating reveal from the rest of
+    // the message/list so the blur layers don't dirty their neighbors.
+    return RepaintBoundary(
+      child: Text.rich(TextSpan(children: spans, style: base)),
+    );
   }
 }
