@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7
+
+- `AiChatView`: a batteries-included drop-in (transcript + composer + layout +
+  safe area) so a working chat is a single widget in your `Scaffold` body.
+
 ## 0.1.6
 
 - Declare supported platforms (Android/iOS/web/macOS/Windows/Linux) for the

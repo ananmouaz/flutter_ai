@@ -59,14 +59,24 @@ class ChatScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Column(
-          children: [
-            Expanded(child: AiChat(controller: controller)),
-            AiPromptInput(controller: controller),
-          ],
-        ),
+        // Batteries-included: transcript + composer + layout in one widget.
+        body: AiChatView(controller: controller),
       );
 }
+```
+
+Need a custom layout between the transcript and composer? Compose the pieces
+yourself instead:
+
+```dart
+Scaffold(
+  body: Column(
+    children: [
+      Expanded(child: AiChat(controller: controller)),
+      AiPromptInput(controller: controller),
+    ],
+  ),
+);
 ```
 
 ## Theming

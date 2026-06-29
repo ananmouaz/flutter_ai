@@ -27,6 +27,7 @@ export 'src/widgets/ai_avatar.dart';
 export 'src/widgets/ai_branch.dart';
 export 'src/widgets/ai_chain_of_thought.dart';
 export 'src/widgets/ai_chat.dart';
+export 'src/widgets/ai_chat_view.dart';
 export 'src/widgets/ai_code_block.dart';
 export 'src/widgets/ai_composer.dart';
 export 'src/widgets/ai_confirmation.dart';
