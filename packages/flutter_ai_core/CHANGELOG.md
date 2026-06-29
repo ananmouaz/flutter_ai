@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.9
+
+- `validateJsonSchema`: a tiny, dependency-free validator for the JSON-Schema
+  subset LLM tool declarations use (`type`, `properties`, `required`, `items`,
+  `enum`, `additionalProperties: false`, numeric/string/array bounds, union
+  types). Returns human-readable violation messages. `UseChatController` uses it
+  to validate tool-call args before execution.
+
 ## 0.1.8
 
 - Perf: streaming text/reasoning deltas accumulate into a per-part

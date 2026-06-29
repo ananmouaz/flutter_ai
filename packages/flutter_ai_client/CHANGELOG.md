@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.7
+
+- Tool-argument validation (`validateToolArgs`, default on): the agent loop
+  validates each model-produced tool call against the tool's
+  `parametersSchema` before running it. Calls with invalid args are not
+  executed — an error `ToolResultPart` describing the violations is fed back so
+  the model can self-correct (bounded by `maxSteps`). Opt out with
+  `validateToolArgs: false`.
+- History trimming (`trimHistory`): a pluggable strategy that maps the full
+  conversation to the (smaller) conversation actually sent to the provider; the
+  stored transcript is never trimmed. Ships with `keepLastMessages(n)` and
+  `trimToApproxTokenBudget(maxTokens)` strategies (both preserve the system
+  prefix and avoid orphaning tool results).
+
 ## 0.1.6
 
 - Declare supported platforms (Android/iOS/web/macOS/Windows/Linux) for the

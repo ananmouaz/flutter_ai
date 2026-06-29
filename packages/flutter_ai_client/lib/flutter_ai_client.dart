@@ -13,4 +13,5 @@ export 'package:flutter_ai_core/flutter_ai_core.dart';
 
 export 'src/chat_status.dart';
 export 'src/chat_store.dart';
+export 'src/context_strategy.dart';
 export 'src/use_chat_controller.dart';

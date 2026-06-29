@@ -45,6 +45,26 @@ class UseChatController extends ChangeNotifier {
   /// [maxSteps] model calls have run. Without [onToolCalls] the behavior is
   /// unchanged: the turn ends with the tool calls and the host drives execution
   /// manually via [addToolResults].
+  ///
+  /// ### Tool-argument validation
+  ///
+  /// When [validateToolArgs] is true (the default) and a tool's
+  /// [ToolDefinition.parametersSchema] is non-empty, the controller validates
+  /// each model-produced call's arguments against that schema *before* running
+  /// [onToolCalls]. A call whose args violate the schema is not executed;
+  /// instead an error [ToolResultPart] describing the violations is fed back to
+  /// the model, which then gets a chance to correct itself (still bounded by
+  /// [maxSteps]). Tools with no schema, and calls for unknown tool names, skip
+  /// validation.
+  ///
+  /// ### History trimming
+  ///
+  /// [trimHistory], when provided, maps the full conversation to the (smaller)
+  /// conversation actually sent to the provider on each request. The stored
+  /// transcript is never trimmed — [conversation]/[messages] still return
+  /// everything — so the UI keeps the full history while requests stay within a
+  /// token budget. See `keepLastMessages` and `trimToApproxTokenBudget` for
+  /// ready-made strategies.
   UseChatController({
     required LlmProvider provider,
     AiConversation? initial,
@@ -55,6 +75,8 @@ class UseChatController extends ChangeNotifier {
     int maxSteps = 8,
     int maxBranches = 20,
     int? tokenBudget,
+    bool validateToolArgs = true,
+    AiConversation Function(AiConversation conversation)? trimHistory,
     void Function(VoidCallback callback)? scheduler,
     String Function()? idGenerator,
   })  : assert(maxSteps >= 1, 'maxSteps must be at least 1'),
@@ -66,6 +88,8 @@ class UseChatController extends ChangeNotifier {
         _maxSteps = maxSteps,
         _maxBranches = maxBranches,
         _tokenBudget = tokenBudget,
+        _validateToolArgs = validateToolArgs,
+        _trimHistory = trimHistory,
         _scheduler = scheduler ?? scheduleMicrotask,
         _newId = idGenerator ?? _sequentialIdGenerator(),
         _processor = MessageProcessor(conversation: initial);
@@ -76,6 +100,8 @@ class UseChatController extends ChangeNotifier {
   final Future<List<ToolResultPart>> Function(List<ToolCallPart>)? _onToolCalls;
   final int _maxSteps;
   final int _maxBranches;
+  final bool _validateToolArgs;
+  final AiConversation Function(AiConversation)? _trimHistory;
   final int? _tokenBudget; // stop the agent loop once cumulative tokens exceed
   final StreamController<AiStreamEvent> _events =
       StreamController<AiStreamEvent>.broadcast();
@@ -398,9 +424,12 @@ class UseChatController extends ChangeNotifier {
     // must not mutate the conversation or leak onto the events stream after a
     // new turn started.
     final seq = _turnSeq;
-    _subscription = _provider
-        .send(_processor.conversation, tools: _tools, options: _options)
-        .listen(
+    // The provider sees the (optionally trimmed) conversation; the stored
+    // transcript is never trimmed.
+    final outgoing =
+        _trimHistory?.call(_processor.conversation) ?? _processor.conversation;
+    _subscription =
+        _provider.send(outgoing, tools: _tools, options: _options).listen(
       (event) {
         if (_disposed || seq != _turnSeq) return;
         _processor.apply(event);
@@ -480,19 +509,29 @@ class UseChatController extends ChangeNotifier {
     List<ToolCallPart> calls,
     Completer<void>? turn,
   ) async {
-    List<ToolResultPart> results;
-    try {
-      results = await _onToolCalls!(calls);
-    } catch (error, stackTrace) {
-      if (_disposed || !identical(_turn, turn)) return;
-      _error = error;
-      _stackTrace = stackTrace;
-      _status = ChatStatus.error;
-      _completeTurn();
-      _scheduleNotify();
-      return;
+    // Split off calls whose arguments violate the tool's parametersSchema:
+    // those are answered with an error result (so the model can retry) instead
+    // of being handed to the executor.
+    final (valid, validationErrors) = _validateToolArgs
+        ? _splitInvalidCalls(calls)
+        : (calls, const <ToolResultPart>[]);
+
+    List<ToolResultPart> executed = const [];
+    if (valid.isNotEmpty) {
+      try {
+        executed = await _onToolCalls!(valid);
+      } catch (error, stackTrace) {
+        if (_disposed || !identical(_turn, turn)) return;
+        _error = error;
+        _stackTrace = stackTrace;
+        _status = ChatStatus.error;
+        _completeTurn();
+        _scheduleNotify();
+        return;
+      }
     }
     if (_disposed || !identical(_turn, turn) || turn == null) return;
+    final results = [...validationErrors, ...executed];
     if (results.isEmpty) {
       _completeTurn();
       _scheduleNotify();
@@ -528,6 +567,47 @@ class UseChatController extends ChangeNotifier {
           if (p is ToolResultPart) p.toolCallId,
     };
     return calls.where((c) => !answered.contains(c.toolCallId)).toList();
+  }
+
+  /// Partitions [calls] into those whose arguments satisfy the matching tool's
+  /// [ToolDefinition.parametersSchema] and, for the rest, an error
+  /// [ToolResultPart] describing the schema violations. Calls for tools with no
+  /// schema, or for tool names not in [_tools], are treated as valid (nothing
+  /// to validate against).
+  (List<ToolCallPart>, List<ToolResultPart>) _splitInvalidCalls(
+    List<ToolCallPart> calls,
+  ) {
+    final valid = <ToolCallPart>[];
+    final errors = <ToolResultPart>[];
+    for (final call in calls) {
+      Map<String, Object?> schema = const {};
+      for (final t in _tools) {
+        if (t.name == call.toolName) {
+          schema = t.parametersSchema;
+          break;
+        }
+      }
+      final violations = schema.isEmpty
+          ? const <String>[]
+          : validateJsonSchema(call.args, schema);
+      if (violations.isEmpty) {
+        valid.add(call);
+      } else {
+        errors.add(
+          ToolResultPart(
+            toolCallId: call.toolCallId,
+            isError: true,
+            result: {
+              'error': 'invalid_arguments',
+              'message': 'Arguments for "${call.toolName}" failed validation. '
+                  'Fix them and call the tool again.',
+              'violations': violations,
+            },
+          ),
+        );
+      }
+    }
+    return (valid, errors);
   }
 
   /// Cancels the active subscription (if any) and completes its turn future.
