@@ -264,10 +264,64 @@ class _AiAnimatedResponseState extends State<AiAnimatedResponse>
       spans.add(TextSpan(text: settled.toString(), style: base));
     }
 
+    // A blinking caret at the leading edge — the "being written right now" cue.
+    spans.add(WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: _Caret(
+        key: const ValueKey('ai-caret'),
+        color: base.color ?? const Color(0xFF000000),
+        base: base,
+      ),
+    ));
+
     // Isolate the per-frame repaint of the animating reveal from the rest of
     // the message/list so the blur layers don't dirty their neighbors.
     return RepaintBoundary(
       child: Text.rich(TextSpan(children: spans, style: base)),
+    );
+  }
+}
+
+/// A thin blinking text caret. Holds steady (no blink) under reduce-motion.
+class _Caret extends StatefulWidget {
+  const _Caret({super.key, required this.color, required this.base});
+
+  final Color color;
+  final TextStyle base;
+
+  @override
+  State<_Caret> createState() => _CaretState();
+}
+
+class _CaretState extends State<_Caret> with SingleTickerProviderStateMixin {
+  late final AnimationController _blink = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final height = (widget.base.fontSize ?? 16) * (widget.base.height ?? 1.2);
+    final bar = Padding(
+      padding: const EdgeInsetsDirectional.only(start: 1),
+      child: Container(width: 2, height: height * 0.78, color: widget.color),
+    );
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) return bar;
+    return FadeTransition(
+      // Square wave-ish blink: mostly on, brief off.
+      opacity: _blink.drive(
+        TweenSequence<double>([
+          TweenSequenceItem(tween: ConstantTween(1), weight: 55),
+          TweenSequenceItem(tween: ConstantTween(0), weight: 45),
+        ]),
+      ),
+      child: bar,
     );
   }
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10
+
+- `AiAnimatedResponse` shows a blinking caret at the streaming edge (the
+  "being written" cue); it holds steady under reduce-motion.
+
 ## 0.1.9
 
 - Focus / hover / keyboard on the primary controls (desktop & web): the
