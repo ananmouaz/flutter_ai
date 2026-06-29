@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3
+
+- Structured output: maps `AiRequestOptions.responseFormat` to a forced tool
+  whose input is the schema; its streamed input is surfaced as the JSON answer
+  text and the turn finishes as `stop`.
+
 ## 0.1.2
 
 - Reports token usage: accumulates input (incl. cache read/creation) from

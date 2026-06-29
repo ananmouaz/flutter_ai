@@ -1,4 +1,5 @@
 import 'package:flutter_ai_core/src/internal/equality.dart';
+import 'package:flutter_ai_core/src/provider/ai_response_format.dart';
 
 /// Provider-neutral knobs for a generation request.
 ///
@@ -11,6 +12,7 @@ final class AiRequestOptions {
     this.model,
     this.temperature,
     this.maxOutputTokens,
+    this.responseFormat,
     this.extra = const {},
   });
 
@@ -23,6 +25,10 @@ final class AiRequestOptions {
   /// An upper bound on the number of tokens to generate.
   final int? maxOutputTokens;
 
+  /// When set, requests structured output constrained to a JSON schema. See
+  /// [AiResponseFormat].
+  final AiResponseFormat? responseFormat;
+
   /// Provider-specific parameters passed through verbatim.
   final Map<String, Object?> extra;
 
@@ -31,12 +37,14 @@ final class AiRequestOptions {
     String? model,
     double? temperature,
     int? maxOutputTokens,
+    AiResponseFormat? responseFormat,
     Map<String, Object?>? extra,
   }) =>
       AiRequestOptions(
         model: model ?? this.model,
         temperature: temperature ?? this.temperature,
         maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
+        responseFormat: responseFormat ?? this.responseFormat,
         extra: extra ?? this.extra,
       );
 
@@ -47,11 +55,17 @@ final class AiRequestOptions {
           other.model == model &&
           other.temperature == temperature &&
           other.maxOutputTokens == maxOutputTokens &&
+          other.responseFormat == responseFormat &&
           deepEquals(other.extra, extra));
 
   @override
-  int get hashCode =>
-      Object.hash(model, temperature, maxOutputTokens, deepHash(extra));
+  int get hashCode => Object.hash(
+        model,
+        temperature,
+        maxOutputTokens,
+        responseFormat,
+        deepHash(extra),
+      );
 
   @override
   String toString() =>

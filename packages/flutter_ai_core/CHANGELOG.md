@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- `AiResponseFormat` (+ `AiRequestOptions.responseFormat`): request structured
+  output constrained to a JSON schema. Providers route it to their native
+  mechanism; the assistant's text is the JSON object.
+
 ## 0.1.3
 
 - `AiUsage` model (input/output/cached/reasoning/total tokens) with `+` to

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- Structured output: maps `AiRequestOptions.responseFormat` to a `json_schema`
+  `response_format` (with `strict`).
+
 ## 0.1.2
 
 - Reports token usage: sets `stream_options.include_usage` and parses the

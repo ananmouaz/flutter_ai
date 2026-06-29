@@ -238,6 +238,48 @@ void main() {
       expect(tools.any((t) => (t as Map).containsKey('googleSearch')), isTrue);
     });
 
+    test('maps responseFormat to generationConfig.responseSchema', () async {
+      late http.Request captured;
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, bodyStream) async {
+          captured = request as http.Request;
+          const body =
+              'data: {"candidates":[{"content":{},"finishReason":"STOP"}]}\n';
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode(body)),
+            200,
+          );
+        }),
+      );
+
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(id: 'u', role: AiRole.user, parts: [TextPart('Hi')]),
+              ],
+            ),
+            options: const AiRequestOptions(
+              responseFormat: AiResponseFormat(
+                schema: {
+                  'type': 'object',
+                  'properties': {
+                    'x': {'type': 'number'},
+                  },
+                },
+              ),
+            ),
+          )
+          .toList();
+
+      final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+      final config = (body['generationConfig'] as Map).cast<String, Object?>();
+      expect(config['responseMimeType'], 'application/json');
+      expect((config['responseSchema'] as Map)['type'], 'object');
+    });
+
     test('emits a StreamErrorEvent on a non-200 response', () async {
       final provider = GeminiProvider(
         apiKey: 'bad',

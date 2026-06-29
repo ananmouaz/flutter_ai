@@ -13,6 +13,14 @@ import 'package:flutter_ai_core/flutter_ai_core.dart';
 /// `message_delta`, `message_stop`, and `error`. `ping` and unknown types are
 /// ignored.
 class AnthropicEventParser {
+  /// Creates a parser. When [structuredToolName] is set (structured output via a
+  /// forced tool), that tool's streamed input is surfaced as [TextDelta]s — the
+  /// JSON answer — rather than as a tool call.
+  AnthropicEventParser({String? structuredToolName})
+      : _structuredToolName = structuredToolName;
+
+  final String? _structuredToolName;
+  int? _structuredIndex;
   String _messageId = 'assistant';
   final Map<int, String> _toolCallIdByIndex = {};
   String _stopReason = 'end_turn';
@@ -29,7 +37,7 @@ class AnthropicEventParser {
       ? [
           MessageFinished(
             messageId: _messageId,
-            reason: _mapFinish(_stopReason),
+            reason: _finishReason(),
             usage: _buildUsage(),
           ),
         ]
@@ -68,8 +76,14 @@ class AnthropicEventParser {
         final index = (event['index'] as num?)?.toInt() ?? 0;
         final block = (event['content_block'] as Map?)?.cast<String, Object?>();
         if (block?['type'] == 'tool_use') {
-          final id = block?['id'] as String? ?? '$_messageId-tool-$index';
           final name = block?['name'] as String? ?? '';
+          // Structured-output tool: capture its input as the JSON answer text
+          // rather than exposing it as a tool call.
+          if (_structuredToolName != null && name == _structuredToolName) {
+            _structuredIndex = index;
+            return const [];
+          }
+          final id = block?['id'] as String? ?? '$_messageId-tool-$index';
           _toolCallIdByIndex[index] = id;
           return [
             ToolCallStarted(
@@ -97,8 +111,13 @@ class AnthropicEventParser {
                 ? const []
                 : [ReasoningDelta(messageId: _messageId, delta: thinking)];
           case 'input_json_delta':
-            final id = _toolCallIdByIndex[index];
             final partial = delta['partial_json'] as String? ?? '';
+            if (index == _structuredIndex) {
+              return partial.isEmpty
+                  ? const []
+                  : [TextDelta(messageId: _messageId, delta: partial)];
+            }
+            final id = _toolCallIdByIndex[index];
             return (id == null || partial.isEmpty)
                 ? const []
                 : [ToolCallDelta(toolCallId: id, argumentsDelta: partial)];
@@ -107,6 +126,7 @@ class AnthropicEventParser {
 
       case 'content_block_stop':
         final index = (event['index'] as num?)?.toInt() ?? 0;
+        if (index == _structuredIndex) return const [];
         final id = _toolCallIdByIndex[index];
         return id == null ? const [] : [ToolCallReady(toolCallId: id)];
 
@@ -124,7 +144,7 @@ class AnthropicEventParser {
         return [
           MessageFinished(
             messageId: _messageId,
-            reason: _mapFinish(_stopReason),
+            reason: _finishReason(),
             usage: _buildUsage(),
           ),
         ];
@@ -139,6 +159,12 @@ class AnthropicEventParser {
         return const []; // ping and unknown events carry no state for us.
     }
   }
+
+  // Structured output forces a tool call, so `tool_use` really means "done".
+  FinishReason _finishReason() =>
+      (_structuredIndex != null && _stopReason == 'tool_use')
+          ? FinishReason.stop
+          : _mapFinish(_stopReason);
 
   static FinishReason _mapFinish(String reason) => switch (reason) {
         'end_turn' => FinishReason.stop,

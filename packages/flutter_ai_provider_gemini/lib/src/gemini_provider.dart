@@ -95,6 +95,10 @@ class GeminiProvider implements LlmProvider {
       if (options?.temperature != null) 'temperature': options!.temperature,
       if (options?.maxOutputTokens != null)
         'maxOutputTokens': options!.maxOutputTokens,
+      if (options?.responseFormat != null) ...{
+        'responseMimeType': 'application/json',
+        'responseSchema': options!.responseFormat!.schema,
+      },
     };
 
     final payload = <String, Object?>{
