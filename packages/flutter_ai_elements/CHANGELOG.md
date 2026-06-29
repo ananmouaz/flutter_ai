@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.9
+
+- Focus / hover / keyboard on the primary controls (desktop & web): the
+  composer's attach/mic and send buttons and the confirmation Allow/Deny buttons
+  use Material ink + focus traversal + Enter/Space instead of bare gesture
+  detectors. The send/stop/live button now morphs (AnimatedSwitcher) and Stop
+  reads as a distinct error-toned affordance.
+
 ## 0.1.8
 
 - Semantic theme tokens: `AiThemeExtension` gains `errorColor`, `successColor`,

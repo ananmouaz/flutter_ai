@@ -313,7 +313,9 @@ class _AiComposerState extends State<AiComposer> {
           ),
         const SizedBox(width: 2),
         _MainButton(
-          color: theme.accentColor,
+          // Stop reads as a distinct (error-toned) affordance, not the same
+          // accent as Send/Live.
+          color: showStop ? theme.errorColor : theme.accentColor,
           iconColor: theme.onAccentColor,
           icon: mainIcon,
           tooltip: showStop
@@ -348,11 +350,18 @@ class _ToolIcon extends StatelessWidget {
     return Semantics(
       button: true,
       label: tooltip,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Icon(icon, size: 24, color: color),
+      child: Tooltip(
+        message: tooltip,
+        // InkResponse gives focus traversal, keyboard (Enter/Space), hover, and
+        // a ripple — none of which a bare GestureDetector provides.
+        child: InkResponse(
+          onTap: onTap,
+          radius: 22,
+          customBorder: const CircleBorder(),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(icon, size: 24, color: color),
+          ),
         ),
       ),
     );
@@ -461,23 +470,43 @@ class _MainButtonState extends State<_MainButton> {
     return Semantics(
       button: true,
       label: widget.tooltip,
-      child: GestureDetector(
-        onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
-        onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
-        onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
-        onTap: widget.onPressed,
+      child: Tooltip(
+        message: widget.tooltip,
         child: AnimatedScale(
           scale: _pressed ? 0.9 : 1,
           duration: const Duration(milliseconds: 100),
-          child: Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color:
-                  enabled ? widget.color : widget.color.withValues(alpha: 0.4),
-              shape: BoxShape.circle,
+          child: Material(
+            color: enabled ? widget.color : widget.color.withValues(alpha: 0.4),
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: widget.onPressed,
+              onTapDown:
+                  enabled ? (_) => setState(() => _pressed = true) : null,
+              onTapCancel:
+                  enabled ? () => setState(() => _pressed = false) : null,
+              onHighlightChanged:
+                  enabled ? (h) => setState(() => _pressed = h) : null,
+              child: SizedBox(
+                width: 38,
+                height: 38,
+                // Morph between Send / Stop / Live rather than hard-swapping.
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, anim) => ScaleTransition(
+                    scale: anim,
+                    child: FadeTransition(opacity: anim, child: child),
+                  ),
+                  child: Icon(
+                    widget.icon,
+                    key: ValueKey(widget.icon),
+                    color: widget.iconColor,
+                    size: 20,
+                  ),
+                ),
+              ),
             ),
-            child: Icon(widget.icon, color: widget.iconColor, size: 20),
           ),
         ),
       ),
