@@ -13,6 +13,16 @@ class OpenAiChunkParser {
   String _finishReason = 'stop';
   AiUsage? _usage;
   final Map<int, String> _toolCallIdByIndex = {};
+  final Set<String> _readied = {};
+
+  /// The id of the assistant message being built (for error finalization).
+  String get messageId => _messageId;
+
+  /// Emits a [ToolCallReady] for each accumulated tool call not yet readied.
+  List<AiStreamEvent> _readyPendingToolCalls() => [
+        for (final id in _toolCallIdByIndex.values)
+          if (_readied.add(id)) ToolCallReady(toolCallId: id),
+      ];
 
   /// Emits the terminal [MessageFinished]. The finish event is deferred to here
   /// because, with `stream_options.include_usage`, OpenAI sends token usage in a
@@ -22,6 +32,7 @@ class OpenAiChunkParser {
     if (!_started || _emitted) return const [];
     _emitted = true;
     return [
+      ..._readyPendingToolCalls(),
       MessageFinished(
         messageId: _messageId,
         reason: _mapFinish(_finishReason),
@@ -69,11 +80,9 @@ class OpenAiChunkParser {
     final finishReason = choice['finish_reason'];
     if (finishReason is String) {
       _finishReason = finishReason;
-      if (finishReason == 'tool_calls') {
-        for (final toolCallId in _toolCallIdByIndex.values) {
-          events.add(ToolCallReady(toolCallId: toolCallId));
-        }
-      }
+      // Ready any accumulated tool calls regardless of finish reason — some
+      // OpenAI-compatible servers end with `stop` even when tool calls streamed.
+      events.addAll(_readyPendingToolCalls());
       // MessageFinished is deferred to finalize() so it can carry usage from the
       // trailing chunk.
     }

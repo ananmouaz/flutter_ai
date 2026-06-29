@@ -135,11 +135,10 @@ class OpenAiProvider implements LlmProvider {
         }
       }
     } on TimeoutException catch (error) {
-      // A mid-stream stall: surface the error, finalize, and stop.
-      yield StreamErrorEvent(error: error);
-      for (final event in parser.finalize()) {
-        yield event;
-      }
+      // A mid-stream stall: surface the error against the in-flight message so
+      // it's marked errored. Do NOT also finalize() — that would emit a
+      // terminal MessageFinished(stop) and mask the timeout.
+      yield StreamErrorEvent(error: error, messageId: parser.messageId);
       return;
     }
     // Stream ended — emit a terminal event if no finish_reason/[DONE] arrived.

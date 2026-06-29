@@ -428,7 +428,7 @@ void main() {
       );
     });
 
-    test('emits StreamErrorEvent + MessageFinished when the stream stalls',
+    test('surfaces a message-scoped StreamErrorEvent (no finalize) on a stall',
         () async {
       final controller = StreamController<List<int>>();
       controller.add(utf8.encode(_dataLines([
@@ -448,8 +448,10 @@ void main() {
           .send(const AiConversation(id: 'c', messages: []))
           .toList();
       await controller.close();
-      expect(events.whereType<StreamErrorEvent>(), isNotEmpty);
-      expect(events.whereType<MessageFinished>(), isNotEmpty);
+      final errors = events.whereType<StreamErrorEvent>().toList();
+      expect(errors, isNotEmpty);
+      expect(errors.last.messageId, 'msg_1');
+      expect(events.whereType<MessageFinished>(), isEmpty);
     });
 
     test('merges adjacent same-role turns so roles alternate', () async {

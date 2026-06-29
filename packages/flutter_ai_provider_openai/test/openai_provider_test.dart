@@ -401,7 +401,7 @@ void main() {
     );
   });
 
-  test('emits StreamErrorEvent + MessageFinished when the stream stalls',
+  test('surfaces a message-scoped StreamErrorEvent (no finalize) on a stall',
       () async {
     // A body stream that emits one chunk then never completes (no [DONE]),
     // simulating a mid-stream stall. The short idle timeout fires.
@@ -426,8 +426,11 @@ void main() {
         .send(const AiConversation(id: 'c', messages: []))
         .toList();
     await controller.close();
-    expect(events.whereType<StreamErrorEvent>(), isNotEmpty);
-    expect(events.whereType<MessageFinished>(), isNotEmpty);
+    final errors = events.whereType<StreamErrorEvent>().toList();
+    expect(errors, isNotEmpty);
+    expect(errors.last.messageId, 'c1'); // marks the in-flight message errored
+    // No terminal MessageFinished — that would mask the timeout as success.
+    expect(events.whereType<MessageFinished>(), isEmpty);
   });
 
   test('retries a transient 503 then succeeds', () async {
