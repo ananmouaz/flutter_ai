@@ -1,5 +1,15 @@
 # flutter_ai_provider_gemini
 
+## ☕ Support this project
+
+<p align="center">
+  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+</p>
+
+<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+
+---
+
 <p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_sources.png" width="300" alt="Grounded source citations"/></p>
 
 <sub>With grounding enabled, answers stream <b>source citations</b> (<code>AiSources</code> / <code>AiInlineCitation</code>).</sub>
