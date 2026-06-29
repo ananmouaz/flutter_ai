@@ -444,17 +444,8 @@ class ChatScreen extends StatelessWidget {
     }
 
     if (sources.isNotEmpty) {
-      // Numbered inline citations + the full source chips.
-      add(
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            for (var i = 0; i < sources.length; i++)
-              AiInlineCitation(number: i + 1),
-          ],
-        ),
-      );
+      // A compact, collapsible strip of where the answer came from. (Grounded
+      // answers can return dozens of sources, so AiSources caps them.)
       add(AiSources(sources: sources));
     }
 

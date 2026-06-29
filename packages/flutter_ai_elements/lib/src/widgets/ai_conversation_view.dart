@@ -22,6 +22,9 @@ class AiConversationView extends StatelessWidget {
     this.loadingBuilder,
     this.padding = const EdgeInsets.all(16),
     this.maxContentWidth,
+    this.trailingSpace = 0,
+    this.anchorKey,
+    this.anchorId,
   });
 
   /// The messages to display, oldest first.
@@ -51,15 +54,31 @@ class AiConversationView extends StatelessWidget {
   /// tablet/desktop). `null` means full-width.
   final double? maxContentWidth;
 
+  /// Extra empty space reserved after the last item. Used by `AiChat` to let the
+  /// newest turn scroll to the top of the viewport (ChatGPT-style anchoring).
+  final double trailingSpace;
+
+  /// When set, the message whose [AiMessage.id] equals [anchorId] is wrapped in
+  /// a [KeyedSubtree] keyed by this, so a parent can scroll it into view.
+  final GlobalKey? anchorKey;
+
+  /// The id of the message to attach [anchorKey] to.
+  final Object? anchorId;
+
   @override
   Widget build(BuildContext context) {
-    final itemCount = messages.length + (showLoader ? 1 : 0);
+    final hasSpacer = trailingSpace > 0;
+    final loaderIndex = showLoader ? messages.length : -1;
+    final spacerIndex = hasSpacer ? messages.length + (showLoader ? 1 : 0) : -1;
+    final itemCount =
+        messages.length + (showLoader ? 1 : 0) + (hasSpacer ? 1 : 0);
     final list = ListView.builder(
       controller: scrollController,
       padding: padding,
       itemCount: itemCount,
       itemBuilder: (context, index) {
-        if (showLoader && index == messages.length) {
+        if (index == spacerIndex) return SizedBox(height: trailingSpace);
+        if (index == loaderIndex) {
           return Align(
             alignment: Alignment.centerLeft,
             child: Padding(
@@ -69,12 +88,16 @@ class AiConversationView extends StatelessWidget {
           );
         }
         final message = messages[index];
-        return messageBuilder?.call(context, message) ??
+        final bubble = messageBuilder?.call(context, message) ??
             AiMessageBubble(
               key: ValueKey(message.id),
               message: message,
               textRenderer: textRenderer,
             );
+        if (anchorKey != null && anchorId == message.id) {
+          return KeyedSubtree(key: anchorKey, child: bubble);
+        }
+        return bubble;
       },
     );
     if (maxContentWidth == null) return list;

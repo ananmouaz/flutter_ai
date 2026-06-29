@@ -283,6 +283,26 @@ void main() {
       expect(find.text('dart.dev'), findsOneWidget); // falls back to host
     });
 
+    testWidgets('AiSources collapses past maxVisible and expands on tap',
+        (tester) async {
+      final sources = [
+        for (var i = 0; i < 10; i++)
+          SourcePart(url: Uri.parse('https://site$i.example')),
+      ];
+      await tester
+          .pumpWidget(_wrap(AiSources(sources: sources, maxVisible: 3)));
+      // Only the first 3 chips show, plus a "+7 more" toggle.
+      expect(find.text('site0.example'), findsOneWidget);
+      expect(find.text('site2.example'), findsOneWidget);
+      expect(find.text('site3.example'), findsNothing);
+      expect(find.text('+7 more'), findsOneWidget);
+
+      await tester.tap(find.text('+7 more'));
+      await tester.pumpAndSettle();
+      expect(find.text('site9.example'), findsOneWidget);
+      expect(find.text('Show less'), findsOneWidget);
+    });
+
     testWidgets('AiCodeBlock shows code and a copy button', (tester) async {
       await tester.pumpWidget(
         _wrap(const AiCodeBlock(code: 'print("hi");', language: 'dart')),
