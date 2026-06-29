@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- Structured output: maps `AiRequestOptions.responseFormat` to
+  `generationConfig.responseSchema` + `responseMimeType: application/json`.
+
 ## 0.1.2
 
 - Reports token usage: parses `usageMetadata` (prompt/candidates/total, cached

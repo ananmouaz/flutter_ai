@@ -84,6 +84,18 @@ class AnthropicProvider implements LlmProvider {
     AiRequestOptions? options,
   }) async* {
     final (system, messages) = _buildMessages(conversation);
+    final responseFormat = options?.responseFormat;
+    // Anthropic has no response_format; structured output is a forced tool whose
+    // input is the schema (the parser surfaces its input as the JSON answer).
+    final toolList = <Map<String, Object?>>[
+      if (tools != null) ..._buildTools(tools),
+      if (responseFormat != null)
+        {
+          'name': responseFormat.name,
+          'description': 'Respond with the structured result.',
+          'input_schema': responseFormat.schema,
+        },
+    ];
     final payload = <String, Object?>{
       if (options?.extra != null) ...options!.extra,
       'model': options?.model ?? defaultModel,
@@ -92,7 +104,9 @@ class AnthropicProvider implements LlmProvider {
       'messages': messages,
       if (system != null && system.isNotEmpty) 'system': system,
       if (options?.temperature != null) 'temperature': options!.temperature,
-      if (tools != null && tools.isNotEmpty) 'tools': _buildTools(tools),
+      if (toolList.isNotEmpty) 'tools': toolList,
+      if (responseFormat != null)
+        'tool_choice': {'type': 'tool', 'name': responseFormat.name},
     };
 
     final http.StreamedResponse response;
@@ -113,7 +127,8 @@ class AnthropicProvider implements LlmProvider {
       return;
     }
 
-    final parser = AnthropicEventParser();
+    final parser =
+        AnthropicEventParser(structuredToolName: responseFormat?.name);
     // Idle timeout: a stall longer than [timeout] between chunks aborts the
     // `await for` with a TimeoutException instead of hanging forever.
     final lines = response.stream

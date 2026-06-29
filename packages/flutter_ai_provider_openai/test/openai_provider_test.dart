@@ -242,6 +242,50 @@ void main() {
       expect(function['name'], 'get_weather');
     });
 
+    test('maps responseFormat to a json_schema response_format', () async {
+      late Map<String, Object?> payload;
+      final provider = OpenAiProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, bodyStream) async {
+          payload = (jsonDecode(await bodyStream.bytesToString()) as Map)
+              .cast<String, Object?>();
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode('data: [DONE]\n')),
+            200,
+          );
+        }),
+      );
+
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(id: 'm', role: AiRole.user, parts: [TextPart('hi')]),
+              ],
+            ),
+            options: const AiRequestOptions(
+              responseFormat: AiResponseFormat(
+                schema: {
+                  'type': 'object',
+                  'properties': {
+                    'x': {'type': 'number'},
+                  },
+                },
+                name: 'result',
+              ),
+            ),
+          )
+          .toList();
+
+      final rf = (payload['response_format'] as Map).cast<String, Object?>();
+      expect(rf['type'], 'json_schema');
+      final js = (rf['json_schema'] as Map).cast<String, Object?>();
+      expect(js['name'], 'result');
+      expect(js['strict'], true);
+      expect((js['schema'] as Map)['type'], 'object');
+    });
+
     test('falls back to the default model when options omit one', () async {
       late Map<String, Object?> payload;
       final provider = OpenAiProvider(

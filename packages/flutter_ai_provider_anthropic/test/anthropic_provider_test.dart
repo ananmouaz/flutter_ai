@@ -133,6 +133,43 @@ void main() {
       );
     });
 
+    test('surfaces the structured-output tool input as JSON text', () {
+      final parser = AnthropicEventParser(structuredToolName: 'result');
+      final events = [
+        ...parser.parse({
+          'type': 'message_start',
+          'message': {'id': 'm', 'role': 'assistant'},
+        }),
+        ...parser.parse({
+          'type': 'content_block_start',
+          'index': 0,
+          'content_block': {'type': 'tool_use', 'id': 't', 'name': 'result'},
+        }),
+        ...parser.parse({
+          'type': 'content_block_delta',
+          'index': 0,
+          'delta': {'type': 'input_json_delta', 'partial_json': '{"x":1}'},
+        }),
+        ...parser.parse({'type': 'content_block_stop', 'index': 0}),
+        ...parser.parse({
+          'type': 'message_delta',
+          'delta': {'stop_reason': 'tool_use'},
+        }),
+        ...parser.parse({'type': 'message_stop'}),
+      ];
+
+      // The forced tool surfaces as text, not a tool call, and finishes as stop.
+      expect(events.whereType<ToolCallStarted>(), isEmpty);
+      expect(
+        events.whereType<TextDelta>().map((e) => e.delta).join(),
+        '{"x":1}',
+      );
+      expect(
+        events.whereType<MessageFinished>().single.reason,
+        FinishReason.stop,
+      );
+    });
+
     test('maps an error event to StreamErrorEvent', () {
       final parser = AnthropicEventParser();
       final events = parser.parse({

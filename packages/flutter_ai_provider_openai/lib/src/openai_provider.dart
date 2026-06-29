@@ -76,6 +76,15 @@ class OpenAiProvider implements LlmProvider {
       if (options?.maxOutputTokens != null)
         'max_tokens': options!.maxOutputTokens,
       if (tools != null && tools.isNotEmpty) 'tools': _buildTools(tools),
+      if (options?.responseFormat != null)
+        'response_format': {
+          'type': 'json_schema',
+          'json_schema': {
+            'name': options!.responseFormat!.name,
+            'schema': options.responseFormat!.schema,
+            'strict': options.responseFormat!.strict,
+          },
+        },
     };
 
     final http.StreamedResponse response;

@@ -3,7 +3,7 @@ description: >-
   Native Google Gemini LlmProvider for flutter_ai: streams streamGenerateContent
   (text, thinking, function calls, Google Search grounding citations) as
   flutter_ai_core AiStreamEvents over an injectable HTTP client.
-version: 0.1.2
+version: 0.1.3
 homepage: https://github.com/ananmouaz/flutter_ai
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_provider_gemini
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues
