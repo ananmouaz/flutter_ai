@@ -8,8 +8,10 @@
   A drag releases the pin; a floating "scroll to latest" button appears whenever
   the conversation is scrolled above the bottom.
 - New `AiAnimatedResponse`: a light typewriter reveal so streamed answers appear
-  smoothly and gradually. `MarkdownTextRenderer` uses it automatically while a
-  message is streaming.
+  smoothly and gradually. It reveals at a readable pace (`charsPerSecond`,
+  default 120) while keeping up, and accelerates to drain a backlog within
+  `catchUpWindow` so it never trails far behind a fast stream.
+  `MarkdownTextRenderer` uses it automatically while a message is streaming.
 - `AiMessageActions` is restyled with compact, evenly spaced icon buttons
   (ChatGPT-style) and gains optional `onSpeak`/`onGood`/`onBad`/`onShare`
   actions.
