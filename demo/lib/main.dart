@@ -320,6 +320,47 @@ class ChatScreen extends StatelessWidget {
         SnackBar(content: Text(text), duration: const Duration(seconds: 1)),
       );
 
+  /// Edits the user message that prompted [assistant]: prefills a dialog with
+  /// its text and, on save, rewrites it and re-runs the turn.
+  Future<void> _editPrecedingUserMessage(
+    BuildContext context,
+    AiMessage assistant,
+  ) async {
+    final msgs = controller.messages;
+    final i = msgs.indexWhere((m) => m.id == assistant.id);
+    final userIndex = i == -1
+        ? -1
+        : msgs.sublist(0, i).lastIndexWhere((m) => m.role == AiRole.user);
+    if (userIndex == -1) return;
+    final user = msgs[userIndex];
+    final field = TextEditingController(text: user.text);
+    final edited = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit message'),
+        content: TextField(
+          controller: field,
+          autofocus: true,
+          maxLines: null,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, field.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    field.dispose();
+    if (edited != null && edited.trim().isNotEmpty) {
+      await controller.editMessage(user.id, edited.trim());
+    }
+  }
+
   // A tiny generative-UI catalog: render each part with the matching element,
   // mapping DataParts to AiChainOfThought / AiTask.
   Widget _buildMessage(BuildContext context, AiMessage message) {
@@ -474,6 +515,7 @@ class ChatScreen extends StatelessWidget {
               onBad: () => _snack(context, 'Thanks — we\'ll do better.'),
               onShare: () => _snack(context, 'Share sheet would open here.'),
               onRegenerate: () => unawaited(controller.regenerate()),
+              onEdit: () => unawaited(_editPrecedingUserMessage(context, message)),
             ),
             const Spacer(),
             // Real regeneration history: only the latest turn has branches.
