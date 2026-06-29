@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4
+
+- Readies tool calls on any finish reason (and in `finalize()`), so calls
+  can't hang in `inputStreaming`.
+- A mid-stream stall now surfaces a message-scoped `StreamErrorEvent` instead of
+  also finalizing a terminal event that masked the timeout.
+- Asserts a non-empty `apiKey` with an actionable message.
+
 ## 0.1.3
 
 - Structured output: maps `AiRequestOptions.responseFormat` to a `json_schema`

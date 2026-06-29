@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- `callTool` throws `McpToolException` when a tool returns `isError: true` (so
+  the failure reaches the model) and prefers the server's structured content.
+
 ## 0.1.0
 
 Initial release.

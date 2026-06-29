@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- A mid-stream stall surfaces a message-scoped `StreamErrorEvent` instead of
+  also finalizing (which masked the timeout).
+- Asserts a non-empty `apiKey` with an actionable message.
+
 ## 0.1.3
 
 - Structured output: maps `AiRequestOptions.responseFormat` to

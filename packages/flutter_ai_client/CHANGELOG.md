@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.5
+
+- Turn-sequence guard: a late event from a cancelled stream can no longer mutate
+  the conversation or leak onto the `events` stream after a new turn starts.
+- `maxBranches` (default 20) caps retained regenerations so a long chat can't
+  grow without bound.
+- `tokenBudget`: stop the agent loop once cumulative usage exceeds the budget (a
+  cost ceiling on top of `maxSteps`).
+
 ## 0.1.4
 
 - Thread management: `ChatThread`, a `ChatThreadStore` (list/delete on top of
