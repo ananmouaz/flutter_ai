@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5
+
+- Throws typed `LlmException`s (auth/rate-limit/server/request) on HTTP errors
+  instead of a generic `Exception`; retries 408/409 too.
+
 ## 0.1.4
 
 - A mid-stream stall surfaces a message-scoped `StreamErrorEvent` instead of

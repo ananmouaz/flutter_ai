@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter_ai_core/flutter_ai_core.dart';
 import 'package:http/http.dart' as http;
 
 /// Sends [build]'s request, retrying transient failures (network errors,
@@ -46,11 +47,16 @@ Future<http.StreamedResponse> connectWithRetry({
     }
 
     final body = await response.stream.bytesToString();
-    throw Exception('$label request failed (${response.statusCode}): $body');
+    throw llmExceptionFor(
+      response.statusCode,
+      '$label: $body',
+      retryAfter: _retryAfter(response.headers['retry-after']),
+    );
   }
 }
 
-bool _isRetryable(int code) => code == 429 || (code >= 500 && code < 600);
+bool _isRetryable(int code) =>
+    code == 408 || code == 409 || code == 429 || (code >= 500 && code < 600);
 
 final _random = Random();
 
