@@ -596,6 +596,51 @@ void main() {
     });
   });
 
+  group('threads', () {
+    test('autoTitle uses the first user message, trimmed', () {
+      const convo = AiConversation(
+        id: 't',
+        messages: [
+          AiMessage(id: 'a', role: AiRole.assistant, parts: [TextPart('hi')]),
+          AiMessage(
+            id: 'u',
+            role: AiRole.user,
+            parts: [TextPart('  Plan a weekend in Lisbon please  ')],
+          ),
+        ],
+      );
+      expect(autoTitle(convo), 'Plan a weekend in Lisbon please');
+      expect(
+          autoTitle(const AiConversation(id: 'e', messages: [])), 'New chat');
+    });
+
+    test('InMemoryChatThreadStore saves, lists, loads, and deletes', () async {
+      final store = InMemoryChatThreadStore();
+      const a = AiConversation(
+        id: 'a',
+        messages: [
+          AiMessage(id: 'u', role: AiRole.user, parts: [TextPart('First')]),
+        ],
+      );
+      const b = AiConversation(
+        id: 'b',
+        messages: [
+          AiMessage(id: 'u', role: AiRole.user, parts: [TextPart('Second')]),
+        ],
+      );
+      await store.save('a', a);
+      await store.save('b', b);
+
+      final threads = await store.listThreads();
+      expect(threads.map((t) => t.title), containsAll(['First', 'Second']));
+      expect((await store.load('a'))?.messages.single.text, 'First');
+
+      await store.delete('a');
+      expect(await store.load('a'), isNull);
+      expect((await store.listThreads()).map((t) => t.id), ['b']);
+    });
+  });
+
   group('usage', () {
     test('totalUsage sums reported usage across messages', () async {
       final provider = ScriptedProvider(const [

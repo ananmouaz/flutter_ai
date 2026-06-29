@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- Thread management: `ChatThread`, a `ChatThreadStore` (list/delete on top of
+  `ChatStore`), `autoTitle(conversation)`, and an `InMemoryChatThreadStore` for
+  demos/tests — enough to drive a multi-conversation sidebar.
+
 ## 0.1.3
 
 - `totalUsage` getter on `UseChatController`: summed `AiUsage` across the
