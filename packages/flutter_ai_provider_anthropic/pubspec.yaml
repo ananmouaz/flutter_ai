@@ -3,7 +3,7 @@ description: >-
   Anthropic (Claude) LlmProvider for flutter_ai: streams the Messages API
   (text, extended thinking, tool use, finish reasons) as flutter_ai_core
   AiStreamEvents over an injectable HTTP client.
-version: 0.1.1
+version: 0.1.2
 homepage: https://github.com/ananmouaz/flutter_ai
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_provider_anthropic
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues

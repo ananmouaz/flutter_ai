@@ -30,7 +30,15 @@ void main() {
       final events = [
         ...parser.parse({
           'type': 'message_start',
-          'message': {'id': 'msg_1', 'role': 'assistant'},
+          'message': {
+            'id': 'msg_1',
+            'role': 'assistant',
+            'usage': {
+              'input_tokens': 10,
+              'cache_read_input_tokens': 4,
+              'output_tokens': 1,
+            },
+          },
         }),
         ...parser.parse({
           'type': 'content_block_start',
@@ -50,6 +58,7 @@ void main() {
         ...parser.parse({
           'type': 'message_delta',
           'delta': {'stop_reason': 'end_turn'},
+          'usage': {'output_tokens': 25},
         }),
         ...parser.parse({'type': 'message_stop'}),
       ];
@@ -60,8 +69,11 @@ void main() {
         'Hello',
         ' world',
       ]);
-      expect(events.last, isA<MessageFinished>());
-      expect((events.last as MessageFinished).reason, FinishReason.stop);
+      final finished = events.last as MessageFinished;
+      expect(finished.reason, FinishReason.stop);
+      expect(finished.usage?.inputTokens, 14); // 10 + 4 cache read
+      expect(finished.usage?.cachedInputTokens, 4);
+      expect(finished.usage?.outputTokens, 25);
     });
 
     test('maps thinking deltas to ReasoningDelta', () {

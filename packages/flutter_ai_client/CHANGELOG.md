@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- `totalUsage` getter on `UseChatController`: summed `AiUsage` across the
+  conversation (feed an `AiContextMeter` or estimate cost).
+
 ## 0.1.2
 
 - Agent loop: pass `onToolCalls` (and optional `maxSteps`, default 8) to

@@ -19,6 +19,7 @@ class GeminiEventParser {
   int _toolSeq = 0;
   bool _sawToolCall = false;
   bool _finished = false;
+  AiUsage? _usage;
 
   /// Emits a terminal [MessageFinished] if the stream ended after starting but
   /// without a `finishReason` (e.g. a dropped connection), so the message isn't
@@ -28,6 +29,7 @@ class GeminiEventParser {
           MessageFinished(
             messageId: _messageId,
             reason: _sawToolCall ? FinishReason.toolCalls : FinishReason.stop,
+            usage: _usage,
           ),
         ]
       : const [];
@@ -38,6 +40,13 @@ class GeminiEventParser {
     if (!_started) {
       _started = true;
       events.add(MessageStarted(messageId: _messageId, role: AiRole.assistant));
+    }
+
+    // `usageMetadata` is a sibling of `candidates` and arrives (cumulatively)
+    // across chunks; keep the latest for the terminal event.
+    final usageMeta = chunk['usageMetadata'];
+    if (usageMeta is Map) {
+      _usage = _mapUsage(usageMeta.cast<String, Object?>());
     }
 
     final candidates = chunk['candidates'];
@@ -111,12 +120,21 @@ class GeminiEventParser {
           messageId: _messageId,
           reason:
               _sawToolCall ? FinishReason.toolCalls : _mapFinish(finishReason),
+          usage: _usage,
         ),
       );
     }
 
     return events;
   }
+
+  static AiUsage _mapUsage(Map<String, Object?> m) => AiUsage(
+        inputTokens: m['promptTokenCount'] as int?,
+        outputTokens: m['candidatesTokenCount'] as int?,
+        cachedInputTokens: m['cachedContentTokenCount'] as int?,
+        reasoningTokens: m['thoughtsTokenCount'] as int?,
+        totalTokens: m['totalTokenCount'] as int?,
+      );
 
   static FinishReason _mapFinish(String reason) => switch (reason) {
         'STOP' => FinishReason.stop,

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3
+
+- `AiUsage` model (input/output/cached/reasoning/total tokens) with `+` to
+  accumulate and `estimateCost(...)` for cost from per-million prices. Carried on
+  `MessageFinished` and stored on the completed `AiMessage`; the processor
+  applies it on finish.
+
 ## 0.1.2
 
 - Docs: added a "Buy me a coffee" (Ko-fi) support section to the README. No code

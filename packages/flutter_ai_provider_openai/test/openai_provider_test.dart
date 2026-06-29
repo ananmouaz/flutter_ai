@@ -41,6 +41,18 @@ void main() {
             },
           ],
         }),
+        // Trailing usage chunk (stream_options.include_usage), empty choices.
+        ...parser.parse({
+          'id': 'chatcmpl-1',
+          'choices': const [],
+          'usage': {
+            'prompt_tokens': 9,
+            'completion_tokens': 12,
+            'total_tokens': 21,
+            'prompt_tokens_details': {'cached_tokens': 4},
+          },
+        }),
+        ...parser.finalize(),
       ];
 
       expect(events[0], isA<MessageStarted>());
@@ -48,8 +60,13 @@ void main() {
         'Hello',
         ' world',
       ]);
-      expect(events.last, isA<MessageFinished>());
-      expect((events.last as MessageFinished).reason, FinishReason.stop);
+      // Finish is deferred to finalize() so it can carry usage.
+      final finished = events.whereType<MessageFinished>().single;
+      expect(finished.reason, FinishReason.stop);
+      expect(finished.usage?.inputTokens, 9);
+      expect(finished.usage?.outputTokens, 12);
+      expect(finished.usage?.totalTokens, 21);
+      expect(finished.usage?.cachedInputTokens, 4);
     });
 
     test('threads streamed tool calls by index and readies them', () {
@@ -87,6 +104,7 @@ void main() {
             },
           ],
         }),
+        ...parser.finalize(),
       ];
 
       expect(

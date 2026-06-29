@@ -50,6 +50,13 @@ void main() {
               'finishReason': 'STOP',
             },
           ],
+          'usageMetadata': {
+            'promptTokenCount': 8,
+            'candidatesTokenCount': 5,
+            'totalTokenCount': 13,
+            'cachedContentTokenCount': 2,
+            'thoughtsTokenCount': 3,
+          },
         }),
       ];
 
@@ -58,8 +65,13 @@ void main() {
         'Hello',
         ' world',
       ]);
-      expect(events.last, isA<MessageFinished>());
-      expect((events.last as MessageFinished).reason, FinishReason.stop);
+      final finished = events.last as MessageFinished;
+      expect(finished.reason, FinishReason.stop);
+      expect(finished.usage?.inputTokens, 8);
+      expect(finished.usage?.outputTokens, 5);
+      expect(finished.usage?.totalTokens, 13);
+      expect(finished.usage?.cachedInputTokens, 2);
+      expect(finished.usage?.reasoningTokens, 3);
     });
 
     test('maps thought parts to ReasoningDelta', () {

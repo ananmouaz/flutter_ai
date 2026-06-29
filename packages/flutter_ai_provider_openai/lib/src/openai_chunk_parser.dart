@@ -8,16 +8,27 @@ import 'package:flutter_ai_core/flutter_ai_core.dart';
 /// can be unit-tested against recorded chunks.
 class OpenAiChunkParser {
   bool _started = false;
-  bool _finished = false;
+  bool _emitted = false;
   String _messageId = 'assistant';
+  String _finishReason = 'stop';
+  AiUsage? _usage;
   final Map<int, String> _toolCallIdByIndex = {};
 
-  /// Emits a terminal [MessageFinished] if the stream ended after starting but
-  /// without a `finish_reason` (e.g. a dropped connection or missing `[DONE]`),
-  /// so the message isn't left streaming forever. Call once after the stream.
-  List<AiStreamEvent> finalize() => _started && !_finished
-      ? [MessageFinished(messageId: _messageId, reason: FinishReason.stop)]
-      : const [];
+  /// Emits the terminal [MessageFinished]. The finish event is deferred to here
+  /// because, with `stream_options.include_usage`, OpenAI sends token usage in a
+  /// trailing chunk *after* the `finish_reason` chunk. Call once after the
+  /// stream completes (also covers a dropped connection with no `finish_reason`).
+  List<AiStreamEvent> finalize() {
+    if (!_started || _emitted) return const [];
+    _emitted = true;
+    return [
+      MessageFinished(
+        messageId: _messageId,
+        reason: _mapFinish(_finishReason),
+        usage: _usage,
+      ),
+    ];
+  }
 
   /// Returns the events implied by one decoded `chat.completion.chunk`.
   List<AiStreamEvent> parse(Map<String, Object?> chunk) {
@@ -28,6 +39,13 @@ class OpenAiChunkParser {
     if (!_started) {
       _started = true;
       events.add(MessageStarted(messageId: _messageId, role: AiRole.assistant));
+    }
+
+    // Usage arrives on its own trailing chunk (empty `choices`); on every other
+    // chunk the field is null. Capture it before the empty-choices early return.
+    final usage = chunk['usage'];
+    if (usage is Map) {
+      _usage = _mapUsage(usage.cast<String, Object?>()) ?? _usage;
     }
 
     final choices = chunk['choices'];
@@ -50,21 +68,34 @@ class OpenAiChunkParser {
 
     final finishReason = choice['finish_reason'];
     if (finishReason is String) {
-      _finished = true;
+      _finishReason = finishReason;
       if (finishReason == 'tool_calls') {
         for (final toolCallId in _toolCallIdByIndex.values) {
           events.add(ToolCallReady(toolCallId: toolCallId));
         }
       }
-      events.add(
-        MessageFinished(
-          messageId: _messageId,
-          reason: _mapFinish(finishReason),
-        ),
-      );
+      // MessageFinished is deferred to finalize() so it can carry usage from the
+      // trailing chunk.
     }
 
     return events;
+  }
+
+  static AiUsage? _mapUsage(Map<String, Object?> u) {
+    final prompt = u['prompt_tokens'] as int?;
+    final completion = u['completion_tokens'] as int?;
+    if (prompt == null && completion == null) return null;
+    final promptDetails =
+        (u['prompt_tokens_details'] as Map?)?.cast<String, Object?>();
+    final completionDetails =
+        (u['completion_tokens_details'] as Map?)?.cast<String, Object?>();
+    return AiUsage(
+      inputTokens: prompt,
+      outputTokens: completion,
+      totalTokens: u['total_tokens'] as int?,
+      cachedInputTokens: promptDetails?['cached_tokens'] as int?,
+      reasoningTokens: completionDetails?['reasoning_tokens'] as int?,
+    );
   }
 
   List<AiStreamEvent> _parseToolCall(Map<String, Object?> toolCall) {

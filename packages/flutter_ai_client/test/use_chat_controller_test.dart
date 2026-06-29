@@ -596,6 +596,32 @@ void main() {
     });
   });
 
+  group('usage', () {
+    test('totalUsage sums reported usage across messages', () async {
+      final provider = ScriptedProvider(const [
+        MessageStarted(messageId: 'a1', role: AiRole.assistant),
+        TextDelta(messageId: 'a1', delta: 'hi'),
+        MessageFinished(
+          messageId: 'a1',
+          reason: FinishReason.stop,
+          usage: AiUsage(inputTokens: 10, outputTokens: 5),
+        ),
+      ]);
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u1',
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hello');
+
+      expect(controller.totalUsage?.inputTokens, 10);
+      expect(controller.totalUsage?.outputTokens, 5);
+      expect(controller.messages.last.usage?.outputTokens, 5);
+    });
+  });
+
   group('attachStore / ChatStore', () {
     test('auto-saves the settled conversation and can be reloaded', () async {
       final store = FakeChatStore();
