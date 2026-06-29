@@ -3,7 +3,7 @@ description: >-
   Provider-agnostic chat controller for flutter_ai. Wraps any LlmProvider in a
   Listenable UseChatController with optimistic send, cancellation, regeneration,
   and frame-batched streaming — without imposing a state-management library.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_client
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues
 homepage: https://github.com/ananmouaz/flutter_ai
