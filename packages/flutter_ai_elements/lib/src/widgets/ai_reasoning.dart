@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// A collapsible disclosure for the model's reasoning ("chain of thought").
@@ -47,7 +48,7 @@ class _AiReasoningState extends State<AiReasoning> {
                 Icon(Icons.psychology_outlined, size: 16, color: subdued),
                 const SizedBox(width: 6),
                 Text(
-                  'Reasoning',
+                  AiLocalizations.of(context).reasoning,
                   style: TextStyle(
                     color: subdued,
                     fontWeight: FontWeight.w600,

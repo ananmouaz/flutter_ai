@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// An animated shimmer placeholder for pending content — a row of grey bars
@@ -38,7 +39,7 @@ class _AiShimmerState extends State<AiShimmer>
     final highlight = Color.lerp(base, Colors.white, 0.5)!;
 
     return Semantics(
-      label: 'Loading',
+      label: AiLocalizations.of(context).loading,
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
