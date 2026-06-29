@@ -70,24 +70,25 @@ void main() {
   // Renders FeatureSections alone in a single scroll view (no nested chat
   // scrollable to fight), so each section can be brought into view cleanly.
   Widget sectionsApp({required bool dark}) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          fontFamily: 'Roboto',
-          brightness: dark ? Brightness.dark : Brightness.light,
-          scaffoldBackgroundColor:
-              dark ? const Color(0xFF131316) : Colors.white,
-          splashFactory: NoSplash.splashFactory,
-          extensions: [dark ? AiThemeExtension.dark() : AiThemeExtension.fallback()],
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      useMaterial3: true,
+      fontFamily: 'Roboto',
+      brightness: dark ? Brightness.dark : Brightness.light,
+      scaffoldBackgroundColor: dark ? const Color(0xFF131316) : Colors.white,
+      splashFactory: NoSplash.splashFactory,
+      extensions: [
+        dark ? AiThemeExtension.dark() : AiThemeExtension.fallback(),
+      ],
+    ),
+    home: Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: FeatureSections(isWide: false, onOpenGallery: () {}),
         ),
-        home: Scaffold(
-          body: SafeArea(
-            child: SingleChildScrollView(
-              child: FeatureSections(isWide: false, onOpenGallery: () {}),
-            ),
-          ),
-        ),
-      );
+      ),
+    ),
+  );
 
   Future<void> scrollTo(WidgetTester tester, String exactTitle) async {
     await tester.ensureVisible(find.text(exactTitle).first);
