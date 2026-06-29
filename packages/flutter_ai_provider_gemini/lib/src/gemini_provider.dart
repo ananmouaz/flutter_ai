@@ -28,7 +28,7 @@ import 'package:http/http.dart' as http;
 ///
 /// > The request/response mapping is unit-tested against recorded SSE chunks;
 /// > supply an API key to use it against the live API.
-class GeminiProvider implements LlmProvider {
+class GeminiProvider implements LlmProvider, EmbeddingProvider, TokenCounter {
   /// Creates a provider.
   ///
   /// [apiKey] authenticates requests (sent as `x-goog-api-key`). [baseUrl]
@@ -181,6 +181,75 @@ class GeminiProvider implements LlmProvider {
     }
   }
 
+  @override
+  Future<List<AiEmbedding>> embed(List<String> inputs, {String? model}) async {
+    final embedModel = model ?? 'text-embedding-004';
+    final response = await _client.post(
+      _modelEndpoint(embedModel, 'batchEmbedContents'),
+      headers: {
+        'x-goog-api-key': apiKey,
+        'content-type': 'application/json',
+      },
+      body: jsonEncode({
+        'requests': [
+          for (final input in inputs)
+            {
+              'model': 'models/$embedModel',
+              'content': {
+                'parts': [
+                  {'text': input},
+                ],
+              },
+            },
+        ],
+      }),
+    );
+    if (response.statusCode != 200) {
+      throw llmExceptionFor(
+        response.statusCode,
+        'Gemini embeddings: ${response.body}',
+      );
+    }
+    final decoded = (jsonDecode(response.body) as Map).cast<String, Object?>();
+    final embeddings = (decoded['embeddings'] as List?) ?? const [];
+    return [
+      for (var i = 0; i < embeddings.length; i++)
+        AiEmbedding(
+          [
+            for (final v in (embeddings[i] as Map)['values']! as List)
+              (v as num).toDouble(),
+          ],
+          index: i,
+        ),
+    ];
+  }
+
+  @override
+  Future<int> countTokens(
+    AiConversation conversation, {
+    List<ToolDefinition> tools = const [],
+    AiRequestOptions? options,
+  }) async {
+    final (_, contents) = _buildContents(conversation);
+    final model = options?.model ?? defaultModel;
+    final response = await _client.post(
+      _modelEndpoint(model, 'countTokens'),
+      headers: {
+        'x-goog-api-key': apiKey,
+        'content-type': 'application/json',
+      },
+      body: jsonEncode({'contents': contents}),
+    );
+    if (response.statusCode != 200) {
+      throw llmExceptionFor(
+        response.statusCode,
+        'Gemini countTokens: ${response.body}',
+      );
+    }
+    final decoded = (jsonDecode(response.body) as Map).cast<String, Object?>();
+    return (decoded['totalTokens'] as num).toInt();
+  }
+
   /// Closes the underlying HTTP client, but only if this provider created it.
   /// When a `client` was injected, `close` is a no-op so a shared client isn't
   /// torn out from under its owner.
@@ -191,6 +260,11 @@ class GeminiProvider implements LlmProvider {
   Uri _endpoint(String model) {
     final base = _baseUrl.toString().replaceAll(RegExp(r'/+$'), '');
     return Uri.parse('$base/models/$model:streamGenerateContent?alt=sse');
+  }
+
+  Uri _modelEndpoint(String model, String method) {
+    final base = _baseUrl.toString().replaceAll(RegExp(r'/+$'), '');
+    return Uri.parse('$base/models/$model:$method');
   }
 
   /// Builds `systemInstruction` text and the `contents` array. Tool results are

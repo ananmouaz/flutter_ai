@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6
+
+- Implements `EmbeddingProvider`: `embed(inputs, {model})` POSTs `/embeddings`
+  (default `text-embedding-3-small`) and returns `AiEmbedding` vectors.
+- Declares supported `platforms:` (all 6).
+
 ## 0.1.5
 
 - Throws typed `LlmException`s (auth/rate-limit/server/request) on HTTP errors

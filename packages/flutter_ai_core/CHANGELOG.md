@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.10
+
+- New AI primitives (opt-in, additive):
+  - `EmbeddingProvider` / `AiEmbedding` and `TokenCounter` capability
+    interfaces a provider may implement (check with `provider is ...`).
+  - `GenerateObject` extension on `LlmProvider`: `generateObject` returns a
+    decoded `Map` constrained to an `AiResponseFormat`; `streamObject` yields
+    the evolving partial object as it streams (via `JsonAccumulator`).
+
 ## 0.1.9
 
 - `validateJsonSchema`: a tiny, dependency-free validator for the JSON-Schema
