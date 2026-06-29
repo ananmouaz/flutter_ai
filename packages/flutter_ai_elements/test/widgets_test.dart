@@ -505,9 +505,13 @@ void main() {
       await tester.pumpWidget(
         _wrap(const AiAnimatedResponse(text: 'Hello world')),
       );
-      // Let the reveal ticker run to completion.
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pumpAndSettle();
+      // Advance the reveal to completion. (Can't pumpAndSettle — the streaming
+      // caret blinks forever.) The first tick has dt=0, so pump twice.
+      // Advance frame by frame to reveal + settle. (Can't pumpAndSettle — the
+      // streaming caret blinks forever.)
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       expect(find.textContaining('Hello world'), findsOneWidget);
     });
 
@@ -526,7 +530,9 @@ void main() {
       // catch-up rate drains the large backlog far faster (~100 chars here) so
       // the reveal never trails a fast stream by much.
       expect(shownChars(), greaterThan(60));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 100)); // drain fully
+      }
       expect(shownChars(), long.length);
     });
 
