@@ -630,4 +630,134 @@ void main() {
       );
     });
   });
+
+  group('embed', () {
+    test('POSTs batchEmbedContents and maps values with indices', () async {
+      late http.Request captured;
+      late Map<String, Object?> payload;
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient((request) async {
+          captured = request;
+          payload = (jsonDecode(request.body) as Map).cast<String, Object?>();
+          return http.Response(
+            jsonEncode({
+              'embeddings': [
+                {
+                  'values': [0.1, 0.2, 0.3],
+                },
+                {
+                  'values': [0.4, 0.5],
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      final embeddings = await provider.embed(['hello', 'world']);
+
+      expect(captured.headers['x-goog-api-key'], 'k');
+      expect(
+        captured.url.toString(),
+        endsWith('/models/text-embedding-004:batchEmbedContents'),
+      );
+      final requests = payload['requests']! as List;
+      expect(requests.length, 2);
+      expect(
+        ((requests.first as Map)['content'] as Map)['parts'],
+        [
+          {'text': 'hello'},
+        ],
+      );
+      expect(embeddings, [
+        const AiEmbedding([0.1, 0.2, 0.3], index: 0),
+        const AiEmbedding([0.4, 0.5], index: 1),
+      ]);
+    });
+
+    test('honors an explicit embedding model', () async {
+      late http.Request captured;
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient((request) async {
+          captured = request;
+          return http.Response(
+            jsonEncode({'embeddings': const <Object?>[]}),
+            200,
+          );
+        }),
+      );
+
+      await provider.embed(['x'], model: 'gemini-embedding-001');
+
+      expect(
+        captured.url.toString(),
+        endsWith('/models/gemini-embedding-001:batchEmbedContents'),
+      );
+    });
+
+    test('is discoverable as an EmbeddingProvider at runtime', () {
+      final LlmProvider provider = GeminiProvider(apiKey: 'k');
+      expect(provider is EmbeddingProvider, isTrue);
+    });
+  });
+
+  group('countTokens', () {
+    test('POSTs countTokens with mapped contents and returns totalTokens',
+        () async {
+      late http.Request captured;
+      late Map<String, Object?> payload;
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient((request) async {
+          captured = request;
+          payload = (jsonDecode(request.body) as Map).cast<String, Object?>();
+          return http.Response(jsonEncode({'totalTokens': 42}), 200);
+        }),
+      );
+
+      final tokens = await provider.countTokens(
+        const AiConversation(
+          id: 'c',
+          messages: [
+            AiMessage(id: 'u', role: AiRole.user, parts: [TextPart('Hi')]),
+          ],
+        ),
+        options: const AiRequestOptions(model: 'gemini-2.5-flash'),
+      );
+
+      expect(tokens, 42);
+      expect(
+        captured.url.toString(),
+        endsWith('/models/gemini-2.5-flash:countTokens'),
+      );
+      final contents = payload['contents']! as List;
+      expect((contents.single as Map)['role'], 'user');
+      expect(
+        (contents.single as Map)['parts'],
+        [
+          {'text': 'Hi'},
+        ],
+      );
+    });
+
+    test('throws a typed LlmException on a non-200', () async {
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient((request) async => http.Response('boom', 500)),
+      );
+
+      await expectLater(
+        provider.countTokens(const AiConversation(id: 'c')),
+        throwsA(isA<LlmServerException>()),
+      );
+    });
+
+    test('is discoverable as a TokenCounter at runtime', () {
+      final LlmProvider provider = GeminiProvider(apiKey: 'k');
+      expect(provider is TokenCounter, isTrue);
+    });
+  });
 }

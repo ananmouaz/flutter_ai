@@ -459,4 +459,81 @@ void main() {
     expect(calls, 2);
     expect(events.whereType<StreamErrorEvent>(), isEmpty);
   });
+
+  group('embed', () {
+    test('POSTs to /embeddings and maps vectors and indices', () async {
+      late http.Request captured;
+      late Map<String, Object?> payload;
+      final provider = OpenAiProvider(
+        apiKey: 'secret',
+        client: MockClient((request) async {
+          captured = request;
+          payload = (jsonDecode(request.body) as Map).cast<String, Object?>();
+          return http.Response(
+            jsonEncode({
+              'object': 'list',
+              'data': [
+                {
+                  'object': 'embedding',
+                  'index': 0,
+                  'embedding': [0.1, 0.2, 0.3],
+                },
+                {
+                  'object': 'embedding',
+                  'index': 1,
+                  'embedding': [0.4, 0.5],
+                },
+              ],
+              'model': 'text-embedding-3-small',
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+
+      final embeddings = await provider.embed(['hello', 'world']);
+
+      expect(captured.url.toString(), endsWith('/embeddings'));
+      expect(captured.headers['authorization'], 'Bearer secret');
+      expect(payload['model'], 'text-embedding-3-small');
+      expect(payload['input'], ['hello', 'world']);
+      expect(embeddings, [
+        const AiEmbedding([0.1, 0.2, 0.3], index: 0),
+        const AiEmbedding([0.4, 0.5], index: 1),
+      ]);
+    });
+
+    test('honors an explicit model override', () async {
+      late Map<String, Object?> payload;
+      final provider = OpenAiProvider(
+        apiKey: 'k',
+        client: MockClient((request) async {
+          payload = (jsonDecode(request.body) as Map).cast<String, Object?>();
+          return http.Response(jsonEncode({'data': const <Object?>[]}), 200);
+        }),
+      );
+
+      await provider.embed(['x'], model: 'text-embedding-3-large');
+
+      expect(payload['model'], 'text-embedding-3-large');
+    });
+
+    test('throws a typed LlmException on a non-200', () async {
+      final provider = OpenAiProvider(
+        apiKey: 'k',
+        client: MockClient((request) async => http.Response('nope', 401)),
+      );
+
+      await expectLater(
+        provider.embed(['x']),
+        throwsA(isA<LlmAuthException>()),
+      );
+    });
+
+    test('is discoverable as an EmbeddingProvider at runtime', () {
+      final LlmProvider provider = OpenAiProvider(apiKey: 'k');
+      expect(provider is EmbeddingProvider, isTrue);
+    });
+  });
 }

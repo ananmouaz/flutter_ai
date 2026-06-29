@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7
+
+- Implements `EmbeddingProvider` (`embed` → `batchEmbedContents`, default
+  `text-embedding-004`) and `TokenCounter` (`countTokens` → the `countTokens`
+  endpoint, reusing the request content mapping).
+
 ## 0.1.6
 
 - Tool correlation: `functionResponse` parts are now emitted in the same order

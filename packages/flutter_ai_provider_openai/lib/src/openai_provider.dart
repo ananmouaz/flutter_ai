@@ -15,7 +15,7 @@ import 'package:http/http.dart' as http;
 /// > Note: the request/response mapping is unit-tested against recorded SSE
 /// > chunks; point the base URL at a live endpoint and supply an API key to use
 /// > it for real.
-class OpenAiProvider implements LlmProvider {
+class OpenAiProvider implements LlmProvider, EmbeddingProvider {
   /// Creates a provider.
   ///
   /// [apiKey] authenticates requests. [baseUrl] defaults to the public OpenAI
@@ -152,6 +152,39 @@ class OpenAiProvider implements LlmProvider {
     }
   }
 
+  @override
+  Future<List<AiEmbedding>> embed(List<String> inputs, {String? model}) async {
+    final response = await _client.post(
+      _embeddingsEndpoint(),
+      headers: {
+        'authorization': 'Bearer $apiKey',
+        'content-type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': model ?? 'text-embedding-3-small',
+        'input': inputs,
+      }),
+    );
+    if (response.statusCode != 200) {
+      throw llmExceptionFor(
+        response.statusCode,
+        'OpenAI embeddings: ${response.body}',
+      );
+    }
+    final decoded = (jsonDecode(response.body) as Map).cast<String, Object?>();
+    final data = (decoded['data'] as List?) ?? const [];
+    return [
+      for (final item in data)
+        AiEmbedding(
+          [
+            for (final v in (item as Map)['embedding']! as List)
+              (v as num).toDouble(),
+          ],
+          index: (item['index'] as num?)?.toInt(),
+        ),
+    ];
+  }
+
   /// Closes the underlying HTTP client, but only if this provider created it.
   /// When a `client` was injected, `close` is a no-op so a shared client isn't
   /// torn out from under its owner.
@@ -162,6 +195,11 @@ class OpenAiProvider implements LlmProvider {
   Uri _endpoint() {
     final base = _baseUrl.toString().replaceAll(RegExp(r'/+$'), '');
     return Uri.parse('$base/chat/completions');
+  }
+
+  Uri _embeddingsEndpoint() {
+    final base = _baseUrl.toString().replaceAll(RegExp(r'/+$'), '');
+    return Uri.parse('$base/embeddings');
   }
 
   List<Map<String, Object?>> _buildMessages(AiConversation conversation) {
