@@ -30,9 +30,9 @@ class AiContextMeter extends StatelessWidget {
     final color = DefaultTextStyle.of(context).style.color;
     final fraction = _fraction;
     final barColor = fraction > 0.9
-        ? const Color(0xFFDC2626)
+        ? theme.errorColor
         : fraction > 0.7
-            ? const Color(0xFFF59E0B)
+            ? theme.warningColor
             : theme.accentColor;
 
     return Column(

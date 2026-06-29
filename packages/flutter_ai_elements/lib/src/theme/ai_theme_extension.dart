@@ -40,6 +40,11 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
     required this.accentColor,
     required this.onAccentColor,
     required this.borderColor,
+    required this.errorColor,
+    required this.successColor,
+    required this.warningColor,
+    required this.codeBackgroundColor,
+    required this.codeForegroundColor,
     required this.bubbleRadius,
     required this.bubbleShadow,
     required this.bubblePadding,
@@ -64,6 +69,11 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
         accentColor: Color(0xFF0D0D0D),
         onAccentColor: Color(0xFFFFFFFF),
         borderColor: Color(0xFFE5E5E5),
+        errorColor: Color(0xFFDC2626),
+        successColor: Color(0xFF16A34A),
+        warningColor: Color(0xFFF59E0B),
+        codeBackgroundColor: Color(0xFF1E1E1E),
+        codeForegroundColor: Color(0xFFE6E6E6),
         bubbleRadius: BorderRadius.all(Radius.circular(22)),
         bubbleShadow: [],
         bubblePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 11),
@@ -90,6 +100,11 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
         accentColor: Color(0xFFFFFFFF),
         onAccentColor: Color(0xFF0D0D0D),
         borderColor: Color(0xFF3A3A40),
+        errorColor: Color(0xFFF87171),
+        successColor: Color(0xFF4ADE80),
+        warningColor: Color(0xFFFBBF24),
+        codeBackgroundColor: Color(0xFF1E1E1E),
+        codeForegroundColor: Color(0xFFE6E6E6),
         bubbleRadius: BorderRadius.all(Radius.circular(22)),
         bubbleShadow: [],
         bubblePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 11),
@@ -129,6 +144,21 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
 
   /// Hairline/border color for fields, cards, and dividers.
   final Color borderColor;
+
+  /// Error/destructive accent (error banner, failed tool, danger states).
+  final Color errorColor;
+
+  /// Success/positive accent (completed tasks, succeeded tools).
+  final Color successColor;
+
+  /// Warning/caution accent (e.g. context meter approaching the limit).
+  final Color warningColor;
+
+  /// Background of a fenced code block.
+  final Color codeBackgroundColor;
+
+  /// Default foreground (text) color inside a fenced code block.
+  final Color codeForegroundColor;
 
   /// Corner radius of bubbles and the composer field.
   final BorderRadius bubbleRadius;
@@ -183,6 +213,11 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
     Color? accentColor,
     Color? onAccentColor,
     Color? borderColor,
+    Color? errorColor,
+    Color? successColor,
+    Color? warningColor,
+    Color? codeBackgroundColor,
+    Color? codeForegroundColor,
     BorderRadius? bubbleRadius,
     List<BoxShadow>? bubbleShadow,
     EdgeInsets? bubblePadding,
@@ -206,6 +241,11 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
         accentColor: accentColor ?? this.accentColor,
         onAccentColor: onAccentColor ?? this.onAccentColor,
         borderColor: borderColor ?? this.borderColor,
+        errorColor: errorColor ?? this.errorColor,
+        successColor: successColor ?? this.successColor,
+        warningColor: warningColor ?? this.warningColor,
+        codeBackgroundColor: codeBackgroundColor ?? this.codeBackgroundColor,
+        codeForegroundColor: codeForegroundColor ?? this.codeForegroundColor,
         bubbleRadius: bubbleRadius ?? this.bubbleRadius,
         bubbleShadow: bubbleShadow ?? this.bubbleShadow,
         bubblePadding: bubblePadding ?? this.bubblePadding,
@@ -236,6 +276,13 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
       accentColor: Color.lerp(accentColor, other.accentColor, t)!,
       onAccentColor: Color.lerp(onAccentColor, other.onAccentColor, t)!,
       borderColor: Color.lerp(borderColor, other.borderColor, t)!,
+      errorColor: Color.lerp(errorColor, other.errorColor, t)!,
+      successColor: Color.lerp(successColor, other.successColor, t)!,
+      warningColor: Color.lerp(warningColor, other.warningColor, t)!,
+      codeBackgroundColor:
+          Color.lerp(codeBackgroundColor, other.codeBackgroundColor, t)!,
+      codeForegroundColor:
+          Color.lerp(codeForegroundColor, other.codeForegroundColor, t)!,
       bubbleRadius: BorderRadius.lerp(bubbleRadius, other.bubbleRadius, t)!,
       bubbleShadow: BoxShadow.lerpList(bubbleShadow, other.bubbleShadow, t) ??
           bubbleShadow,

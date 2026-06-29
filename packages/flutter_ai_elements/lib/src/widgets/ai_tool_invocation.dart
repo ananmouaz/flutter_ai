@@ -122,13 +122,14 @@ class _AiToolInvocationState extends State<AiToolInvocation> {
   }
 
   (IconData, Color) _statusVisual(BuildContext context) {
+    final theme = AiThemeExtension.of(context);
     final base =
         DefaultTextStyle.of(context).style.color ?? const Color(0xFF000000);
     return switch (_effectiveState()) {
-      ToolCallState.error => (Icons.error_outline, const Color(0xFFDC2626)),
+      ToolCallState.error => (Icons.error_outline, theme.errorColor),
       ToolCallState.outputAvailable => (
           Icons.check_circle_outline,
-          const Color(0xFF16A34A),
+          theme.successColor,
         ),
       _ => (Icons.build_outlined, base),
     };
