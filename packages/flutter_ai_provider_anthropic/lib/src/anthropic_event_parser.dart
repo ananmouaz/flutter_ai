@@ -22,6 +22,9 @@ class AnthropicEventParser {
   final String? _structuredToolName;
   int? _structuredIndex;
   String _messageId = 'assistant';
+
+  /// The id of the assistant message being built (for error finalization).
+  String get messageId => _messageId;
   final Map<int, String> _toolCallIdByIndex = {};
   String _stopReason = 'end_turn';
   bool _started = false;

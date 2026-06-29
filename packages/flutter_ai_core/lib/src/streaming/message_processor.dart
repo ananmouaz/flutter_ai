@@ -92,7 +92,9 @@ class MessageProcessor {
           messageId,
           toolCallId,
           (p) => p.copyWith(
-            args: partial is Map ? partial.cast<String, Object?>() : const {},
+            // Keep the last good partial args when this fragment isn't yet
+            // parseable, rather than clobbering to {} and flickering the UI.
+            args: partial is Map ? partial.cast<String, Object?>() : p.args,
             state: ToolCallState.inputStreaming,
           ),
         );

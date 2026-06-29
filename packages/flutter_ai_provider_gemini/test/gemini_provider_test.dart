@@ -362,7 +362,7 @@ void main() {
       expect(events.whereType<TextDelta>().map((e) => e.delta), contains('ok'));
     });
 
-    test('emits StreamErrorEvent + MessageFinished when the stream stalls',
+    test('surfaces a message-scoped StreamErrorEvent (no finalize) on a stall',
         () async {
       final controller = StreamController<List<int>>();
       controller.add(utf8.encode(
@@ -379,8 +379,10 @@ void main() {
           .send(const AiConversation(id: 'c', messages: []))
           .toList();
       await controller.close();
-      expect(events.whereType<StreamErrorEvent>(), isNotEmpty);
-      expect(events.whereType<MessageFinished>(), isNotEmpty);
+      final errors = events.whereType<StreamErrorEvent>().toList();
+      expect(errors, isNotEmpty);
+      expect(errors.last.messageId, isNotNull); // marks the in-flight message
+      expect(events.whereType<MessageFinished>(), isEmpty);
     });
 
     test('omits googleSearch when function tools are present with grounding',

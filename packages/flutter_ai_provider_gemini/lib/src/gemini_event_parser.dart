@@ -15,6 +15,9 @@ class GeminiEventParser {
   GeminiEventParser({String messageId = 'assistant'}) : _messageId = messageId;
 
   final String _messageId;
+
+  /// The id of the assistant message being built (for error finalization).
+  String get messageId => _messageId;
   bool _started = false;
   int _toolSeq = 0;
   bool _sawToolCall = false;

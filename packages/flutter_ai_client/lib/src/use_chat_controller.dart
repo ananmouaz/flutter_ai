@@ -90,6 +90,7 @@ class UseChatController extends ChangeNotifier {
   StreamSubscription<AiStreamEvent>? _subscription;
   Completer<void>? _turn;
   int _step = 0; // model calls executed so far in the current agent turn
+  int _turnSeq = 0; // bumped whenever a turn is torn down/replaced
   bool _notifyScheduled = false;
   bool _disposed = false;
 
@@ -380,10 +381,16 @@ class UseChatController extends ChangeNotifier {
   /// Subscribes to one provider stream, folding events into the conversation.
   void _dispatch() {
     _step++; // one model call
+    // Capture the turn this subscription belongs to. A late event from a
+    // cancelled stream (a microtask already queued when the turn was torn down)
+    // must not mutate the conversation or leak onto the events stream after a
+    // new turn started.
+    final seq = _turnSeq;
     _subscription = _provider
         .send(_processor.conversation, tools: _tools, options: _options)
         .listen(
       (event) {
+        if (_disposed || seq != _turnSeq) return;
         _processor.apply(event);
         if (!_events.isClosed) _events.add(event);
         // A message-scoped error event is fatal: record the error and tear the
@@ -405,6 +412,7 @@ class UseChatController extends ChangeNotifier {
         _scheduleNotify();
       },
       onError: (Object error, StackTrace stackTrace) {
+        if (_disposed || seq != _turnSeq) return;
         _error = error;
         _stackTrace = stackTrace;
         _status = ChatStatus.error;
@@ -418,7 +426,10 @@ class UseChatController extends ChangeNotifier {
         _completeTurn();
         _scheduleNotify();
       },
-      onDone: _onStreamDone,
+      onDone: () {
+        if (_disposed || seq != _turnSeq) return;
+        _onStreamDone();
+      },
       cancelOnError: true,
     );
   }
@@ -506,6 +517,7 @@ class UseChatController extends ChangeNotifier {
   /// The cancel itself is fire-and-forget — a new stream is started right after,
   /// and `StreamSubscription.cancel` stops delivery immediately.
   void _stopActiveStream() {
+    _turnSeq++; // invalidate any in-flight subscription's late events
     final sub = _subscription;
     _subscription = null;
     if (sub != null) unawaited(sub.cancel());

@@ -163,11 +163,9 @@ class GeminiProvider implements LlmProvider {
         }
       }
     } on TimeoutException catch (error) {
-      // A mid-stream stall: surface the error, finalize, and stop.
-      yield StreamErrorEvent(error: error);
-      for (final event in parser.finalize()) {
-        yield event;
-      }
+      // A mid-stream stall: mark the in-flight message errored. Don't also
+      // finalize() — that terminal MessageFinished would mask the timeout.
+      yield StreamErrorEvent(error: error, messageId: parser.messageId);
       return;
     }
     // Stream ended — emit a terminal event if Gemini didn't send a finishReason.
