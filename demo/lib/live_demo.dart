@@ -160,9 +160,19 @@ class _LiveDemoScreenState extends State<LiveDemoScreen> {
     }
   }
 
-  Future<void> _end() async {
-    if (_real) await _speech.stop();
-    if (mounted) Navigator.of(context).pop();
+  bool _ending = false;
+
+  void _end() {
+    // Idempotent: overlapping callbacks (end / keyboard) or a double-tap must
+    // not pop twice.
+    if (_ending) return;
+    _ending = true;
+    if (_real) unawaited(_speech.stop());
+    // Pop after the current frame so we never re-enter a Navigator that is
+    // still locked mid-transition (the source of the `!_debugLocked` assert).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 
   @override
@@ -185,8 +195,8 @@ class _LiveDemoScreenState extends State<LiveDemoScreen> {
         conversation: _conversation(),
         muted: _muted,
         onMute: () => unawaited(_toggleMute()),
-        onKeyboard: () => unawaited(_end()),
-        onEnd: () => unawaited(_end()),
+        onKeyboard: _end,
+        onEnd: _end,
       ),
     );
   }
