@@ -122,28 +122,35 @@ class _Button extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(12);
     return Semantics(
       button: true,
       enabled: onTap != null,
       label: label,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          height: 40,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: filled ? theme.accentColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: filled ? null : Border.all(color: theme.borderColor),
-          ),
-          child: Text(
-            label,
-            style: theme.textStyle.copyWith(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: filled
-                  ? theme.onAccentColor
-                  : DefaultTextStyle.of(context).style.color,
+      // A confirmation gate must be keyboard- and focus-reachable (desktop/web)
+      // — Material + InkWell give focus traversal, Enter/Space, hover, ripple.
+      child: Material(
+        color: filled ? theme.accentColor : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: filled ? BorderSide.none : BorderSide(color: theme.borderColor),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Container(
+            height: 40,
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: theme.textStyle.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: filled
+                    ? theme.onAccentColor
+                    : DefaultTextStyle.of(context).style.color,
+              ),
             ),
           ),
         ),

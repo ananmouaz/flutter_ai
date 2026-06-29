@@ -751,7 +751,7 @@ void main() {
       );
       expect(find.byIcon(Icons.graphic_eq), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'hello');
-      await tester.pump();
+      await tester.pumpAndSettle(); // let the main-button icon morph finish
       expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
       expect(find.byIcon(Icons.graphic_eq), findsNothing);
       expect(find.byIcon(Icons.mic_none_rounded), findsNothing); // mic hidden
