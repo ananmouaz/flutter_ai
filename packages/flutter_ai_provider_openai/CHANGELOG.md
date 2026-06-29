@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- Reports token usage: sets `stream_options.include_usage` and parses the
+  trailing usage chunk (prompt/completion/total, cached + reasoning token
+  details) into `AiUsage` on `MessageFinished`.
+
 ## 0.1.1
 
 - Docs: added a "Buy me a coffee" (Ko-fi) support section to the README. No code

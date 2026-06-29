@@ -68,6 +68,10 @@ class OpenAiProvider implements LlmProvider {
       'model': options?.model ?? defaultModel,
       'messages': _buildMessages(conversation),
       'stream': true,
+      // Ask for token usage on a trailing chunk (parsed into AiUsage). Respect a
+      // caller override passed via options.extra.
+      'stream_options':
+          options?.extra['stream_options'] ?? {'include_usage': true},
       if (options?.temperature != null) 'temperature': options!.temperature,
       if (options?.maxOutputTokens != null)
         'max_tokens': options!.maxOutputTokens,

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- Reports token usage: accumulates input (incl. cache read/creation) from
+  `message_start` and output from `message_delta` into `AiUsage` on
+  `MessageFinished`.
+
 ## 0.1.1
 
 - Docs: added a "Buy me a coffee" (Ko-fi) support section to the README. No code

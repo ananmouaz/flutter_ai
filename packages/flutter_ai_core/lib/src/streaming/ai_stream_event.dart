@@ -2,6 +2,7 @@ import 'package:flutter_ai_core/src/internal/equality.dart';
 import 'package:flutter_ai_core/src/models/ai_part.dart';
 import 'package:flutter_ai_core/src/models/ai_role.dart';
 import 'package:flutter_ai_core/src/models/finish_reason.dart';
+import 'package:flutter_ai_core/src/models/usage.dart';
 
 /// A single incremental update emitted by an `LlmProvider` during generation.
 ///
@@ -375,14 +376,23 @@ final class PartReceived extends AiStreamEvent {
 /// Marks message [messageId] complete, carrying the [reason] generation ended.
 final class MessageFinished extends AiStreamEvent {
   /// Creates a message-finished event.
-  const MessageFinished({required this.messageId, required this.reason});
+  const MessageFinished({
+    required this.messageId,
+    required this.reason,
+    this.usage,
+  });
 
   /// Reconstructs a [MessageFinished] from [json].
-  factory MessageFinished.fromJson(Map<String, Object?> json) =>
-      MessageFinished(
-        messageId: json['messageId']! as String,
-        reason: FinishReason.fromJson(json['reason']! as String),
-      );
+  factory MessageFinished.fromJson(Map<String, Object?> json) {
+    final usage = json['usage'];
+    return MessageFinished(
+      messageId: json['messageId']! as String,
+      reason: FinishReason.fromJson(json['reason']! as String),
+      usage: usage == null
+          ? null
+          : AiUsage.fromJson((usage as Map).cast<String, Object?>()),
+    );
+  }
 
   /// The message that finished.
   final String messageId;
@@ -390,11 +400,15 @@ final class MessageFinished extends AiStreamEvent {
   /// Why generation stopped.
   final FinishReason reason;
 
+  /// Token usage for the turn, if the provider reported it.
+  final AiUsage? usage;
+
   @override
   Map<String, Object?> toJson() => {
         'type': 'message-finished',
         'messageId': messageId,
         'reason': reason.toJson(),
+        if (usage != null) 'usage': usage!.toJson(),
       };
 
   @override
@@ -402,10 +416,11 @@ final class MessageFinished extends AiStreamEvent {
       identical(this, other) ||
       (other is MessageFinished &&
           other.messageId == messageId &&
-          other.reason == reason);
+          other.reason == reason &&
+          other.usage == usage);
 
   @override
-  int get hashCode => Object.hash(messageId, reason);
+  int get hashCode => Object.hash(messageId, reason, usage);
 
   @override
   String toString() => 'MessageFinished($messageId, ${reason.name})';

@@ -2,6 +2,7 @@ import 'package:flutter_ai_core/src/internal/equality.dart';
 import 'package:flutter_ai_core/src/models/ai_part.dart';
 import 'package:flutter_ai_core/src/models/ai_role.dart';
 import 'package:flutter_ai_core/src/models/finish_reason.dart';
+import 'package:flutter_ai_core/src/models/usage.dart';
 
 /// The delivery state of an [AiMessage].
 enum AiMessageStatus {
@@ -50,6 +51,7 @@ final class AiMessage {
     this.status = AiMessageStatus.complete,
     this.finishReason,
     this.createdAt,
+    this.usage,
   });
 
   /// Convenience constructor for a plain-text message.
@@ -72,6 +74,7 @@ final class AiMessage {
     final rawParts = (json['parts'] as List?) ?? const [];
     final createdAt = json['createdAt'] as String?;
     final finishReason = json['finishReason'] as String?;
+    final usage = json['usage'];
     return AiMessage(
       id: json['id']! as String,
       role: AiRole.fromJson(json['role']! as String),
@@ -83,6 +86,9 @@ final class AiMessage {
       finishReason:
           finishReason == null ? null : FinishReason.fromJson(finishReason),
       createdAt: createdAt == null ? null : DateTime.parse(createdAt),
+      usage: usage == null
+          ? null
+          : AiUsage.fromJson((usage as Map).cast<String, Object?>()),
     );
   }
 
@@ -105,6 +111,10 @@ final class AiMessage {
   /// When the message was created, if tracked.
   final DateTime? createdAt;
 
+  /// Token usage for this message's turn, if the provider reported it. Set on
+  /// the assistant message when its turn finishes.
+  final AiUsage? usage;
+
   /// The concatenated text of every [TextPart], ignoring other part types.
   ///
   /// A convenience for the common case of reading a message's prose.
@@ -121,6 +131,7 @@ final class AiMessage {
     AiMessageStatus? status,
     FinishReason? finishReason,
     DateTime? createdAt,
+    AiUsage? usage,
   }) =>
       AiMessage(
         id: id ?? this.id,
@@ -129,6 +140,7 @@ final class AiMessage {
         status: status ?? this.status,
         finishReason: finishReason ?? this.finishReason,
         createdAt: createdAt ?? this.createdAt,
+        usage: usage ?? this.usage,
       );
 
   /// Serializes this message.
@@ -139,6 +151,7 @@ final class AiMessage {
         'status': status.toJson(),
         if (finishReason != null) 'finishReason': finishReason!.toJson(),
         if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+        if (usage != null) 'usage': usage!.toJson(),
       };
 
   @override
@@ -150,6 +163,7 @@ final class AiMessage {
           other.status == status &&
           other.finishReason == finishReason &&
           other.createdAt == createdAt &&
+          other.usage == usage &&
           deepEquals(other.parts, parts));
 
   @override
@@ -159,6 +173,7 @@ final class AiMessage {
         status,
         finishReason,
         createdAt,
+        usage,
         Object.hashAll(parts),
       );
 

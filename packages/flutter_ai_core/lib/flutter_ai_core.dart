@@ -23,6 +23,7 @@ export 'src/models/ai_role.dart';
 export 'src/models/finish_reason.dart';
 export 'src/models/tool_call_state.dart';
 export 'src/models/tool_definition.dart';
+export 'src/models/usage.dart';
 export 'src/provider/ai_request_options.dart';
 export 'src/provider/llm_provider.dart';
 export 'src/rendering/text_renderer.dart';

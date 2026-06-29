@@ -193,7 +193,7 @@ class MessageProcessor {
         );
         return _changed(messageId);
 
-      case MessageFinished(:final messageId, :final reason):
+      case MessageFinished(:final messageId, :final reason, :final usage):
         _mutate(
           messageId,
           (m) => m.copyWith(
@@ -201,6 +201,7 @@ class MessageProcessor {
                 ? AiMessageStatus.error
                 : AiMessageStatus.complete,
             finishReason: reason,
+            usage: usage,
           ),
         );
         return _changed(messageId);

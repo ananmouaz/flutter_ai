@@ -115,6 +115,18 @@ class UseChatController extends ChangeNotifier {
   /// The 0-based index of the version currently shown for the latest turn.
   int get branchIndex => _branchIndex;
 
+  /// The summed token usage across every message in the conversation that
+  /// reported it, or `null` if none did. Feed an `AiContextMeter` or estimate
+  /// cost with [AiUsage.estimateCost].
+  AiUsage? get totalUsage {
+    AiUsage? total;
+    for (final message in _processor.conversation.messages) {
+      final usage = message.usage;
+      if (usage != null) total = total == null ? usage : total + usage;
+    }
+    return total;
+  }
+
   /// A broadcast stream of every event applied to the conversation.
   ///
   /// An escape hatch for hosts that want to react to raw events (analytics,
