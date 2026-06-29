@@ -76,27 +76,42 @@ final class TextPart extends AiPart {
 /// region rather than mixing it into the answer.
 final class ReasoningPart extends AiPart {
   /// Creates a reasoning part holding [text].
-  const ReasoningPart(this.text);
+  const ReasoningPart(this.text, {this.signature});
 
   /// Reconstructs a [ReasoningPart] from [json].
-  factory ReasoningPart.fromJson(Map<String, Object?> json) =>
-      ReasoningPart(json['text']! as String);
+  factory ReasoningPart.fromJson(Map<String, Object?> json) => ReasoningPart(
+        json['text']! as String,
+        signature: json['signature'] as String?,
+      );
 
   /// The reasoning content.
   final String text;
 
-  /// Returns a copy with [text] replaced.
-  ReasoningPart copyWith({String? text}) => ReasoningPart(text ?? this.text);
+  /// An opaque provider signature for this reasoning block, when the provider
+  /// supplies one (e.g. Anthropic extended thinking). It must be preserved and
+  /// replayed verbatim on subsequent turns or the API rejects the request.
+  final String? signature;
+
+  /// Returns a copy with the given fields replaced.
+  ReasoningPart copyWith({String? text, String? signature}) =>
+      ReasoningPart(text ?? this.text, signature: signature ?? this.signature);
 
   @override
-  Map<String, Object?> toJson() => {'type': 'reasoning', 'text': text};
+  Map<String, Object?> toJson() => {
+        'type': 'reasoning',
+        'text': text,
+        if (signature != null) 'signature': signature,
+      };
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || (other is ReasoningPart && other.text == text);
+      identical(this, other) ||
+      (other is ReasoningPart &&
+          other.text == text &&
+          other.signature == signature);
 
   @override
-  int get hashCode => text.hashCode;
+  int get hashCode => Object.hash(text, signature);
 
   @override
   String toString() => 'ReasoningPart(${text.length} chars)';
