@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- Prompt caching: when `AiRequestOptions.cachePrompt` is set, marks the system
+  prompt and the last tool with `cache_control: ephemeral` (caches the stable
+  prefix for ~90% cheaper repeat input).
+
 ## 0.1.3
 
 - Structured output: maps `AiRequestOptions.responseFormat` to a forced tool

@@ -96,13 +96,32 @@ class AnthropicProvider implements LlmProvider {
           'input_schema': responseFormat.schema,
         },
     ];
+    // Prompt caching: mark the stable prefix (system + the last tool, which
+    // anchors the cached span covering all tools) with `cache_control`.
+    final cache = options?.cachePrompt ?? false;
+    const cacheControl = {'type': 'ephemeral'};
+    if (cache && toolList.isNotEmpty) {
+      toolList[toolList.length - 1] = {
+        ...toolList.last,
+        'cache_control': cacheControl,
+      };
+    }
     final payload = <String, Object?>{
       if (options?.extra != null) ...options!.extra,
       'model': options?.model ?? defaultModel,
       'max_tokens': options?.maxOutputTokens ?? defaultMaxTokens,
       'stream': true,
       'messages': messages,
-      if (system != null && system.isNotEmpty) 'system': system,
+      if (system != null && system.isNotEmpty)
+        'system': cache
+            ? [
+                {
+                  'type': 'text',
+                  'text': system,
+                  'cache_control': cacheControl,
+                },
+              ]
+            : system,
       if (options?.temperature != null) 'temperature': options!.temperature,
       if (toolList.isNotEmpty) 'tools': toolList,
       if (responseFormat != null)
