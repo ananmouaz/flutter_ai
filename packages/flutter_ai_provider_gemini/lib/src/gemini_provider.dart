@@ -43,7 +43,12 @@ class GeminiProvider implements LlmProvider {
     this.enableGrounding = false,
     this.maxRetries = 2,
     this.timeout = const Duration(seconds: 60),
-  })  : _baseUrl = baseUrl ??
+  })  : assert(
+          apiKey.isNotEmpty,
+          'GeminiProvider: apiKey is empty — pass a key or set GEMINI_API_KEY '
+          'via --dart-define.',
+        ),
+        _baseUrl = baseUrl ??
             Uri.parse('https://generativelanguage.googleapis.com/v1beta'),
         _ownsClient = client == null,
         _client = client ?? http.Client();

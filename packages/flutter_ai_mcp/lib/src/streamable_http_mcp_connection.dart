@@ -58,11 +58,18 @@ class StreamableHttpMcpConnection implements McpConnection {
   @override
   Future<Object?> callTool(String name, Map<String, Object?> arguments) async {
     final result = await _client.callTool(name, arguments);
-    // Concatenate the textual content; MCP results are usually a single text
-    // block holding JSON or prose.
     final text =
         result.content.whereType<TextContent>().map((c) => c.text).join();
-    return text;
+    // Surface tool failures as an exception so the registry feeds an error
+    // result back to the model (rather than passing the error off as success).
+    if (result.isError ?? false) {
+      throw McpToolException(
+        name,
+        text.isEmpty ? 'MCP tool "$name" returned an error' : text,
+      );
+    }
+    // Prefer the server's structured content when present; else the text.
+    return result.structuredContent ?? text;
   }
 
   @override
