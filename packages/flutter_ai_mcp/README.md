@@ -50,4 +50,5 @@ final controller = UseChatController(
 
 ## Status
 
-`0.1.0`. Built on [`mcp_client`](https://pub.dev/packages/mcp_client).
+Published on pub.dev (see the CHANGELOG). Built on
+[`mcp_client`](https://pub.dev/packages/mcp_client).

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+
+- Declare supported platforms (Android/iOS/web/macOS/Windows/Linux) for the
+  pub.dev listing.
+
 ## 0.1.5
 
 - Turn-sequence guard: a late event from a cancelled stream can no longer mutate

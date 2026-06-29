@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6
+
+- Declare supported platforms (Android/iOS/web/macOS/Windows/Linux) for the
+  pub.dev listing; fix a stale library-doc reference (`AiChat`, not the removed
+  `AiConversation` widget name).
+
 ## 0.1.5
 
 - Performance: `AiConversationView` memoizes bubbles by message identity, so

@@ -8,7 +8,7 @@
 ///
 /// - **Presentational** (`AiMessageBubble`, `AiConversationView`, `AiComposer`,
 ///   `AiLoader`) take plain data and callbacks; reusable and easy to test.
-/// - **Bound** (`AiConversation`, `AiPromptInput`) wire those to a
+/// - **Bound** (`AiChat`, `AiPromptInput`) wire those to a
 ///   `UseChatController` from `flutter_ai_client` for a drop-in chat surface.
 ///
 /// Re-exports `flutter_ai_client` (and transitively `flutter_ai_core`) so a

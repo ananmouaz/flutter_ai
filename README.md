@@ -143,6 +143,7 @@ change models — nothing else changes.
 | Talk to a model | a provider: `…_openai`, `…_anthropic`, or `…_gemini` |
 | Drive chat with my own UI | `flutter_ai_client` |
 | Tools / function calling | `flutter_ai_tools` |
+| Connect to MCP servers | `flutter_ai_mcp` |
 | Voice input | `flutter_ai_voice` (+ an STT plugin) |
 | Build my own provider/widgets | `flutter_ai_core` only |
 
@@ -154,6 +155,7 @@ change models — nothing else changes.
 | [`flutter_ai_client`](packages/flutter_ai_client) | `UseChatController` — a `Listenable` chat controller (optimistic send, cancel, regenerate, branches, tool results) |
 | [`flutter_ai_elements`](packages/flutter_ai_elements) | 30+ UI widgets + `AiThemeExtension`: `AiChat`, `AiComposer`, `AiResponse` (Markdown), `AiToolGroup`, `AiReasoning`, `AiSources`, `AiLiveSession`, … |
 | [`flutter_ai_tools`](packages/flutter_ai_tools) | Tool calling (`ToolSpec`, `ToolRegistry`) + web-search adapter |
+| [`flutter_ai_mcp`](packages/flutter_ai_mcp) | Model Context Protocol client (Streamable HTTP) — MCP server tools flow through the agent loop |
 | [`flutter_ai_voice`](packages/flutter_ai_voice) | Engine-agnostic speech-to-text contracts |
 | [`flutter_ai_provider_openai`](packages/flutter_ai_provider_openai) | OpenAI-compatible streaming provider (also works with Gemini's OpenAI endpoint) |
 | [`flutter_ai_provider_anthropic`](packages/flutter_ai_provider_anthropic) | Anthropic (Claude) Messages API provider |
