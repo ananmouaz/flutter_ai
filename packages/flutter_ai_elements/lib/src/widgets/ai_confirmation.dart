@@ -1,6 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_haptics.dart';
+
+/// The visual weight of an [AiConfirmation], which restyles its confirm button.
+enum AiConfirmationTone {
+  /// The default look — a neutral accent-colored confirm button.
+  neutral,
+
+  /// A cautionary action — the confirm button uses the theme's warning color.
+  caution,
+
+  /// A destructive action — the confirm button uses the theme's error color.
+  danger,
+}
 
 /// An approve/deny card for actions an agent wants to take (running a tool,
 /// sending an email, making a purchase) — the human-in-the-loop gate.
@@ -15,6 +28,7 @@ class AiConfirmation extends StatelessWidget {
     this.onConfirm,
     this.onDeny,
     this.icon = Icons.shield_outlined,
+    this.tone = AiConfirmationTone.neutral,
   });
 
   /// The action being confirmed.
@@ -38,11 +52,21 @@ class AiConfirmation extends StatelessWidget {
   /// Leading icon.
   final IconData icon;
 
+  /// The action's weight, which restyles the confirm button. Defaults to
+  /// [AiConfirmationTone.neutral] (the original accent look).
+  final AiConfirmationTone tone;
+
   @override
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
     final l = AiLocalizations.of(context);
     final color = DefaultTextStyle.of(context).style.color;
+    // The confirm button's fill follows the tone; neutral keeps the accent.
+    final confirmColor = switch (tone) {
+      AiConfirmationTone.neutral => theme.accentColor,
+      AiConfirmationTone.caution => theme.warningColor,
+      AiConfirmationTone.danger => theme.errorColor,
+    };
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -85,8 +109,14 @@ class AiConfirmation extends StatelessWidget {
               Expanded(
                 child: _Button(
                   label: denyLabel ?? l.deny,
-                  onTap: onDeny,
+                  onTap: onDeny == null
+                      ? null
+                      : () {
+                          aiLightHaptic(theme);
+                          onDeny!();
+                        },
                   filled: false,
+                  fillColor: confirmColor,
                   theme: theme,
                 ),
               ),
@@ -94,8 +124,14 @@ class AiConfirmation extends StatelessWidget {
               Expanded(
                 child: _Button(
                   label: confirmLabel ?? l.allow,
-                  onTap: onConfirm,
+                  onTap: onConfirm == null
+                      ? null
+                      : () {
+                          aiLightHaptic(theme);
+                          onConfirm!();
+                        },
                   filled: true,
+                  fillColor: confirmColor,
                   theme: theme,
                 ),
               ),
@@ -112,12 +148,14 @@ class _Button extends StatelessWidget {
     required this.label,
     required this.onTap,
     required this.filled,
+    required this.fillColor,
     required this.theme,
   });
 
   final String label;
   final VoidCallback? onTap;
   final bool filled;
+  final Color fillColor;
   final AiThemeExtension theme;
 
   @override
@@ -130,7 +168,7 @@ class _Button extends StatelessWidget {
       // A confirmation gate must be keyboard- and focus-reachable (desktop/web)
       // — Material + InkWell give focus traversal, Enter/Space, hover, ripple.
       child: Material(
-        color: filled ? theme.accentColor : Colors.transparent,
+        color: filled ? fillColor : Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
           side: filled ? BorderSide.none : BorderSide(color: theme.borderColor),

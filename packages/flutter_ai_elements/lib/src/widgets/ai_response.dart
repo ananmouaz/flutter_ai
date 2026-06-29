@@ -143,6 +143,7 @@ class _AiResponseState extends State<AiResponse> {
         );
       case _BlockType.bullet:
       case _BlockType.ordered:
+        final isTask = block.checks.isNotEmpty;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -154,10 +155,25 @@ class _AiResponseState extends State<AiResponse> {
                   children: [
                     SizedBox(
                       width: 24,
-                      child: Text(
-                        block.type == _BlockType.ordered ? '${i + 1}.' : '•',
-                        style: base,
-                      ),
+                      child: isTask
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Icon(
+                                block.checks[i]
+                                    ? Icons.check_box_rounded
+                                    : Icons.check_box_outline_blank_rounded,
+                                size: 16,
+                                color: block.checks[i]
+                                    ? theme.successColor
+                                    : theme.borderColor,
+                              ),
+                            )
+                          : Text(
+                              block.type == _BlockType.ordered
+                                  ? '${i + 1}.'
+                                  : '•',
+                              style: base,
+                            ),
                     ),
                     Expanded(
                       child: Text.rich(
@@ -170,6 +186,11 @@ class _AiResponseState extends State<AiResponse> {
                 ),
               ),
           ],
+        );
+      case _BlockType.rule:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Divider(height: 1, thickness: 1, color: theme.borderColor),
         );
       case _BlockType.quote:
         return Container(
@@ -285,6 +306,24 @@ class _AiResponseState extends State<AiResponse> {
           continue;
         }
       }
+      if (text.startsWith('~~', i)) {
+        final end = text.indexOf('~~', i + 2);
+        if (end != -1) {
+          flush();
+          spans.addAll(
+            _inline(
+              text.substring(i + 2, end),
+              base.copyWith(
+                decoration: TextDecoration.lineThrough,
+                decorationColor: base.color,
+              ),
+              theme,
+            ),
+          );
+          i = end + 2;
+          continue;
+        }
+      }
       final char = text[i];
       if (char == '`') {
         final end = text.indexOf('`', i + 1);
@@ -353,7 +392,7 @@ class _AiResponseState extends State<AiResponse> {
     AiThemeExtension theme,
   ) {
     final style = base.copyWith(
-      color: theme.accentColor,
+      color: theme.linkColor,
       decoration: TextDecoration.underline,
     );
     final onTap = widget.onLinkTap;
@@ -387,7 +426,16 @@ class MarkdownTextRenderer implements AiTextRenderer {
         );
 }
 
-enum _BlockType { paragraph, heading, code, bullet, ordered, quote, table }
+enum _BlockType {
+  paragraph,
+  heading,
+  code,
+  bullet,
+  ordered,
+  quote,
+  table,
+  rule
+}
 
 class _Block {
   _Block.paragraph(this.text)
@@ -395,40 +443,57 @@ class _Block {
         level = 0,
         language = null,
         items = const [],
+        checks = const [],
         rows = const [];
   _Block.heading(this.level, this.text)
       : type = _BlockType.heading,
         language = null,
         items = const [],
+        checks = const [],
         rows = const [];
   _Block.code(this.text, this.language)
       : type = _BlockType.code,
         level = 0,
         items = const [],
+        checks = const [],
         rows = const [];
   _Block.quote(this.text)
       : type = _BlockType.quote,
         level = 0,
         language = null,
         items = const [],
+        checks = const [],
         rows = const [];
-  _Block.list(this.type, this.items)
+  _Block.list(this.type, this.items, {this.checks = const []})
       : level = 0,
         language = null,
         text = '',
+        rows = const [];
+  _Block.rule()
+      : type = _BlockType.rule,
+        level = 0,
+        language = null,
+        text = '',
+        items = const [],
+        checks = const [],
         rows = const [];
   _Block.table(this.rows)
       : type = _BlockType.table,
         level = 0,
         language = null,
         text = '',
-        items = const [];
+        items = const [],
+        checks = const [];
 
   final _BlockType type;
   final String text;
   final int level;
   final String? language;
   final List<String> items;
+
+  /// For task lists: per-item checkbox state (`true`/`false`), or empty for a
+  /// plain bullet/ordered list. Parallel to [items].
+  final List<bool> checks;
 
   /// Table cells, first row being the header. Empty for non-tables.
   final List<List<String>> rows;
@@ -461,6 +526,14 @@ List<_Block> _parseBlocks(String source) {
       blocks.add(
         _Block.code(codeLines.join('\n'), language.isEmpty ? null : language),
       );
+      continue;
+    }
+
+    // Horizontal rule: three or more -, * or _ (optionally spaced), alone.
+    if (RegExp(r'^(?:-\s*){3,}$|^(?:\*\s*){3,}$|^(?:_\s*){3,}$')
+        .hasMatch(trimmed)) {
+      blocks.add(_Block.rule());
+      i++;
       continue;
     }
 
@@ -497,11 +570,28 @@ List<_Block> _parseBlocks(String source) {
       continue;
     }
 
+    // Task list (GFM checkboxes): `- [ ] todo` / `- [x] done`.
+    final task = RegExp(r'^[-*+]\s+\[([ xX])\]\s+');
+    if (task.hasMatch(trimmed)) {
+      final items = <String>[];
+      final checks = <bool>[];
+      while (i < lines.length && task.hasMatch(lines[i].trim())) {
+        final t = lines[i].trim();
+        final m = task.firstMatch(t)!;
+        checks.add(m.group(1) != ' ');
+        items.add(t.substring(m.end));
+        i++;
+      }
+      blocks.add(_Block.list(_BlockType.bullet, items, checks: checks));
+      continue;
+    }
+
     // Unordered list.
     if (RegExp(r'^[-*+]\s+').hasMatch(trimmed)) {
       final items = <String>[];
-      while (
-          i < lines.length && RegExp(r'^[-*+]\s+').hasMatch(lines[i].trim())) {
+      while (i < lines.length &&
+          RegExp(r'^[-*+]\s+').hasMatch(lines[i].trim()) &&
+          !task.hasMatch(lines[i].trim())) {
         items.add(lines[i].trim().replaceFirst(RegExp(r'^[-*+]\s+'), ''));
         i++;
       }
@@ -537,6 +627,8 @@ List<_Block> _parseBlocks(String source) {
               RegExp(r'^#{1,6}\s+').hasMatch(t) ||
               t.startsWith('>') ||
               _isTableHeaderAt(lines, i) ||
+              RegExp(r'^(?:-\s*){3,}$|^(?:\*\s*){3,}$|^(?:_\s*){3,}$')
+                  .hasMatch(t) ||
               RegExp(r'^[-*+]\s+').hasMatch(t) ||
               RegExp(r'^\d+\.\s+').hasMatch(t))) {
         break;

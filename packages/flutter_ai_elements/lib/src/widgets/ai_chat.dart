@@ -7,6 +7,7 @@ import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_conversation_view.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_haptics.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
 
 /// A live, drop-in chat transcript bound to a [UseChatController].
@@ -56,8 +57,9 @@ class AiChat extends StatefulWidget {
   /// Builds the thinking indicator (defaults to `AiLoader`).
   final WidgetBuilder? loadingBuilder;
 
-  /// On wide screens, centers the conversation at this width. `null` is
-  /// full-width.
+  /// On wide screens, centers the conversation at this width. When `null`,
+  /// falls back to [AiThemeExtension.maxContentWidth]; pass [double.infinity]
+  /// for full-width.
   final double? maxContentWidth;
 
   @override
@@ -82,6 +84,9 @@ class _AiChatState extends State<AiChat> {
   bool _showJump = false;
   int _lastCount = 0;
 
+  /// The controller status at the previous change, to detect turn completion.
+  ChatStatus? _lastStatus;
+
   /// Bounds the per-change settle retries (waiting for the anchor to lay out).
   int _settleAttempts = 0;
 
@@ -92,6 +97,7 @@ class _AiChatState extends State<AiChat> {
   void initState() {
     super.initState();
     _lastCount = widget.controller.messages.length;
+    _lastStatus = widget.controller.status;
     widget.controller.addListener(_onChange);
   }
 
@@ -112,6 +118,16 @@ class _AiChatState extends State<AiChat> {
   }
 
   void _onChange() {
+    // A light tap when a turn finishes (busy → idle) — independent of scrolling.
+    final status = widget.controller.status;
+    if (_lastStatus != null &&
+        _lastStatus!.isBusy &&
+        !status.isBusy &&
+        mounted) {
+      aiLightHaptic(AiThemeExtension.of(context));
+    }
+    _lastStatus = status;
+
     if (!widget.autoScroll) return;
     final messages = widget.controller.messages;
     final count = messages.length;

@@ -145,6 +145,15 @@ void main() {
       final fallback = AiThemeExtension.fallback();
       expect(fallback.enableHaptics, isTrue);
       expect(fallback.maxBubbleWidthFraction, closeTo(0.80, 0.001));
+      expect(fallback.maxContentWidth, closeTo(720, 0.001));
+    });
+
+    test('lerp snaps an infinite reading width instead of producing NaN', () {
+      final a = AiThemeExtension.fallback();
+      final b = a.copyWith(maxContentWidth: double.infinity);
+      final lerped = a.lerp(b, 0.7);
+      expect(lerped.maxContentWidth, double.infinity); // snaps to b past 0.5
+      expect(lerped.maxContentWidth.isNaN, isFalse);
     });
 
     test('copyWith overrides only the given token', () {
@@ -409,6 +418,29 @@ void main() {
       expect(find.text('Ask me anything'), findsOneWidget);
     });
 
+    testWidgets('AiEmptyState fires the tapped suggestion', (tester) async {
+      String? chosen;
+      await tester.pumpWidget(
+        _wrap(
+          AiEmptyState(
+            title: 'Hi',
+            suggestions: const ['Plan a trip', 'Write code'],
+            onSuggestionTap: (s) => chosen = s,
+          ),
+        ),
+      );
+      expect(find.text('Plan a trip'), findsOneWidget);
+      await tester.tap(find.text('Write code'));
+      expect(chosen, 'Write code');
+    });
+
+    testWidgets('AiOrb builds and animates', (tester) async {
+      await tester.pumpWidget(_wrap(const AiOrb(size: 48)));
+      expect(find.byType(AiOrb), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('AiErrorBanner shows message and fires retry', (tester) async {
       var retried = false;
       await tester.pumpWidget(
@@ -451,6 +483,9 @@ void main() {
       );
       expect(find.text('Flutter'), findsOneWidget);
       expect(find.text('dart.dev'), findsOneWidget); // falls back to host
+      // Numeric citation indices on each chip.
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
     });
 
     testWidgets('AiSources collapses past maxVisible and expands on tap',
@@ -593,6 +628,70 @@ void main() {
       expect(seenCode, 'final x = 1;');
       expect(seenLanguage, 'dart');
       expect(find.byType(AiCodeBlock), findsOneWidget);
+    });
+
+    testWidgets('AiResponse renders strikethrough, a rule, and task lists',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const SingleChildScrollView(
+            child: AiResponse(
+              text: 'has ~~struck~~ text\n\n---\n\n'
+                  '- [x] done\n- [ ] todo',
+            ),
+          ),
+        ),
+      );
+      // Strikethrough span present.
+      final rich = tester.widget<RichText>(find.byType(RichText).first);
+      var sawStrike = false;
+      rich.text.visitChildren((span) {
+        if (span is TextSpan &&
+            span.style?.decoration == TextDecoration.lineThrough) {
+          sawStrike = true;
+        }
+        return true;
+      });
+      expect(sawStrike, isTrue);
+      // Horizontal rule renders a Divider.
+      expect(find.byType(Divider), findsOneWidget);
+      // Task list: a checked + an unchecked checkbox icon, with labels.
+      expect(find.byIcon(Icons.check_box_rounded), findsOneWidget);
+      expect(
+          find.byIcon(Icons.check_box_outline_blank_rounded), findsOneWidget);
+      expect(find.text('done'), findsOneWidget);
+      expect(find.text('todo'), findsOneWidget);
+    });
+
+    testWidgets('AiResponse colors links from the theme linkColor',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: [
+              AiThemeExtension.fallback()
+                  .copyWith(linkColor: const Color(0xFF00FF00)),
+            ],
+          ),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AiResponse(
+                text: 'a [link](https://example.com)',
+                onLinkTap: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      final rich = tester.widget<RichText>(find.byType(RichText).first);
+      var sawLinkColor = false;
+      rich.text.visitChildren((span) {
+        if (span is TextSpan && span.style?.color == const Color(0xFF00FF00)) {
+          sawLinkColor = true;
+        }
+        return true;
+      });
+      expect(sawLinkColor, isTrue);
     });
 
     testWidgets('AiResponse renders a Markdown table', (tester) async {
@@ -834,6 +933,27 @@ void main() {
       expect(find.text('Send the email?'), findsOneWidget);
       await tester.tap(find.text('Allow'));
       expect(allowed, isTrue);
+    });
+
+    testWidgets('AiConfirmation danger tone fills confirm with errorColor',
+        (tester) async {
+      final theme = AiThemeExtension.fallback();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: [theme]),
+          home: const Scaffold(
+            body: AiConfirmation(
+              title: 'Delete everything?',
+              tone: AiConfirmationTone.danger,
+            ),
+          ),
+        ),
+      );
+      // The filled confirm button's Material uses the theme error color.
+      final materials = tester
+          .widgetList<Material>(find.byType(Material))
+          .where((m) => m.color == theme.errorColor);
+      expect(materials, isNotEmpty);
     });
 
     testWidgets('AiContextMeter formats usage', (tester) async {

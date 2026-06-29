@@ -45,15 +45,18 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
     required this.warningColor,
     required this.codeBackgroundColor,
     required this.codeForegroundColor,
+    required this.linkColor,
     required this.bubbleRadius,
     required this.bubbleShadow,
     required this.bubblePadding,
     required this.messageSpacing,
     required this.maxBubbleWidthFraction,
+    required this.maxContentWidth,
     required this.composerPadding,
     required this.textStyle,
     required this.codeStyle,
     required this.loaderColor,
+    required this.orbColor,
     required this.motionDuration,
     required this.motionCurve,
     required this.enableHaptics,
@@ -74,16 +77,19 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
         warningColor: Color(0xFFF59E0B),
         codeBackgroundColor: Color(0xFF1E1E1E),
         codeForegroundColor: Color(0xFFE6E6E6),
+        linkColor: Color(0xFF2563EB),
         bubbleRadius: BorderRadius.all(Radius.circular(22)),
         bubbleShadow: [],
         bubblePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         messageSpacing: 18,
         maxBubbleWidthFraction: 0.80,
+        maxContentWidth: 720,
         composerPadding: EdgeInsets.fromLTRB(14, 8, 14, 12),
         textStyle: TextStyle(fontSize: 16.5, height: 1.5),
         codeStyle:
             TextStyle(fontFamily: 'monospace', fontSize: 14, height: 1.45),
         loaderColor: Color(0xFF8E8EA0),
+        orbColor: Color(0xFF2F7BE6),
         motionDuration: Duration(milliseconds: 240),
         motionCurve: Curves.easeOutCubic,
         enableHaptics: true,
@@ -105,16 +111,19 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
         warningColor: Color(0xFFFBBF24),
         codeBackgroundColor: Color(0xFF1E1E1E),
         codeForegroundColor: Color(0xFFE6E6E6),
+        linkColor: Color(0xFF60A5FA),
         bubbleRadius: BorderRadius.all(Radius.circular(22)),
         bubbleShadow: [],
         bubblePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         messageSpacing: 18,
         maxBubbleWidthFraction: 0.80,
+        maxContentWidth: 720,
         composerPadding: EdgeInsets.fromLTRB(14, 8, 14, 12),
         textStyle: TextStyle(fontSize: 16.5, height: 1.5),
         codeStyle:
             TextStyle(fontFamily: 'monospace', fontSize: 14, height: 1.45),
         loaderColor: Color(0xFF8E8EA0),
+        orbColor: Color(0xFF2F7BE6),
         motionDuration: Duration(milliseconds: 240),
         motionCurve: Curves.easeOutCubic,
         enableHaptics: true,
@@ -160,6 +169,9 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
   /// Default foreground (text) color inside a fenced code block.
   final Color codeForegroundColor;
 
+  /// Color of inline links in rendered Markdown.
+  final Color linkColor;
+
   /// Corner radius of bubbles and the composer field.
   final BorderRadius bubbleRadius;
 
@@ -176,6 +188,12 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
   /// Plain assistant messages always span the full width.
   final double maxBubbleWidthFraction;
 
+  /// Default reading-width the conversation column is centered at on wide
+  /// screens, so prose doesn't run edge-to-edge (like ChatGPT/Claude on
+  /// desktop). Set to [double.infinity] for full-width. A `maxContentWidth`
+  /// passed directly to a widget overrides this.
+  final double maxContentWidth;
+
   /// Padding around the composer.
   final EdgeInsets composerPadding;
 
@@ -187,6 +205,9 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
 
   /// Color of the thinking/typing loader.
   final Color loaderColor;
+
+  /// Base color of the live-voice `AiOrb` / `AiLiveSession` orb.
+  final Color orbColor;
 
   /// Duration for entrance and state-change animations.
   final Duration motionDuration;
@@ -218,15 +239,18 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
     Color? warningColor,
     Color? codeBackgroundColor,
     Color? codeForegroundColor,
+    Color? linkColor,
     BorderRadius? bubbleRadius,
     List<BoxShadow>? bubbleShadow,
     EdgeInsets? bubblePadding,
     double? messageSpacing,
     double? maxBubbleWidthFraction,
+    double? maxContentWidth,
     EdgeInsets? composerPadding,
     TextStyle? textStyle,
     TextStyle? codeStyle,
     Color? loaderColor,
+    Color? orbColor,
     Duration? motionDuration,
     Curve? motionCurve,
     bool? enableHaptics,
@@ -246,16 +270,19 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
         warningColor: warningColor ?? this.warningColor,
         codeBackgroundColor: codeBackgroundColor ?? this.codeBackgroundColor,
         codeForegroundColor: codeForegroundColor ?? this.codeForegroundColor,
+        linkColor: linkColor ?? this.linkColor,
         bubbleRadius: bubbleRadius ?? this.bubbleRadius,
         bubbleShadow: bubbleShadow ?? this.bubbleShadow,
         bubblePadding: bubblePadding ?? this.bubblePadding,
         messageSpacing: messageSpacing ?? this.messageSpacing,
         maxBubbleWidthFraction:
             maxBubbleWidthFraction ?? this.maxBubbleWidthFraction,
+        maxContentWidth: maxContentWidth ?? this.maxContentWidth,
         composerPadding: composerPadding ?? this.composerPadding,
         textStyle: textStyle ?? this.textStyle,
         codeStyle: codeStyle ?? this.codeStyle,
         loaderColor: loaderColor ?? this.loaderColor,
+        orbColor: orbColor ?? this.orbColor,
         motionDuration: motionDuration ?? this.motionDuration,
         motionCurve: motionCurve ?? this.motionCurve,
         enableHaptics: enableHaptics ?? this.enableHaptics,
@@ -283,6 +310,7 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
           Color.lerp(codeBackgroundColor, other.codeBackgroundColor, t)!,
       codeForegroundColor:
           Color.lerp(codeForegroundColor, other.codeForegroundColor, t)!,
+      linkColor: Color.lerp(linkColor, other.linkColor, t)!,
       bubbleRadius: BorderRadius.lerp(bubbleRadius, other.bubbleRadius, t)!,
       bubbleShadow: BoxShadow.lerpList(bubbleShadow, other.bubbleShadow, t) ??
           bubbleShadow,
@@ -293,11 +321,18 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
         other.maxBubbleWidthFraction,
         t,
       )!,
+      // Guard against a non-finite reading width (e.g. double.infinity) which
+      // would lerp to NaN; snap discretely instead.
+      maxContentWidth:
+          (maxContentWidth.isFinite && other.maxContentWidth.isFinite)
+              ? lerpDouble(maxContentWidth, other.maxContentWidth, t)!
+              : (t < 0.5 ? maxContentWidth : other.maxContentWidth),
       composerPadding:
           EdgeInsets.lerp(composerPadding, other.composerPadding, t)!,
       textStyle: TextStyle.lerp(textStyle, other.textStyle, t)!,
       codeStyle: TextStyle.lerp(codeStyle, other.codeStyle, t)!,
       loaderColor: Color.lerp(loaderColor, other.loaderColor, t)!,
+      orbColor: Color.lerp(orbColor, other.orbColor, t)!,
       motionDuration: t < 0.5 ? motionDuration : other.motionDuration,
       motionCurve: t < 0.5 ? motionCurve : other.motionCurve,
       enableHaptics: t < 0.5 ? enableHaptics : other.enableHaptics,
