@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_ai_client/flutter_ai_client.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
@@ -6,9 +7,12 @@ import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
 
 /// A live, drop-in chat transcript bound to a [UseChatController].
 ///
-/// Rebuilds as the controller's transcript changes, shows a thinking loader
-/// while awaiting the first token, and keeps the view pinned to the latest
-/// message when the user is already at the bottom.
+/// Rebuilds as the controller's transcript changes and shows a thinking loader
+/// while awaiting the first token.
+///
+/// When you send a message, the chat anchors that message to the **top** of the
+/// viewport (ChatGPT-style) and lets the answer stream into the space below it,
+/// reserving just enough trailing space and releasing it as the answer grows.
 ///
 /// Named `AiChat` rather than `AiConversation` to avoid colliding with the
 /// `AiConversation` data model from `flutter_ai_core`.
@@ -58,6 +62,13 @@ class AiChat extends StatefulWidget {
 
 class _AiChatState extends State<AiChat> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _anchorKey = GlobalKey();
+
+  /// Id of the user message currently pinned to the top of the viewport.
+  String? _anchorId;
+
+  /// Empty space reserved after the last item so the anchor can reach the top.
+  double _trailingSpace = 0;
   int _lastCount = 0;
 
   @override
@@ -85,25 +96,83 @@ class _AiChatState extends State<AiChat> {
 
   void _onChange() {
     if (!widget.autoScroll) return;
-    final count = widget.controller.messages.length;
-    // A new message (the user's, or a fresh assistant turn) always jumps to the
-    // end; streaming tokens only stick if the user hasn't scrolled away.
+    final messages = widget.controller.messages;
+    final count = messages.length;
     final newMessage = count > _lastCount;
     _lastCount = count;
+
+    if (messages.isEmpty) {
+      if (_anchorId != null || _trailingSpace != 0) {
+        setState(() {
+          _anchorId = null;
+          _trailingSpace = 0;
+        });
+      }
+      return;
+    }
+
+    if (newMessage) {
+      // Anchor the latest user turn to the top and reserve a screenful of space
+      // so it can get there even before the answer fills it; _settle() shrinks
+      // the reservation back as the answer streams in.
+      final lastUser = _lastUserId(messages);
+      if (lastUser != null) {
+        final viewport = _scrollController.hasClients
+            ? _scrollController.position.viewportDimension
+            : MediaQuery.maybeSizeOf(context)?.height ?? 600;
+        setState(() {
+          _anchorId = lastUser;
+          _trailingSpace = viewport;
+        });
+        _settle(scrollToAnchor: true);
+        return;
+      }
+    }
+    // Streaming tokens (or no user message): keep the anchor in place and just
+    // release reserved space as content grows.
+    _settle(scrollToAnchor: false);
+  }
+
+  static String? _lastUserId(List<AiMessage> messages) {
+    for (var i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role == AiRole.user) return messages[i].id;
+    }
+    return null;
+  }
+
+  /// Trims the trailing reservation so the anchored message sits at the top with
+  /// no excess blank space, optionally jumping it there.
+  void _settle({required bool scrollToAnchor}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-      final position = _scrollController.position;
-      final nearBottom = position.maxScrollExtent - position.pixels < 120;
-      if (!newMessage && !nearBottom) return;
-      _scrollController.jumpTo(position.maxScrollExtent);
-      // A second pass catches the extent growing as lazy items lay out (a tall
-      // new bubble can exceed the first estimate).
-      if (newMessage) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final pos = _scrollController.position;
+      final box = _anchorKey.currentContext?.findRenderObject();
+      if (_anchorId == null || box is! RenderBox || !box.attached) {
+        // Fallback: classic bottom pin.
+        if (scrollToAnchor || pos.maxScrollExtent - pos.pixels < 120) {
+          _scrollController.jumpTo(pos.maxScrollExtent);
+        }
+        return;
+      }
+      final viewport = pos.viewportDimension;
+      final reveal =
+          RenderAbstractViewport.of(box).getOffsetToReveal(box, 0).offset;
+      // Reserve only as much as is needed for the anchor to reach the top
+      // (maxScrollExtent must stay >= reveal); release the rest as content grows.
+      final desired =
+          (_trailingSpace + reveal - pos.maxScrollExtent).clamp(0.0, viewport);
+      if ((desired - _trailingSpace).abs() > 0.5) {
+        setState(() => _trailingSpace = desired);
+      }
+      if (scrollToAnchor) {
+        // Jump after the reservation settles on the next frame.
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController
-                .jumpTo(_scrollController.position.maxScrollExtent);
-          }
+          if (!mounted || !_scrollController.hasClients) return;
+          final p = _scrollController.position;
+          final b = _anchorKey.currentContext?.findRenderObject();
+          if (b is! RenderBox || !b.attached) return;
+          final r = RenderAbstractViewport.of(b).getOffsetToReveal(b, 0).offset;
+          _scrollController.jumpTo(r.clamp(0.0, p.maxScrollExtent));
         });
       }
     });
@@ -129,6 +198,9 @@ class _AiChatState extends State<AiChat> {
           padding: widget.padding,
           // Show the loader only while awaiting the first streamed token.
           showLoader: widget.controller.status == ChatStatus.submitted,
+          trailingSpace: widget.autoScroll ? _trailingSpace : 0,
+          anchorKey: _anchorKey,
+          anchorId: _anchorId,
         );
       },
     );

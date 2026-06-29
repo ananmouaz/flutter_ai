@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.1
+
+- `AiChat` now anchors the message you just sent to the **top** of the viewport
+  (ChatGPT-style) and streams the answer into the space below it, reserving just
+  enough trailing space and releasing it as the answer grows — instead of
+  pinning every send to the very bottom.
+- `AiSources` collapses past `maxVisible` chips (default 6) behind a "+N more"
+  toggle, so grounded answers that return dozens of sources no longer flood the
+  bubble.
+
 ## 0.1.0
 
 Initial release.
