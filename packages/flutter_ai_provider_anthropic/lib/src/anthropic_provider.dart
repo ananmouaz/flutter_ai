@@ -230,6 +230,15 @@ class AnthropicProvider implements LlmProvider {
           ]);
         case AiRole.assistant:
           addContent('assistant', [
+            // Replay signed thinking blocks first — required by extended
+            // thinking when the turn also has tool_use, or the API 400s.
+            for (final reasoning in message.parts.whereType<ReasoningPart>())
+              if (reasoning.signature != null)
+                {
+                  'type': 'thinking',
+                  'thinking': reasoning.text,
+                  'signature': reasoning.signature,
+                },
             if (message.text.isNotEmpty) {'type': 'text', 'text': message.text},
             for (final call in message.parts.whereType<ToolCallPart>())
               {

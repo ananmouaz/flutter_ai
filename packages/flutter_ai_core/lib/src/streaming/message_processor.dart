@@ -59,8 +59,8 @@ class MessageProcessor {
         _mutate(messageId, (m) => _appendText(m, delta));
         return _changed(messageId);
 
-      case ReasoningDelta(:final messageId, :final delta):
-        _mutate(messageId, (m) => _appendReasoning(m, delta));
+      case ReasoningDelta(:final messageId, :final delta, :final signature):
+        _mutate(messageId, (m) => _appendReasoning(m, delta, signature));
         return _changed(messageId);
 
       case ToolCallStarted(
@@ -293,13 +293,14 @@ class MessageProcessor {
     return message.copyWith(parts: parts, status: AiMessageStatus.streaming);
   }
 
-  AiMessage _appendReasoning(AiMessage message, String delta) {
+  AiMessage _appendReasoning(AiMessage message, String delta, [String? sig]) {
     final parts = [...message.parts];
     final last = parts.isEmpty ? null : parts.last;
     if (last is ReasoningPart) {
-      parts[parts.length - 1] = last.copyWith(text: last.text + delta);
+      parts[parts.length - 1] =
+          last.copyWith(text: last.text + delta, signature: sig);
     } else {
-      parts.add(ReasoningPart(delta));
+      parts.add(ReasoningPart(delta, signature: sig));
     }
     return message.copyWith(parts: parts, status: AiMessageStatus.streaming);
   }

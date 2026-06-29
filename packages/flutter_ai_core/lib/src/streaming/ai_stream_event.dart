@@ -121,12 +121,17 @@ final class TextDelta extends AiStreamEvent {
 /// Appends [delta] to the reasoning of message [messageId].
 final class ReasoningDelta extends AiStreamEvent {
   /// Creates a reasoning-delta event.
-  const ReasoningDelta({required this.messageId, required this.delta});
+  const ReasoningDelta({
+    required this.messageId,
+    required this.delta,
+    this.signature,
+  });
 
   /// Reconstructs a [ReasoningDelta] from [json].
   factory ReasoningDelta.fromJson(Map<String, Object?> json) => ReasoningDelta(
         messageId: json['messageId']! as String,
         delta: json['delta']! as String,
+        signature: json['signature'] as String?,
       );
 
   /// The message receiving the reasoning.
@@ -135,19 +140,28 @@ final class ReasoningDelta extends AiStreamEvent {
   /// The reasoning fragment to append.
   final String delta;
 
+  /// An opaque provider signature for the reasoning block (set on the
+  /// [ReasoningPart] when present); see [ReasoningPart.signature].
+  final String? signature;
+
   @override
-  Map<String, Object?> toJson() =>
-      {'type': 'reasoning-delta', 'messageId': messageId, 'delta': delta};
+  Map<String, Object?> toJson() => {
+        'type': 'reasoning-delta',
+        'messageId': messageId,
+        'delta': delta,
+        if (signature != null) 'signature': signature,
+      };
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ReasoningDelta &&
           other.messageId == messageId &&
-          other.delta == delta);
+          other.delta == delta &&
+          other.signature == signature);
 
   @override
-  int get hashCode => Object.hash(messageId, delta);
+  int get hashCode => Object.hash(messageId, delta, signature);
 
   @override
   String toString() => 'ReasoningDelta($messageId, ${delta.length} chars)';

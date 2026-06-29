@@ -334,6 +334,67 @@ void main() {
       expect(tools.last['cache_control'], {'type': 'ephemeral'});
     });
 
+    test(
+        'replays a signed thinking block before tool_use in the assistant turn',
+        () async {
+      late http.Request captured;
+      final provider = AnthropicProvider(
+        apiKey: 'sk',
+        client: MockClient.streaming((request, bodyStream) async {
+          captured = request as http.Request;
+          return http.StreamedResponse(
+            Stream<List<int>>.value(
+              utf8.encode('data: ${jsonEncode({'type': 'message_stop'})}\n'),
+            ),
+            200,
+          );
+        }),
+      );
+
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(id: 'u', role: AiRole.user, parts: [TextPart('hi')]),
+                AiMessage(
+                  id: 'a',
+                  role: AiRole.assistant,
+                  parts: [
+                    ReasoningPart('let me think', signature: 'sig-abc'),
+                    ToolCallPart(
+                      toolCallId: 't1',
+                      toolName: 'get_weather',
+                      args: {'city': 'Lisbon'},
+                    ),
+                  ],
+                ),
+                AiMessage(
+                  id: 'tr',
+                  role: AiRole.tool,
+                  parts: [ToolResultPart(toolCallId: 't1', result: 'sunny')],
+                ),
+              ],
+            ),
+          )
+          .toList();
+
+      final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+      final messages = (body['messages'] as List).cast<Map<String, Object?>>();
+      final assistant = messages.firstWhere((m) => m['role'] == 'assistant');
+      final blocks =
+          (assistant['content'] as List).cast<Map<String, Object?>>();
+      // Thinking block (with signature) comes first, before tool_use.
+      expect(blocks.first['type'], 'thinking');
+      expect(blocks.first['signature'], 'sig-abc');
+      expect(blocks.any((b) => b['type'] == 'tool_use'), isTrue);
+      expect(
+        blocks.indexWhere((b) => b['type'] == 'thinking') <
+            blocks.indexWhere((b) => b['type'] == 'tool_use'),
+        isTrue,
+      );
+    });
+
     test('emits a StreamErrorEvent when the transport throws', () async {
       final provider = AnthropicProvider(
         apiKey: 'test',

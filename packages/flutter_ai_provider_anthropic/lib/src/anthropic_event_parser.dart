@@ -113,6 +113,16 @@ class AnthropicEventParser {
             return thinking.isEmpty
                 ? const []
                 : [ReasoningDelta(messageId: _messageId, delta: thinking)];
+          case 'signature_delta':
+            // The signed proof of the thinking block; must be replayed verbatim
+            // on the next turn or the API rejects it.
+            final sig = delta['signature'] as String? ?? '';
+            return sig.isEmpty
+                ? const []
+                : [
+                    ReasoningDelta(
+                        messageId: _messageId, delta: '', signature: sig)
+                  ];
           case 'input_json_delta':
             final partial = delta['partial_json'] as String? ?? '';
             if (index == _structuredIndex) {
