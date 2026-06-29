@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.7
+
+- Cost accuracy: `cache_creation_input_tokens` now map to
+  `AiUsage.cacheCreationTokens` (billed at the ~1.25x write rate) instead of
+  being folded into base input and billed wrong.
+- Declares supported `platforms:` (all 6).
+
 ## 0.1.6
 
 - Throws typed `LlmException`s (auth/rate-limit/server/request) on HTTP errors

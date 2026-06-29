@@ -44,14 +44,39 @@ sealed class AiPart {
 /// Human- or model-authored prose, typically rendered as Markdown.
 final class TextPart extends AiPart {
   /// Creates a text part holding [text].
-  const TextPart(this.text);
+  const TextPart(String text)
+      : _text = text,
+        _buffer = null;
 
   /// Reconstructs a [TextPart] from [json].
   factory TextPart.fromJson(Map<String, Object?> json) =>
       TextPart(json['text']! as String);
 
+  /// Creates a text part whose content is accumulated in [buffer], materialized
+  /// to a [String] lazily on first read of [text].
+  ///
+  /// Internal to the streaming reducer: appending deltas to one shared
+  /// [StringBuffer] keeps accumulation linear (O(total length)) instead of
+  /// reallocating the whole string on every delta. The expensive `toString()`
+  /// happens only when a consumer actually reads the text (e.g. at a frame
+  /// boundary), not once per token. Equality, hashing, and JSON all read
+  /// through [text], so this is observably identical to a plain `TextPart`.
+  TextPart.buffered(StringBuffer buffer)
+      : _text = null,
+        _buffer = buffer;
+
+  final String? _text;
+  final StringBuffer? _buffer;
+
   /// The textual content.
-  final String text;
+  ///
+  /// For a [TextPart.buffered] this materializes the backing buffer on demand.
+  String get text => _text ?? _buffer!.toString();
+
+  /// The live accumulation buffer backing this part, or `null` for an ordinary
+  /// part. Internal to the streaming reducer, which appends the next delta in
+  /// place rather than rebuilding the string.
+  StringBuffer? get buffer => _buffer;
 
   /// Returns a copy with [text] replaced.
   TextPart copyWith({String? text}) => TextPart(text ?? this.text);
@@ -76,7 +101,9 @@ final class TextPart extends AiPart {
 /// region rather than mixing it into the answer.
 final class ReasoningPart extends AiPart {
   /// Creates a reasoning part holding [text].
-  const ReasoningPart(this.text, {this.signature});
+  const ReasoningPart(String text, {this.signature})
+      : _text = text,
+        _buffer = null;
 
   /// Reconstructs a [ReasoningPart] from [json].
   factory ReasoningPart.fromJson(Map<String, Object?> json) => ReasoningPart(
@@ -84,8 +111,27 @@ final class ReasoningPart extends AiPart {
         signature: json['signature'] as String?,
       );
 
+  /// Creates a reasoning part whose content is accumulated in [buffer],
+  /// materialized lazily on first read of [text].
+  ///
+  /// See [TextPart.buffered]: this keeps reasoning-delta accumulation linear
+  /// rather than reallocating the whole string per delta.
+  ReasoningPart.buffered(StringBuffer buffer, {this.signature})
+      : _text = null,
+        _buffer = buffer;
+
+  final String? _text;
+  final StringBuffer? _buffer;
+
   /// The reasoning content.
-  final String text;
+  ///
+  /// For a [ReasoningPart.buffered] this materializes the backing buffer on
+  /// demand.
+  String get text => _text ?? _buffer!.toString();
+
+  /// The live accumulation buffer backing this part, or `null` for an ordinary
+  /// part. Internal to the streaming reducer.
+  StringBuffer? get buffer => _buffer;
 
   /// An opaque provider signature for this reasoning block, when the provider
   /// supplies one (e.g. Anthropic extended thinking). It must be preserved and
