@@ -22,6 +22,10 @@
 - `AiSources` collapses past `maxVisible` chips (default 6) behind a "+N more"
   toggle, so grounded answers that return dozens of sources no longer flood the
   bubble.
+- Pluggable syntax highlighting: `AiCodeBlock`, `AiResponse`, and
+  `MarkdownTextRenderer` accept an optional `CodeHighlighter` that turns code +
+  language into styled spans. The package ships no grammar engine (stays
+  dependency-free); supply one from the app. Defaults to plain monospace.
 - Fixed the Markdown block parser hanging (and exhausting memory) when handed a
   partial stream that ended mid-construct, e.g. a lone `#` before its heading
   text arrived — the parser now always makes forward progress.

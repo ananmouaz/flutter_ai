@@ -13,13 +13,22 @@ import 'package:flutter_ai_elements/src/widgets/ai_code_block.dart';
 /// always and become tappable when [onLinkTap] is provided.
 class AiResponse extends StatefulWidget {
   /// Creates a Markdown response from [text].
-  const AiResponse({super.key, required this.text, this.onLinkTap});
+  const AiResponse({
+    super.key,
+    required this.text,
+    this.onLinkTap,
+    this.codeHighlighter,
+  });
 
   /// The Markdown source to render.
   final String text;
 
   /// Called when a link is tapped. If `null`, links render but aren't tappable.
   final void Function(Uri url)? onLinkTap;
+
+  /// Optional syntax highlighter for fenced code blocks. When `null`, code
+  /// renders as plain monospace.
+  final CodeHighlighter? codeHighlighter;
 
   @override
   State<AiResponse> createState() => _AiResponseState();
@@ -75,7 +84,8 @@ class _AiResponseState extends State<AiResponse> {
     // Re-parse (and rebuild recognizers) only when the inputs that affect them
     // change — never every frame.
     if (oldWidget.text != widget.text ||
-        oldWidget.onLinkTap != widget.onLinkTap) {
+        oldWidget.onLinkTap != widget.onLinkTap ||
+        oldWidget.codeHighlighter != widget.codeHighlighter) {
       _parse();
     }
   }
@@ -125,7 +135,11 @@ class _AiResponseState extends State<AiResponse> {
       case _BlockType.code:
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
-          child: AiCodeBlock(code: block.text, language: block.language),
+          child: AiCodeBlock(
+            code: block.text,
+            language: block.language,
+            highlighter: widget.codeHighlighter,
+          ),
         );
       case _BlockType.bullet:
       case _BlockType.ordered:
@@ -355,15 +369,22 @@ class _AiResponseState extends State<AiResponse> {
 /// renderer for assistant content.
 class MarkdownTextRenderer implements AiTextRenderer {
   /// Creates a Markdown renderer.
-  const MarkdownTextRenderer({this.onLinkTap});
+  const MarkdownTextRenderer({this.onLinkTap, this.codeHighlighter});
 
   /// Forwarded to [AiResponse.onLinkTap].
   final void Function(Uri url)? onLinkTap;
 
+  /// Forwarded to [AiResponse.codeHighlighter] for the completed message.
+  final CodeHighlighter? codeHighlighter;
+
   @override
   Widget render(String text, {required bool isStreaming}) => isStreaming
       ? AiAnimatedResponse(text: text, onLinkTap: onLinkTap)
-      : AiResponse(text: text, onLinkTap: onLinkTap);
+      : AiResponse(
+          text: text,
+          onLinkTap: onLinkTap,
+          codeHighlighter: codeHighlighter,
+        );
 }
 
 enum _BlockType { paragraph, heading, code, bullet, ordered, quote, table }

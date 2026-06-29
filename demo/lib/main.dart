@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_demo/code_highlighter.dart';
 import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/demo_provider.dart';
 import 'package:flutter_ai_demo/demo_tools.dart';
@@ -412,11 +413,12 @@ class ChatScreen extends StatelessWidget {
         case ReasoningPart(:final text):
           add(AiReasoning(text: text));
         case TextPart(:final text):
-          // Smoothly reveal the streaming answer; show completed text as-is.
+          // Smoothly reveal the streaming answer; show completed text as-is,
+          // with syntax-highlighted code blocks.
           add(
             message.status == AiMessageStatus.streaming
                 ? AiAnimatedResponse(text: text)
-                : AiResponse(text: text),
+                : AiResponse(text: text, codeHighlighter: demoCodeHighlighter),
           );
         case ToolCallPart():
           // Render all tool calls once: a group when parallel, else a card.
