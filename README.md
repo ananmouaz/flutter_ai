@@ -3,6 +3,16 @@
 [![CI](https://github.com/ananmouaz/flutter_ai/actions/workflows/ci.yml/badge.svg)](https://github.com/ananmouaz/flutter_ai/actions/workflows/ci.yml)
 [![License: BSD-3](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
+## ☕ Support this project
+
+<p align="center">
+  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+</p>
+
+<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+
+---
+
 **Build AI chat in Flutter in minutes.** A family of small, focused packages —
 the Flutter answer to Vercel's AI SDK + AI Elements. Drop in a polished chat UI,
 or compose the pieces yourself. Provider-agnostic (OpenAI, Anthropic, Gemini),
