@@ -37,13 +37,15 @@ restyle everything via theme tokens.
 - `AiMessageBubble` — renders one message's parts (text, reasoning, tool calls,
   results, files, sources, data), role-aware, with streaming-safe semantics.
 - `AiConversationView` — a scrolling list of bubbles, optional thinking loader.
-- `AiComposer` — input with a leading attach (`+`) button and a main button that
-  is Live while empty, Send once you type, and Stop while streaming; emits haptics.
+- `AiComposer` — the **presentational** input: a leading attach (`+`) button and
+  a main button that is Live while empty, Send once you type, and Stop while
+  streaming; emits haptics. Use this only if you're wiring callbacks yourself.
 - `AiLoader` — a pulsing three-dot thinking indicator.
 
-**Controller-bound** (wire to a `UseChatController`):
+**Controller-bound** (wire to a `UseChatController` — what you usually want):
 - `AiChat` — live transcript with auto-scroll and a thinking loader.
-- `AiPromptInput` — composer wired to `sendText` / `stop`.
+- `AiPromptInput` — the drop-in composer: wraps `AiComposer` and wires it to
+  `sendText` / `stop`. Prefer this over `AiComposer`.
 
 ## Quick start
 
@@ -103,5 +105,6 @@ AiChat(controller: controller, textRenderer: MyMarkdownRenderer());
 
 ## Status
 
-`0.1.0`. Published on pub.dev; depends on the sibling `flutter_ai` packages.
+Published on pub.dev (see the CHANGELOG); depends on the sibling `flutter_ai`
+packages.
 See [`example/`](example/) for a full app.

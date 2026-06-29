@@ -80,4 +80,4 @@ class MyProvider implements LlmProvider {
 
 ## Status
 
-`0.1.0`. Published on pub.dev; depends on `flutter_ai_core`.
+Published on pub.dev (see the CHANGELOG for versions); depends on `flutter_ai_core`.

@@ -71,5 +71,6 @@ chosen engine in the host app or a dedicated adapter package.
 
 ## Status
 
-`0.1.1`. Interface + models + callback adapter, fully unit-tested. No concrete
-audio engine, recording, or TTS ships in this package (see **Scope** above).
+Interface + models + callback adapter, fully unit-tested. No concrete audio
+engine, recording, or TTS ships in this package (see **Scope** above). See the
+CHANGELOG for version history.

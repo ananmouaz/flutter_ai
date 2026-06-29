@@ -49,7 +49,5 @@ The HTTP client is injectable (`client:`) for testing or custom transport.
 
 ## Status
 
-`0.1.0`. The request/response mapping is **unit-tested against recorded SSE
-chunks**; it has not been exercised against the live OpenAI API in this release.
-Depends on `flutter_ai_core` via a local path (`publish_to: none`) until that
-package is published.
+Published on pub.dev (see the CHANGELOG); depends on `flutter_ai_core`. The
+request/response mapping is **unit-tested against recorded SSE chunks**.

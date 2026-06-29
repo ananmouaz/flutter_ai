@@ -68,5 +68,5 @@ class MyTavilyAdapter implements WebSearchAdapter {
 
 ## Status
 
-`0.1.0`. Published on pub.dev; depends on `flutter_ai_core`.
+Published on pub.dev (see the CHANGELOG); depends on `flutter_ai_core`.
 See [`example/`](example/).

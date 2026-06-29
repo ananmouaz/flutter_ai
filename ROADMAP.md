@@ -10,6 +10,15 @@ LangGraph, the MCP spec, provider docs, and the Flutter pub.dev ecosystem
 (June 2026). Items are grouped by what makes us *credible* as the standard, what
 lets us *win* the Flutter market, and what we deliberately keep out of scope.
 
+> **Status (kept rough — the CHANGELOGs and GitHub issues are the source of
+> truth):** Phases 1 and 2 below have **shipped** — the agentic tool loop,
+> structured output, token usage + cost, prompt caching, the generative-UI
+> registry, thread management, and the MCP client are all published. A
+> multi-OS CI matrix and i18n have shipped too. A later expert-panel review
+> added a further backlog (correctness, performance, accessibility, DX) tracked
+> in issues #40–#68; the correctness/performance/safety/a11y tier of that is
+> also shipped.
+
 ## Where we stand
 
 Our layered shape — provider-agnostic streaming `core`, a `useChat`-style
