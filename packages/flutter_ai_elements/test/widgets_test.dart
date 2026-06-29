@@ -395,19 +395,17 @@ void main() {
       await tester.pumpWidget(
         _wrap(SingleChildScrollView(child: AiAnimatedResponse(text: long))),
       );
+      int shownChars() =>
+          (tester.state(find.byType(AiAnimatedResponse)) as dynamic).shownChars
+              as int;
       await tester.pump(const Duration(milliseconds: 100)); // baseline tick
       await tester.pump(const Duration(milliseconds: 100));
-      final shown =
-          tester.widget<AiResponse>(find.byType(AiResponse)).text.length;
       // The 120 cps floor alone would reveal only ~24 chars in 200ms; the
       // catch-up rate drains the large backlog far faster (~100 chars here) so
       // the reveal never trails a fast stream by much.
-      expect(shown, greaterThan(60));
+      expect(shownChars(), greaterThan(60));
       await tester.pumpAndSettle();
-      expect(
-        tester.widget<AiResponse>(find.byType(AiResponse)).text.length,
-        long.length,
-      );
+      expect(shownChars(), long.length);
     });
 
     testWidgets('AiChat shows the empty state when idle and empty',
