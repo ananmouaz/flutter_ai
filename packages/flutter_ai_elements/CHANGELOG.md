@@ -7,11 +7,15 @@
   reserving just enough trailing space and releasing it as the answer grows.
   A drag releases the pin; a floating "scroll to latest" button appears whenever
   the conversation is scrolled above the bottom.
-- New `AiAnimatedResponse`: a light typewriter reveal so streamed answers appear
-  smoothly and gradually. It reveals at a readable pace (`charsPerSecond`,
-  default 120) while keeping up, and accelerates to drain a backlog within
-  `catchUpWindow` so it never trails far behind a fast stream.
-  `MarkdownTextRenderer` uses it automatically while a message is streaming.
+- New `AiAnimatedResponse`: a **blur fade-in** reveal (the Apple-Intelligence /
+  Siri look) so streamed answers appear smoothly — each newly revealed word
+  arrives blurred and faded, then sharpens into place over `fadeDuration`
+  (`blurSigma` controls the starting blur). Text is paced at a readable
+  `charsPerSecond` (default 120) and accelerates to drain a backlog within
+  `catchUpWindow` so it never trails far behind a fast stream. Only the few
+  words at the leading edge animate at once, so the cost stays bounded. The
+  in-flight text renders as plain prose and settles into full Markdown once
+  complete. `MarkdownTextRenderer` uses it automatically while streaming.
 - `AiMessageActions` is restyled with compact, evenly spaced icon buttons
   (ChatGPT-style) and gains optional `onSpeak`/`onGood`/`onBad`/`onShare`
   actions.

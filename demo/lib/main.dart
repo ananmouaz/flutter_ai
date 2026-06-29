@@ -8,6 +8,7 @@ import 'package:flutter_ai_demo/demo_tools.dart';
 import 'package:flutter_ai_demo/live_demo.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 import 'package:flutter_ai_provider_gemini/flutter_ai_provider_gemini.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Supply a real Gemini key to talk to live models:
 ///
@@ -450,8 +451,17 @@ class ChatScreen extends StatelessWidget {
 
     if (sources.isNotEmpty) {
       // A compact, collapsible strip of where the answer came from. (Grounded
-      // answers can return dozens of sources, so AiSources caps them.)
-      add(AiSources(sources: sources));
+      // answers can return dozens of sources, so AiSources caps them.) Tapping
+      // a chip opens its URL; Gemini grounding URLs are Google redirects that
+      // forward to the publisher page.
+      add(
+        AiSources(
+          sources: sources,
+          onTap: (source) => unawaited(
+            launchUrl(source.url, mode: LaunchMode.externalApplication),
+          ),
+        ),
+      );
     }
 
     if (message.status == AiMessageStatus.complete) {

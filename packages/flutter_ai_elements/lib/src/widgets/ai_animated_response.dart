@@ -1,20 +1,26 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
+import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
+import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
-/// Wraps [AiResponse] with a light typewriter reveal so streamed answers appear
-/// smoothly and gradually rather than snapping in token-by-token.
+/// Reveals a streamed answer with a trailing **blur fade-in** — the
+/// Apple-Intelligence / Siri look — instead of a hard typewriter edge.
 ///
-/// It renders an ever-growing prefix of [text], advancing the visible length
-/// toward the full text at a readable [charsPerSecond] while it is keeping up.
-/// When the stream outpaces the reveal, it accelerates to drain the backlog
-/// within [catchUpWindow] so it never trails far behind; when the text is
-/// complete it finishes revealing and stops. Use it for the *streaming* message
-/// only — completed/history messages should use [AiResponse] directly so they
-/// don't replay the animation.
+/// Text appears progressively (paced like [charsPerSecond], accelerating to
+/// drain a backlog within [catchUpWindow] so it never trails far behind a fast
+/// stream), and each newly revealed word arrives blurred and semi-transparent,
+/// then sharpens and fades into place over [fadeDuration]. Only the few words
+/// at the leading edge animate at once, so the cost stays bounded no matter how
+/// long the answer is.
+///
+/// This renders the in-flight text as **plain prose** (no Markdown formatting)
+/// — inline blur can only be applied to whole inline boxes, not to spans inside
+/// a laid-out paragraph. Use it for the *streaming* message only; completed
+/// messages should render with the full Markdown widget so headings, lists,
+/// code, and links come back.
 class AiAnimatedResponse extends StatefulWidget {
   /// Creates an animated Markdown response.
   const AiAnimatedResponse({
@@ -23,12 +29,16 @@ class AiAnimatedResponse extends StatefulWidget {
     this.onLinkTap,
     this.charsPerSecond = 120,
     this.catchUpWindow = const Duration(seconds: 1),
+    this.fadeDuration = const Duration(milliseconds: 340),
+    this.blurSigma = 5,
   });
 
-  /// The (growing) Markdown source to reveal.
+  /// The (growing) source text to reveal.
   final String text;
 
-  /// Forwarded to [AiResponse.onLinkTap].
+  /// Reserved for API compatibility with the completed renderer. Links are not
+  /// tappable during the animated phase (the in-flight text is plain prose);
+  /// they become active once the message settles into the Markdown renderer.
   final void Function(Uri url)? onLinkTap;
 
   /// The baseline (readable) reveal speed used while the typewriter is keeping
@@ -40,38 +50,98 @@ class AiAnimatedResponse extends StatefulWidget {
   /// streams while never trailing far behind a fast one.
   final Duration catchUpWindow;
 
+  /// How long each freshly revealed word takes to sharpen from blurred and
+  /// faded to crisp and opaque.
+  final Duration fadeDuration;
+
+  /// The blur applied to a word the moment it appears, in logical pixels. It
+  /// eases to zero over [fadeDuration].
+  final double blurSigma;
+
   @override
   State<AiAnimatedResponse> createState() => _AiAnimatedResponseState();
 }
 
 class _AiAnimatedResponseState extends State<AiAnimatedResponse>
     with SingleTickerProviderStateMixin {
+  /// At most this many trailing words animate at once, bounding the number of
+  /// blur/opacity layers regardless of how fast the stream bursts.
+  static const _maxAnimating = 6;
+
   late final Ticker _ticker;
-  int _shown = 0;
+
+  /// `[start, end)` char ranges of every non-whitespace run in the text.
+  List<List<int>> _words = const [];
+
+  /// Word start offset -> the ticker time at which it became fully revealed.
+  final Map<int, Duration> _births = {};
+
+  int _shown = 0; // characters revealed so far
+  int _settledCursor = 0; // index into [_words] whose births are recorded
   Duration _last = Duration.zero;
+  Duration _elapsed = Duration.zero;
+
+  @visibleForTesting
+  int get shownChars => _shown;
 
   @override
   void initState() {
     super.initState();
+    _retokenize();
     _ticker = createTicker(_tick);
     if (widget.text.isNotEmpty) unawaited(_ticker.start());
   }
 
+  void _retokenize() {
+    final s = widget.text;
+    final words = <List<int>>[];
+    var i = 0;
+    while (i < s.length) {
+      if (_isSpace(s.codeUnitAt(i))) {
+        i++;
+        continue;
+      }
+      final start = i;
+      while (i < s.length && !_isSpace(s.codeUnitAt(i))) {
+        i++;
+      }
+      words.add([start, i]);
+    }
+    _words = words;
+  }
+
+  static bool _isSpace(int c) =>
+      c == 0x20 || c == 0x0A || c == 0x09 || c == 0x0D;
+
   @override
   void didUpdateWidget(AiAnimatedResponse oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.text == widget.text) return;
     // If the text was replaced (e.g. a regenerate) rather than appended to,
     // restart the reveal from the beginning.
-    if (!widget.text.startsWith(oldWidget.text.substring(
+    final appended = widget.text.startsWith(oldWidget.text.substring(
       0,
       math.min(oldWidget.text.length, widget.text.length),
-    ))) {
+    ));
+    _retokenize();
+    if (!appended) {
       _shown = 0;
+      _settledCursor = 0;
+      _births.clear();
     }
-    if (_shown < widget.text.length && !_ticker.isActive) {
+    if (!_settled() && !_ticker.isActive) {
       _last = Duration.zero;
       unawaited(_ticker.start());
     }
+  }
+
+  /// True once everything is revealed and the last word has finished sharpening.
+  bool _settled() {
+    if (_shown < widget.text.length) return false;
+    if (_words.isEmpty) return true;
+    final birth = _births[_words.last[0]];
+    if (birth == null) return false;
+    return (_elapsed - birth) >= widget.fadeDuration;
   }
 
   void _tick(Duration elapsed) {
@@ -79,21 +149,32 @@ class _AiAnimatedResponseState extends State<AiAnimatedResponse>
         ? 0.0
         : (elapsed - _last).inMicroseconds / Duration.microsecondsPerSecond;
     _last = elapsed;
+    _elapsed = elapsed;
+
     final target = widget.text.length;
     // Reveal at the readable baseline while caught up, but accelerate to drain
     // a large backlog within [catchUpWindow] so the typewriter never trails far
     // behind the stream once the answer has fully arrived.
-    final window = widget.catchUpWindow.inMicroseconds /
-        Duration.microsecondsPerSecond;
-    final backlogRate = window > 0 ? (target - _shown) / window : double.infinity;
+    final window =
+        widget.catchUpWindow.inMicroseconds / Duration.microsecondsPerSecond;
+    final backlogRate =
+        window > 0 ? (target - _shown) / window : double.infinity;
     final rate = math.max(widget.charsPerSecond, backlogRate);
     final step = math.max(1, (rate * dt).round());
-    final next = _shown + step < target ? _shown + step : target;
-    if (next != _shown) setState(() => _shown = next);
-    if (_shown >= target) {
+    _shown = _shown + step < target ? _shown + step : target;
+
+    // Stamp the birth time of every word that just became fully revealed.
+    while (_settledCursor < _words.length &&
+        _words[_settledCursor][1] <= _shown) {
+      _births.putIfAbsent(_words[_settledCursor][0], () => elapsed);
+      _settledCursor++;
+    }
+
+    if (_settled()) {
       _ticker.stop();
       _last = Duration.zero;
     }
+    setState(() {});
   }
 
   @override
@@ -104,10 +185,78 @@ class _AiAnimatedResponseState extends State<AiAnimatedResponse>
 
   @override
   Widget build(BuildContext context) {
-    final shown = _shown < widget.text.length ? _shown : widget.text.length;
-    return AiResponse(
-      text: widget.text.substring(0, shown),
-      onLinkTap: widget.onLinkTap,
-    );
+    final theme = AiThemeExtension.of(context);
+    final base = DefaultTextStyle.of(context).style.merge(theme.textStyle);
+    final text = widget.text;
+    final visible = math.min(_shown, text.length);
+
+    // Index of the last word that is fully revealed; only the trailing
+    // [_maxAnimating] of these (plus any partially revealed word) animate.
+    var lastFull = -1;
+    for (var i = 0; i < _words.length; i++) {
+      if (_words[i][1] <= visible) {
+        lastFull = i;
+      } else {
+        break;
+      }
+    }
+    final animateFrom = lastFull - _maxAnimating + 1;
+
+    final spans = <InlineSpan>[];
+    final settled = StringBuffer();
+    var cursor = 0;
+    for (var i = 0; i < _words.length; i++) {
+      final start = _words[i][0];
+      final end = _words[i][1];
+      if (start >= visible) break;
+      if (start > cursor) settled.write(text.substring(cursor, start));
+      final shownEnd = math.min(end, visible);
+      final partial = end > visible;
+
+      double t; // 0 = just born (blurred), 1 = settled (crisp)
+      if (partial) {
+        t = 0;
+      } else {
+        final birth = _births[start];
+        t = birth == null
+            ? 1
+            : ((_elapsed - birth).inMicroseconds /
+                    widget.fadeDuration.inMicroseconds)
+                .clamp(0.0, 1.0);
+      }
+
+      final recent = i >= animateFrom;
+      if (t >= 1.0 || (!partial && !recent)) {
+        settled.write(text.substring(start, shownEnd));
+      } else {
+        if (settled.isNotEmpty) {
+          spans.add(TextSpan(text: settled.toString(), style: base));
+          settled.clear();
+        }
+        final eased = Curves.easeOut.transform(t);
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: Opacity(
+            opacity: 0.25 + 0.75 * eased,
+            child: ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(
+                sigmaX: widget.blurSigma * (1 - eased),
+                sigmaY: widget.blurSigma * (1 - eased),
+                tileMode: TileMode.decal,
+              ),
+              child: Text(text.substring(start, shownEnd), style: base),
+            ),
+          ),
+        ));
+      }
+      cursor = shownEnd;
+    }
+    if (cursor < visible) settled.write(text.substring(cursor, visible));
+    if (settled.isNotEmpty) {
+      spans.add(TextSpan(text: settled.toString(), style: base));
+    }
+
+    return Text.rich(TextSpan(children: spans, style: base));
   }
 }
