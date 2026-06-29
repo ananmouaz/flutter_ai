@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.7
+
+- Typed errors: `LlmException` hierarchy (`LlmAuthException`,
+  `LlmRateLimitException`, `LlmServerException`, `LlmRequestException`) + a
+  `llmExceptionFor` mapper, surfaced on `StreamErrorEvent.error` so hosts can
+  branch on the failure type instead of string-matching.
+
 ## 0.1.6
 
 - `ReasoningPart` / `ReasoningDelta` gain an optional `signature` (preserved and

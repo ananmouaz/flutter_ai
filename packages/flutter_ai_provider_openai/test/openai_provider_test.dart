@@ -172,7 +172,9 @@ void main() {
       final events = await provider
           .send(const AiConversation(id: 'c', messages: []))
           .toList();
-      expect(events.single, isA<StreamErrorEvent>());
+      final error = events.single as StreamErrorEvent;
+      // Typed so hosts can branch on auth vs rate-limit vs server.
+      expect(error.error, isA<LlmAuthException>());
     });
 
     test('emits a StreamErrorEvent when the transport throws', () async {
