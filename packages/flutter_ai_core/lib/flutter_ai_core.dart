@@ -33,3 +33,4 @@ export 'src/streaming/ai_stream_event.dart';
 export 'src/streaming/json_accumulator.dart';
 export 'src/streaming/message_processor.dart';
 export 'src/streaming/mutation_result.dart';
+export 'src/tools/json_schema_validator.dart';

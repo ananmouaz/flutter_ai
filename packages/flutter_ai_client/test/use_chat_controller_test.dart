@@ -817,6 +817,138 @@ void main() {
       detach();
     });
   });
+
+  group('tool-argument validation', () {
+    String Function() seqIds() {
+      var n = 0;
+      return () => 'm${n++}';
+    }
+
+    const weatherTool = ToolDefinition(
+      name: 'get_weather',
+      description: 'weather',
+      parametersSchema: {
+        'type': 'object',
+        'properties': {
+          'city': {'type': 'string'},
+        },
+        'required': ['city'],
+      },
+    );
+
+    test('invalid args are not executed and an error result is fed back',
+        () async {
+      final provider = _BadThenGoodToolProvider();
+      final executedArgs = <Map<String, Object?>>[];
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        tools: const [weatherTool],
+        onToolCalls: (calls) async {
+          for (final c in calls) {
+            executedArgs.add(c.args);
+          }
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: {'temp': 25}),
+          ];
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('weather?');
+
+      // The executor only ever saw the corrected (valid) call.
+      expect(executedArgs, [
+        {'city': 'Lisbon'}
+      ]);
+      // Three model calls: bad call, corrected call, final text.
+      expect(provider.sendCount, 3);
+      expect(controller.messages.last.text, 'It is sunny.');
+
+      // An error tool result for the bad call is in the transcript.
+      final errorResults = [
+        for (final m in controller.messages)
+          for (final p in m.parts)
+            if (p is ToolResultPart && p.isError) p,
+      ];
+      expect(errorResults, hasLength(1));
+      expect(
+        (errorResults.single.result! as Map)['error'],
+        'invalid_arguments',
+      );
+    });
+
+    test(
+        'validateToolArgs: false hands malformed args straight to the executor',
+        () async {
+      final provider = _BadThenGoodToolProvider();
+      final executedArgs = <Map<String, Object?>>[];
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        tools: const [weatherTool],
+        validateToolArgs: false,
+        onToolCalls: (calls) async {
+          for (final c in calls) {
+            executedArgs.add(c.args);
+          }
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: 'ok'),
+          ];
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('weather?');
+
+      // The bad args (city is an int) reached the executor unchallenged.
+      expect(executedArgs.first['city'], 123);
+    });
+  });
+
+  group('history trimming (trimHistory)', () {
+    test('the provider sees a trimmed conversation; the store keeps all',
+        () async {
+      final provider = _ConversationCapturingProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u-new',
+        initial: const AiConversation(
+          id: 'c',
+          messages: [
+            AiMessage(id: 's', role: AiRole.system, parts: [TextPart('sys')]),
+            AiMessage(id: 'u1', role: AiRole.user, parts: [TextPart('one')]),
+            AiMessage(id: 'a1', role: AiRole.assistant, parts: [TextPart('1')]),
+            AiMessage(id: 'u2', role: AiRole.user, parts: [TextPart('two')]),
+            AiMessage(id: 'a2', role: AiRole.assistant, parts: [TextPart('2')]),
+          ],
+        ),
+        trimHistory: keepLastMessages(1),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('three');
+
+      // Provider saw: system + only the most recent non-system message before
+      // this turn's user message... plus the new user message.
+      final sentRoles =
+          provider.lastConversation!.messages.map((m) => m.role).toList();
+      expect(sentRoles.first, AiRole.system);
+      // Far fewer than the full transcript.
+      expect(
+        provider.lastConversation!.messages.length,
+        lessThan(controller.messages.length),
+      );
+      // Full transcript is retained on the controller.
+      expect(controller.messages.first.id, 's');
+      expect(controller.messages.any((m) => m.id == 'u1'), isTrue);
+    });
+  });
 }
 
 /// An in-memory [ChatStore] that records the latest save per id.
@@ -950,5 +1082,75 @@ class _AlwaysToolProvider implements LlmProvider {
       reason: FinishReason.toolCalls,
       usage: const AiUsage(outputTokens: 100),
     );
+  }
+}
+
+/// First emits a `get_weather` call with a type-invalid `city` (an int), then a
+/// corrected call, then a final text answer — exercising arg validation +
+/// model self-correction.
+class _BadThenGoodToolProvider implements LlmProvider {
+  int sendCount = 0;
+
+  @override
+  Stream<AiStreamEvent> send(
+    AiConversation conversation, {
+    List<ToolDefinition>? tools,
+    AiRequestOptions? options,
+  }) async* {
+    sendCount++;
+    if (sendCount == 1) {
+      yield const MessageStarted(messageId: 'a1', role: AiRole.assistant);
+      yield const ToolCallStarted(
+        messageId: 'a1',
+        toolCallId: 'c1',
+        toolName: 'get_weather',
+      );
+      yield const ToolCallDelta(
+        toolCallId: 'c1',
+        argumentsDelta: '{"city":123}',
+      );
+      yield const ToolCallReady(toolCallId: 'c1');
+      yield const MessageFinished(
+        messageId: 'a1',
+        reason: FinishReason.toolCalls,
+      );
+    } else if (sendCount == 2) {
+      yield const MessageStarted(messageId: 'a2', role: AiRole.assistant);
+      yield const ToolCallStarted(
+        messageId: 'a2',
+        toolCallId: 'c2',
+        toolName: 'get_weather',
+      );
+      yield const ToolCallDelta(
+        toolCallId: 'c2',
+        argumentsDelta: '{"city":"Lisbon"}',
+      );
+      yield const ToolCallReady(toolCallId: 'c2');
+      yield const MessageFinished(
+        messageId: 'a2',
+        reason: FinishReason.toolCalls,
+      );
+    } else {
+      yield const MessageStarted(messageId: 'a3', role: AiRole.assistant);
+      yield const TextDelta(messageId: 'a3', delta: 'It is sunny.');
+      yield const MessageFinished(messageId: 'a3', reason: FinishReason.stop);
+    }
+  }
+}
+
+/// Records the conversation passed to it, so trimming can be asserted.
+class _ConversationCapturingProvider implements LlmProvider {
+  AiConversation? lastConversation;
+
+  @override
+  Stream<AiStreamEvent> send(
+    AiConversation conversation, {
+    List<ToolDefinition>? tools,
+    AiRequestOptions? options,
+  }) async* {
+    lastConversation = conversation;
+    yield const MessageStarted(messageId: 'r1', role: AiRole.assistant);
+    yield const TextDelta(messageId: 'r1', delta: 'ok');
+    yield const MessageFinished(messageId: 'r1', reason: FinishReason.stop);
   }
 }
