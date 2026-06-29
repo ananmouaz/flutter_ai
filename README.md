@@ -194,6 +194,8 @@ contracts (`LlmProvider`, `AiStreamEvent`, `UseChatController`) are the most
 settled. We follow [semver](https://semver.org); 1.0 marks an API-stability
 commitment.
 
+See [`ROADMAP.md`](ROADMAP.md) for what's planned on the way to 1.0.
+
 ## Contributing
 
 Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and our
