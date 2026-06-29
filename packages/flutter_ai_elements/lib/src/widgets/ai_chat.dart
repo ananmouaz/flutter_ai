@@ -1,7 +1,10 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_ai_client/flutter_ai_client.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
+import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_conversation_view.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
 
@@ -69,7 +72,20 @@ class _AiChatState extends State<AiChat> {
 
   /// Empty space reserved after the last item so the anchor can reach the top.
   double _trailingSpace = 0;
+
+  /// Whether we're actively holding the anchor at the top. Released when the
+  /// user scrolls manually, re-armed on the next sent message.
+  bool _pinned = false;
+
+  /// Whether to show the floating "scroll to latest" button.
+  bool _showJump = false;
   int _lastCount = 0;
+
+  /// Bounds the per-change settle retries (waiting for the anchor to lay out).
+  int _settleAttempts = 0;
+
+  /// Coalesces overlapping settle callbacks into one per frame.
+  bool _settleScheduled = false;
 
   @override
   void initState() {
@@ -106,31 +122,30 @@ class _AiChatState extends State<AiChat> {
         setState(() {
           _anchorId = null;
           _trailingSpace = 0;
+          _pinned = false;
+          _showJump = false;
         });
       }
       return;
     }
 
     if (newMessage) {
-      // Anchor the latest user turn to the top and reserve a screenful of space
-      // so it can get there even before the answer fills it; _settle() shrinks
-      // the reservation back as the answer streams in.
+      // Pin the latest user turn to the top for the whole turn. Start with no
+      // reserved space so the freshly-appended anchor (the last item) is within
+      // the lazy list's build area; _settle() then reserves what's needed and
+      // holds the anchor at the top as the answer streams in.
       final lastUser = _lastUserId(messages);
       if (lastUser != null) {
-        final viewport = _scrollController.hasClients
-            ? _scrollController.position.viewportDimension
-            : MediaQuery.maybeSizeOf(context)?.height ?? 600;
         setState(() {
           _anchorId = lastUser;
-          _trailingSpace = viewport;
+          _trailingSpace = 0;
+          _pinned = true;
         });
-        _settle(scrollToAnchor: true);
-        return;
       }
     }
-    // Streaming tokens (or no user message): keep the anchor in place and just
-    // release reserved space as content grows.
-    _settle(scrollToAnchor: false);
+    // Re-assert the anchor every change while pinned so it *persists* at the top
+    // as the answer streams (not just on the first frame).
+    _settle();
   }
 
   static String? _lastUserId(List<AiMessage> messages) {
@@ -140,42 +155,108 @@ class _AiChatState extends State<AiChat> {
     return null;
   }
 
-  /// Trims the trailing reservation so the anchored message sits at the top with
-  /// no excess blank space, optionally jumping it there.
-  void _settle({required bool scrollToAnchor}) {
+  /// Re-asserts the top-pin: reserves just enough trailing space for the
+  /// anchored message to reach the top, then holds it there. Retries across a
+  /// few frames while the anchor (or viewport) finishes laying out.
+  void _settle() {
+    _settleAttempts = 0;
+    _scheduleSettle();
+  }
+
+  void _scheduleSettle() {
+    if (_settleScheduled) return;
+    _settleScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
-      final pos = _scrollController.position;
-      final box = _anchorKey.currentContext?.findRenderObject();
-      if (_anchorId == null || box is! RenderBox || !box.attached) {
-        // Fallback: classic bottom pin.
-        if (scrollToAnchor || pos.maxScrollExtent - pos.pixels < 120) {
-          _scrollController.jumpTo(pos.maxScrollExtent);
-        }
-        return;
+      _settleScheduled = false;
+      _doSettle();
+    });
+  }
+
+  void _doSettle() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (!pos.haveDimensions) {
+      if (_settleAttempts++ < 12) _scheduleSettle();
+      return;
+    }
+    if (!_pinned || _anchorId == null) {
+      _updateJump();
+      return;
+    }
+
+    final box = _anchorKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached) {
+      // The just-appended anchor isn't built yet. Nudge toward the end (it's the
+      // last real item, so this builds it) and retry — NEVER leave it bottom-
+      // pinned, which is what produced "shows previous messages".
+      if (_settleAttempts++ < 12) {
+        _scrollController.jumpTo(pos.maxScrollExtent);
+        _scheduleSettle();
       }
-      final viewport = pos.viewportDimension;
-      final reveal =
-          RenderAbstractViewport.of(box).getOffsetToReveal(box, 0).offset;
-      // Reserve only as much as is needed for the anchor to reach the top
-      // (maxScrollExtent must stay >= reveal); release the rest as content grows.
-      final desired =
-          (_trailingSpace + reveal - pos.maxScrollExtent).clamp(0.0, viewport);
-      if ((desired - _trailingSpace).abs() > 0.5) {
-        setState(() => _trailingSpace = desired);
-      }
-      if (scrollToAnchor) {
-        // Jump after the reservation settles on the next frame.
+      return;
+    }
+
+    final viewport = pos.viewportDimension;
+    // Offset that puts the anchor at the very top — independent of the trailing
+    // spacer (which is below the anchor), so it's stable across frames.
+    final reveal =
+        RenderAbstractViewport.of(box).getOffsetToReveal(box, 0).offset;
+    // Body height excluding the current spacer, computed from this frame's
+    // consistent (max, trailing) pair — avoids the off-by-one feedback that made
+    // the reservation oscillate and the anchor land short of the top.
+    final body = pos.maxScrollExtent + viewport - _trailingSpace;
+    final contentBelow = body - reveal;
+    final desired = (viewport - contentBelow).clamp(0.0, viewport);
+
+    if ((desired - _trailingSpace).abs() > 0.5) {
+      // Set the reservation and pin on the next frame, once it has laid out —
+      // don't jump using the stale (pre-relayout) extents.
+      setState(() => _trailingSpace = desired);
+      if (_settleAttempts++ < 12) _scheduleSettle();
+      return;
+    }
+    // Reservation is correct for this layout: pin the anchor to the top.
+    _scrollController.jumpTo(reveal.clamp(0.0, pos.maxScrollExtent));
+    _updateJump();
+  }
+
+  /// Shows the jump button whenever there's content below the fold.
+  void _updateJump() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    final show = pos.maxScrollExtent - pos.pixels > 240;
+    if (show != _showJump) setState(() => _showJump = show);
+  }
+
+  // A user-initiated drag releases the top-pin so we stop fighting their scroll,
+  // and frees the reserved space so they can't scroll into empty space below the
+  // last message.
+  bool _onScrollNotification(ScrollNotification n) {
+    if (n is ScrollStartNotification && n.dragDetails != null && _pinned) {
+      _pinned = false;
+      if (_trailingSpace != 0) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted || !_scrollController.hasClients) return;
-          final p = _scrollController.position;
-          final b = _anchorKey.currentContext?.findRenderObject();
-          if (b is! RenderBox || !b.attached) return;
-          final r = RenderAbstractViewport.of(b).getOffsetToReveal(b, 0).offset;
-          _scrollController.jumpTo(r.clamp(0.0, p.maxScrollExtent));
+          if (mounted && !_pinned && _trailingSpace != 0) {
+            setState(() => _trailingSpace = 0);
+          }
         });
       }
-    });
+    }
+    _updateJump();
+    return false;
+  }
+
+  void _jumpToLatest() {
+    _pinned = false;
+    if (_scrollController.hasClients) {
+      unawaited(
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        ),
+      );
+    }
   }
 
   @override
@@ -188,7 +269,7 @@ class _AiChatState extends State<AiChat> {
             !widget.controller.status.isBusy) {
           return widget.emptyState!;
         }
-        return AiConversationView(
+        final view = AiConversationView(
           messages: widget.controller.messages,
           scrollController: _scrollController,
           textRenderer: widget.textRenderer,
@@ -202,7 +283,57 @@ class _AiChatState extends State<AiChat> {
           anchorKey: _anchorKey,
           anchorId: _anchorId,
         );
+        return NotificationListener<ScrollNotification>(
+          onNotification: _onScrollNotification,
+          child: Stack(
+            children: [
+              view,
+              if (_showJump)
+                PositionedDirectional(
+                  bottom: 8,
+                  start: 0,
+                  end: 0,
+                  child: Center(child: _JumpButton(onTap: _jumpToLatest)),
+                ),
+            ],
+          ),
+        );
       },
+    );
+  }
+}
+
+/// A small circular "scroll to latest" affordance, shown when the conversation
+/// has scrolled above the bottom.
+class _JumpButton extends StatelessWidget {
+  const _JumpButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = AiThemeExtension.of(context);
+    return Semantics(
+      button: true,
+      label: 'Scroll to latest',
+      child: Material(
+        color: theme.assistantBubbleColor,
+        shape: const CircleBorder(),
+        elevation: 2,
+        shadowColor: Colors.black.withValues(alpha: 0.2),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(
+              Icons.arrow_downward_rounded,
+              size: 20,
+              color: theme.assistantTextColor,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

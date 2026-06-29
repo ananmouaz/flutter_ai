@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_animated_response.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_code_block.dart';
 
 /// Renders a useful subset of Markdown — headings, bold/italic, inline code,
@@ -360,8 +361,9 @@ class MarkdownTextRenderer implements AiTextRenderer {
   final void Function(Uri url)? onLinkTap;
 
   @override
-  Widget render(String text, {required bool isStreaming}) =>
-      AiResponse(text: text, onLinkTap: onLinkTap);
+  Widget render(String text, {required bool isStreaming}) => isStreaming
+      ? AiAnimatedResponse(text: text, onLinkTap: onLinkTap)
+      : AiResponse(text: text, onLinkTap: onLinkTap);
 }
 
 enum _BlockType { paragraph, heading, code, bullet, ordered, quote, table }
@@ -499,21 +501,29 @@ List<_Block> _parseBlocks(String source) {
     }
 
     // Paragraph (consecutive non-blank, non-special lines).
+    //
+    // The first line here was already rejected by every block detector above,
+    // so it is genuinely paragraph text — always consume it. Only *subsequent*
+    // lines may break the paragraph. Gating the break on a non-empty paragraph
+    // guarantees `i` advances every outer iteration, so a partial stream that
+    // ends mid-construct (e.g. a lone `#` before its space arrives) can never
+    // spin this loop forever.
     final paragraph = <String>[];
     while (i < lines.length && lines[i].trim().isNotEmpty) {
       final t = lines[i].trim();
-      if (t.startsWith('```') ||
-          t.startsWith('#') ||
-          t.startsWith('>') ||
-          _isTableHeaderAt(lines, i) ||
-          RegExp(r'^[-*+]\s+').hasMatch(t) ||
-          RegExp(r'^\d+\.\s+').hasMatch(t)) {
+      if (paragraph.isNotEmpty &&
+          (t.startsWith('```') ||
+              RegExp(r'^#{1,6}\s+').hasMatch(t) ||
+              t.startsWith('>') ||
+              _isTableHeaderAt(lines, i) ||
+              RegExp(r'^[-*+]\s+').hasMatch(t) ||
+              RegExp(r'^\d+\.\s+').hasMatch(t))) {
         break;
       }
       paragraph.add(t);
       i++;
     }
-    blocks.add(_Block.paragraph(paragraph.join(' ')));
+    if (paragraph.isNotEmpty) blocks.add(_Block.paragraph(paragraph.join(' ')));
   }
 
   return blocks;

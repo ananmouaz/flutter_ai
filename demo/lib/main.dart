@@ -370,7 +370,12 @@ class ChatScreen extends StatelessWidget {
         case ReasoningPart(:final text):
           add(AiReasoning(text: text));
         case TextPart(:final text):
-          add(AiResponse(text: text));
+          // Smoothly reveal the streaming answer; show completed text as-is.
+          add(
+            message.status == AiMessageStatus.streaming
+                ? AiAnimatedResponse(text: text)
+                : AiResponse(text: text),
+          );
         case ToolCallPart():
           // Render all tool calls once: a group when parallel, else a card.
           if (!toolsRendered) {
@@ -455,6 +460,9 @@ class ChatScreen extends StatelessWidget {
           children: [
             AiMessageActions(
               message: message,
+              onGood: () => _snack(context, 'Thanks for the feedback!'),
+              onBad: () => _snack(context, 'Thanks — we\'ll do better.'),
+              onShare: () => _snack(context, 'Share sheet would open here.'),
               onRegenerate: () => unawaited(controller.regenerate()),
             ),
             const Spacer(),
