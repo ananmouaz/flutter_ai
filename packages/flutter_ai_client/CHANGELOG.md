@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2
+
+- Agent loop: pass `onToolCalls` (and optional `maxSteps`, default 8) to
+  `UseChatController` and it becomes an automatic agent — when a model turn ends
+  with unanswered tool calls it runs the executor, feeds the results back, and
+  re-prompts until there are no pending calls or `maxSteps` model calls have run.
+  Without `onToolCalls` behavior is unchanged (the host drives tools manually via
+  `addToolResults`). Cancellation/stop aborts the loop mid-flight.
+
 ## 0.1.1
 
 - `editMessage(id, text)` / `editLastUserMessage(text)`: edit a sent user

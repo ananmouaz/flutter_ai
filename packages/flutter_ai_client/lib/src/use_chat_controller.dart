@@ -35,16 +35,32 @@ class UseChatController extends ChangeNotifier {
   /// the provider on every request. [scheduler] customizes notification
   /// batching (defaults to [scheduleMicrotask]). [idGenerator] supplies ids for
   /// locally-created user messages (defaults to a sequential generator).
+  ///
+  /// ### Agent loop
+  ///
+  /// Provide [onToolCalls] to turn the controller into an automatic agent: when
+  /// a model turn ends with tool calls that have no results yet, the controller
+  /// invokes [onToolCalls], appends the returned [ToolResultPart]s, and
+  /// re-prompts the model — repeating until a turn has no pending tool calls or
+  /// [maxSteps] model calls have run. Without [onToolCalls] the behavior is
+  /// unchanged: the turn ends with the tool calls and the host drives execution
+  /// manually via [addToolResults].
   UseChatController({
     required LlmProvider provider,
     AiConversation? initial,
     List<ToolDefinition> tools = const [],
     AiRequestOptions? options,
+    Future<List<ToolResultPart>> Function(List<ToolCallPart> calls)?
+        onToolCalls,
+    int maxSteps = 8,
     void Function(VoidCallback callback)? scheduler,
     String Function()? idGenerator,
-  })  : _provider = provider,
+  })  : assert(maxSteps >= 1, 'maxSteps must be at least 1'),
+        _provider = provider,
         _tools = List.unmodifiable(tools),
         _options = options,
+        _onToolCalls = onToolCalls,
+        _maxSteps = maxSteps,
         _scheduler = scheduler ?? scheduleMicrotask,
         _newId = idGenerator ?? _sequentialIdGenerator(),
         _processor = MessageProcessor(conversation: initial);
@@ -52,6 +68,8 @@ class UseChatController extends ChangeNotifier {
   final MessageProcessor _processor;
   final void Function(VoidCallback callback) _scheduler;
   final String Function() _newId;
+  final Future<List<ToolResultPart>> Function(List<ToolCallPart>)? _onToolCalls;
+  final int _maxSteps;
   final StreamController<AiStreamEvent> _events =
       StreamController<AiStreamEvent>.broadcast();
 
@@ -71,6 +89,7 @@ class UseChatController extends ChangeNotifier {
   StackTrace? _stackTrace;
   StreamSubscription<AiStreamEvent>? _subscription;
   Completer<void>? _turn;
+  int _step = 0; // model calls executed so far in the current agent turn
   bool _notifyScheduled = false;
   bool _disposed = false;
 
@@ -130,10 +149,11 @@ class UseChatController extends ChangeNotifier {
     _error = null;
     _stackTrace = null;
     _capture = _Capture.reset; // a new user turn starts a fresh branch set
+    _step = 0;
     _processor.reset(_processor.conversation.append(userMessage));
     _status = ChatStatus.submitted;
     _scheduleNotify();
-    return _startStream();
+    return _beginTurn();
   }
 
   /// Re-runs the model from the most recent user message, discarding everything
@@ -146,12 +166,13 @@ class UseChatController extends ChangeNotifier {
     _error = null;
     _stackTrace = null;
     _capture = _Capture.append; // keep the prior version, add a new one
+    _step = 0;
     _processor.reset(
       _processor.conversation.copyWith(messages: all.sublist(0, lastUser + 1)),
     );
     _status = ChatStatus.submitted;
     _scheduleNotify();
-    return _startStream();
+    return _beginTurn();
   }
 
   /// Edits the user message [messageId] to [text] — keeping any non-text parts
@@ -189,6 +210,7 @@ class UseChatController extends ChangeNotifier {
     _error = null;
     _stackTrace = null;
     _capture = _Capture.reset;
+    _step = 0;
     _processor.reset(
       _processor.conversation.copyWith(
         messages: [
@@ -199,7 +221,7 @@ class UseChatController extends ChangeNotifier {
     );
     _status = ChatStatus.submitted;
     _scheduleNotify();
-    return _startStream();
+    return _beginTurn();
   }
 
   /// Edits the most recent user message to [text] and re-runs from it. A no-op
@@ -234,7 +256,9 @@ class UseChatController extends ChangeNotifier {
   ///
   /// Every [ToolCallPart] in the preceding assistant message should have a
   /// matching [ToolResultPart] here before continuing, as providers require a
-  /// result per call.
+  /// result per call. When an `onToolCalls` executor is configured the
+  /// controller calls this for you (the agent loop); use it directly only for
+  /// manual tool handling.
   Future<void> addToolResults(List<ToolResultPart> results) {
     if (results.isEmpty) return Future<void>.value();
     _stopActiveStream();
@@ -252,7 +276,7 @@ class UseChatController extends ChangeNotifier {
     );
     _status = ChatStatus.submitted;
     _scheduleNotify();
-    return _startStream();
+    return _beginTurn();
   }
 
   /// Cancels the in-flight turn, finalizing the streaming message as stopped.
@@ -331,9 +355,19 @@ class UseChatController extends ChangeNotifier {
     _capture = _Capture.update;
   }
 
-  Future<void> _startStream() {
+  /// Opens a fresh turn future and dispatches the first model call. The future
+  /// completes when the whole turn ends — including any automatic agent-loop
+  /// continuations.
+  Future<void> _beginTurn() {
     final completer = Completer<void>();
     _turn = completer;
+    _dispatch();
+    return completer.future;
+  }
+
+  /// Subscribes to one provider stream, folding events into the conversation.
+  void _dispatch() {
+    _step++; // one model call
     _subscription = _provider
         .send(_processor.conversation, tools: _tools, options: _options)
         .listen(
@@ -372,18 +406,88 @@ class UseChatController extends ChangeNotifier {
         _completeTurn();
         _scheduleNotify();
       },
-      onDone: () {
-        if (_status != ChatStatus.error) {
-          _status = ChatStatus.idle;
-          _captureBranch();
-        }
-        _subscription = null;
-        _completeTurn();
-        _scheduleNotify();
-      },
+      onDone: _onStreamDone,
       cancelOnError: true,
     );
-    return completer.future;
+  }
+
+  /// A provider stream completed cleanly. Captures the branch, then either runs
+  /// the agent loop (execute pending tool calls and re-prompt) or ends the turn.
+  void _onStreamDone() {
+    _subscription = null;
+    if (_status == ChatStatus.error) {
+      _completeTurn();
+      _scheduleNotify();
+      return;
+    }
+    _status = ChatStatus.idle;
+    _captureBranch();
+
+    final pending = _pendingToolCalls();
+    if (_onToolCalls != null && pending.isNotEmpty && _step < _maxSteps) {
+      _scheduleNotify();
+      unawaited(_continueWithTools(pending, _turn));
+      return;
+    }
+    _completeTurn();
+    _scheduleNotify();
+  }
+
+  /// Runs [_onToolCalls] for [calls] and feeds the results back into the model,
+  /// continuing the same [turn]. Aborts silently if the turn was stopped or
+  /// replaced while the executor ran.
+  Future<void> _continueWithTools(
+    List<ToolCallPart> calls,
+    Completer<void>? turn,
+  ) async {
+    List<ToolResultPart> results;
+    try {
+      results = await _onToolCalls!(calls);
+    } catch (error, stackTrace) {
+      if (_disposed || !identical(_turn, turn)) return;
+      _error = error;
+      _stackTrace = stackTrace;
+      _status = ChatStatus.error;
+      _completeTurn();
+      _scheduleNotify();
+      return;
+    }
+    if (_disposed || !identical(_turn, turn) || turn == null) return;
+    if (results.isEmpty) {
+      _completeTurn();
+      _scheduleNotify();
+      return;
+    }
+    _capture = _Capture.update;
+    _processor.reset(
+      _processor.conversation.append(
+        AiMessage(
+          id: _newId(),
+          role: AiRole.tool,
+          parts: List<AiPart>.of(results),
+        ),
+      ),
+    );
+    _status = ChatStatus.submitted;
+    _scheduleNotify();
+    _dispatch();
+  }
+
+  /// Tool calls in the latest assistant message that have no matching
+  /// [ToolResultPart] anywhere in the transcript yet.
+  List<ToolCallPart> _pendingToolCalls() {
+    final msgs = _processor.conversation.messages;
+    final lastAssistant =
+        msgs.lastIndexWhere((m) => m.role == AiRole.assistant);
+    if (lastAssistant == -1) return const [];
+    final calls = msgs[lastAssistant].parts.whereType<ToolCallPart>().toList();
+    if (calls.isEmpty) return const [];
+    final answered = <String>{
+      for (final m in msgs)
+        for (final p in m.parts)
+          if (p is ToolResultPart) p.toolCallId,
+    };
+    return calls.where((c) => !answered.contains(c.toolCallId)).toList();
   }
 
   /// Cancels the active subscription (if any) and completes its turn future.

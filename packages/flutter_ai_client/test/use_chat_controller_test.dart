@@ -513,6 +513,89 @@ void main() {
     });
   });
 
+  group('agent loop (onToolCalls)', () {
+    String Function() seqIds() {
+      var n = 0;
+      return () => 'm${n++}';
+    }
+
+    test('auto-executes tools and continues to a final answer', () async {
+      final provider = _ToolThenTextProvider();
+      var executed = 0;
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        onToolCalls: (calls) async {
+          executed++;
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: {'temp': 25}),
+          ];
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('weather in Lisbon?');
+
+      expect(executed, 1);
+      expect(provider.sendCount, 2); // tool call, then final answer
+      expect(controller.status, ChatStatus.idle);
+      expect(controller.messages.last.role, AiRole.assistant);
+      expect(controller.messages.last.text, 'It is sunny.');
+      // The tool result message is in the transcript between the two assistant
+      // turns.
+      expect(
+        controller.messages.where((m) => m.role == AiRole.tool),
+        hasLength(1),
+      );
+    });
+
+    test('stops at maxSteps when tools never resolve', () async {
+      final provider = _AlwaysToolProvider();
+      var executed = 0;
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        maxSteps: 3,
+        onToolCalls: (calls) async {
+          executed++;
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: 'ok'),
+          ];
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('loop forever');
+
+      expect(provider.sendCount, 3); // bounded by maxSteps model calls
+      expect(executed, 2); // tools run between calls (3 calls -> 2 rounds)
+      expect(controller.status, ChatStatus.idle);
+    });
+
+    test('without onToolCalls, the turn ends with the tool call (manual mode)',
+        () async {
+      final provider = _ToolThenTextProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('weather?');
+
+      expect(provider.sendCount, 1); // no auto-continue
+      expect(
+        controller.messages.last.parts.whereType<ToolCallPart>(),
+        hasLength(1),
+      );
+    });
+  });
+
   group('attachStore / ChatStore', () {
     test('auto-saves the settled conversation and can be reloaded', () async {
       final store = FakeChatStore();
@@ -689,5 +772,62 @@ class _ToolsCapturingProvider implements LlmProvider {
   }) async* {
     lastTools = tools;
     yield const MessageFinished(messageId: 'a1', reason: FinishReason.stop);
+  }
+}
+
+/// First send: a tool call. Second send: a final text answer.
+class _ToolThenTextProvider implements LlmProvider {
+  int sendCount = 0;
+
+  @override
+  Stream<AiStreamEvent> send(
+    AiConversation conversation, {
+    List<ToolDefinition>? tools,
+    AiRequestOptions? options,
+  }) async* {
+    sendCount++;
+    if (sendCount == 1) {
+      yield const MessageStarted(messageId: 'a1', role: AiRole.assistant);
+      yield const ToolCallStarted(
+        messageId: 'a1',
+        toolCallId: 'c1',
+        toolName: 'get_weather',
+      );
+      yield const ToolCallDelta(
+        toolCallId: 'c1',
+        argumentsDelta: '{"city":"Lisbon"}',
+      );
+      yield const ToolCallReady(toolCallId: 'c1');
+      yield const MessageFinished(
+        messageId: 'a1',
+        reason: FinishReason.toolCalls,
+      );
+    } else {
+      yield const MessageStarted(messageId: 'a2', role: AiRole.assistant);
+      yield const TextDelta(messageId: 'a2', delta: 'It is sunny.');
+      yield const MessageFinished(messageId: 'a2', reason: FinishReason.stop);
+    }
+  }
+}
+
+/// Every send returns a fresh tool call, so the agent loop only stops at
+/// maxSteps. Each assistant message gets a unique id/tool-call id.
+class _AlwaysToolProvider implements LlmProvider {
+  int sendCount = 0;
+
+  @override
+  Stream<AiStreamEvent> send(
+    AiConversation conversation, {
+    List<ToolDefinition>? tools,
+    AiRequestOptions? options,
+  }) async* {
+    sendCount++;
+    final id = 'a$sendCount';
+    final callId = 'c$sendCount';
+    yield MessageStarted(messageId: id, role: AiRole.assistant);
+    yield ToolCallStarted(messageId: id, toolCallId: callId, toolName: 'ping');
+    yield ToolCallDelta(toolCallId: callId, argumentsDelta: '{}');
+    yield ToolCallReady(toolCallId: callId);
+    yield MessageFinished(messageId: id, reason: FinishReason.toolCalls);
   }
 }
