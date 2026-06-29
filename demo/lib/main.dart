@@ -486,25 +486,13 @@ class ChatScreen extends StatelessWidget {
         : msgs.sublist(0, i).lastIndexWhere((m) => m.role == AiRole.user);
     if (userIndex == -1) return;
     final user = msgs[userIndex];
-    final field = TextEditingController(text: user.text);
+    // The dialog owns its TextEditingController so it's disposed only after the
+    // dialog's element unmounts — disposing it here (right after showDialog
+    // returns, while the field is still animating out) trips `_dependents`.
     final edited = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit message'),
-        content: TextField(controller: field, autofocus: true, maxLines: null),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, field.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (context) => _EditMessageDialog(initialText: user.text),
     );
-    field.dispose();
     if (edited != null && edited.trim().isNotEmpty) {
       await controller.editMessage(user.id, edited.trim());
     }
@@ -760,6 +748,48 @@ class ChatScreen extends StatelessWidget {
     ],
     onSuggestionTap: _onSuggestion,
   );
+}
+
+/// Edit-message dialog that owns its [TextEditingController], so the controller
+/// outlives the [TextField] and is disposed only when this dialog's element
+/// unmounts — avoiding a `_dependents` assert from disposing it mid-dismiss.
+class _EditMessageDialog extends StatefulWidget {
+  const _EditMessageDialog({required this.initialText});
+
+  final String initialText;
+
+  @override
+  State<_EditMessageDialog> createState() => _EditMessageDialogState();
+}
+
+class _EditMessageDialogState extends State<_EditMessageDialog> {
+  late final TextEditingController _field = TextEditingController(
+    text: widget.initialText,
+  );
+
+  @override
+  void dispose() {
+    _field.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit message'),
+      content: TextField(controller: _field, autofocus: true, maxLines: null),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _field.text),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
 }
 
 /// The `flutter_ai` brand glyph — a luminous accent square with a soft glow,
