@@ -513,6 +513,26 @@ void main() {
     });
   });
 
+  group('branch memory', () {
+    test('caps retained regenerations at maxBranches', () async {
+      final provider = _CountingProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u1',
+        maxBranches: 3,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hi');
+      for (var i = 0; i < 6; i++) {
+        await controller.regenerate();
+      }
+      expect(controller.branchCount, 3); // oldest versions evicted
+      expect(controller.branchIndex, 2);
+    });
+  });
+
   group('agent loop (onToolCalls)', () {
     String Function() seqIds() {
       var n = 0;

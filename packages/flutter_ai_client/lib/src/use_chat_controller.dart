@@ -53,14 +53,17 @@ class UseChatController extends ChangeNotifier {
     Future<List<ToolResultPart>> Function(List<ToolCallPart> calls)?
         onToolCalls,
     int maxSteps = 8,
+    int maxBranches = 20,
     void Function(VoidCallback callback)? scheduler,
     String Function()? idGenerator,
   })  : assert(maxSteps >= 1, 'maxSteps must be at least 1'),
+        assert(maxBranches >= 1, 'maxBranches must be at least 1'),
         _provider = provider,
         _tools = List.unmodifiable(tools),
         _options = options,
         _onToolCalls = onToolCalls,
         _maxSteps = maxSteps,
+        _maxBranches = maxBranches,
         _scheduler = scheduler ?? scheduleMicrotask,
         _newId = idGenerator ?? _sequentialIdGenerator(),
         _processor = MessageProcessor(conversation: initial);
@@ -70,6 +73,7 @@ class UseChatController extends ChangeNotifier {
   final String Function() _newId;
   final Future<List<ToolResultPart>> Function(List<ToolCallPart>)? _onToolCalls;
   final int _maxSteps;
+  final int _maxBranches;
   final StreamController<AiStreamEvent> _events =
       StreamController<AiStreamEvent>.broadcast();
 
@@ -355,6 +359,11 @@ class UseChatController extends ChangeNotifier {
         _branchIndex = 0;
       case _Capture.append:
         _branches.add(tail);
+        // Cap retained regenerations so a long-running chat can't grow without
+        // bound; drop the oldest version(s) and keep the index aligned.
+        while (_branches.length > _maxBranches) {
+          _branches.removeAt(0);
+        }
         _branchIndex = _branches.length - 1;
       case _Capture.update:
         if (_branches.isEmpty) {

@@ -10,7 +10,7 @@ import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
 /// Presentational: it renders the [messages] it is given and reports nothing
 /// back. The controller-bound `AiConversation` wraps it with live updates and
 /// auto-scroll.
-class AiConversationView extends StatelessWidget {
+class AiConversationView extends StatefulWidget {
   /// Creates a conversation view.
   const AiConversationView({
     super.key,
@@ -66,44 +66,92 @@ class AiConversationView extends StatelessWidget {
   final Object? anchorId;
 
   @override
+  State<AiConversationView> createState() => _AiConversationViewState();
+}
+
+class _AiConversationViewState extends State<AiConversationView> {
+  // Memoize the built bubble per message identity. While streaming, only the
+  // changed message gets a new AiMessage instance, so unchanged bubbles return
+  // the *same* widget instance and Flutter skips their rebuild entirely.
+  final Map<String, AiMessage> _cachedMessage = {};
+  final Map<String, Widget> _cachedBubble = {};
+
+  void _clearCache() {
+    _cachedMessage.clear();
+    _cachedBubble.clear();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _clearCache(); // theme/inherited changed — bubbles may need restyling
+  }
+
+  @override
+  void didUpdateWidget(AiConversationView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.textRenderer != widget.textRenderer ||
+        oldWidget.messageBuilder != widget.messageBuilder) {
+      _clearCache();
+    }
+  }
+
+  Widget _bubbleFor(BuildContext context, AiMessage message) {
+    // Custom builders aren't memoized (they may capture changing state).
+    if (widget.messageBuilder != null) {
+      return widget.messageBuilder!(context, message);
+    }
+    if (identical(_cachedMessage[message.id], message)) {
+      return _cachedBubble[message.id]!;
+    }
+    final bubble = AiMessageBubble(
+      key: ValueKey(message.id),
+      message: message,
+      textRenderer: widget.textRenderer,
+    );
+    _cachedMessage[message.id] = message;
+    _cachedBubble[message.id] = bubble;
+    return bubble;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hasSpacer = trailingSpace > 0;
+    final messages = widget.messages;
+    final showLoader = widget.showLoader;
+    final hasSpacer = widget.trailingSpace > 0;
     final loaderIndex = showLoader ? messages.length : -1;
     final spacerIndex = hasSpacer ? messages.length + (showLoader ? 1 : 0) : -1;
     final itemCount =
         messages.length + (showLoader ? 1 : 0) + (hasSpacer ? 1 : 0);
     final list = ListView.builder(
-      controller: scrollController,
-      padding: padding,
+      controller: widget.scrollController,
+      padding: widget.padding,
       itemCount: itemCount,
       itemBuilder: (context, index) {
-        if (index == spacerIndex) return SizedBox(height: trailingSpace);
+        if (index == spacerIndex) {
+          return SizedBox(height: widget.trailingSpace);
+        }
         if (index == loaderIndex) {
           return Align(
             alignment: Alignment.centerLeft,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: loadingBuilder?.call(context) ?? const AiLoader(),
+              child: widget.loadingBuilder?.call(context) ?? const AiLoader(),
             ),
           );
         }
         final message = messages[index];
-        final bubble = messageBuilder?.call(context, message) ??
-            AiMessageBubble(
-              key: ValueKey(message.id),
-              message: message,
-              textRenderer: textRenderer,
-            );
-        if (anchorKey != null && anchorId == message.id) {
-          return KeyedSubtree(key: anchorKey, child: bubble);
+        final bubble = _bubbleFor(context, message);
+        if (widget.anchorKey != null && widget.anchorId == message.id) {
+          return KeyedSubtree(key: widget.anchorKey, child: bubble);
         }
         return bubble;
       },
     );
-    if (maxContentWidth == null) return list;
+    if (widget.maxContentWidth == null) return list;
     return Center(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxContentWidth!),
+        constraints: BoxConstraints(maxWidth: widget.maxContentWidth!),
         child: list,
       ),
     );
