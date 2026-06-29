@@ -48,9 +48,9 @@ persistence glue in one family. That gap is our wedge.
 These all sit cleanly above the existing `LlmProvider` seam (mostly
 `core` / `client` / providers).
 
-1. **Agentic tool loop** — a runner above `LlmProvider` that executes
-   tool-call → result → re-prompt until a `stopWhen` / `maxSteps` predicate.
-   Today the app must re-call `addToolResults` manually. *(effort: M)*
+1. **Agentic tool loop** — ✅ **shipped.** The controller runs the
+   tool-call → result → re-prompt loop above `LlmProvider` up to a `maxSteps`
+   bound, so the app no longer has to re-call `addToolResults` manually.
 2. **Structured output** — accept a JSON Schema and route per provider (OpenAI
    `json_schema`+strict, Gemini `response_schema`, Anthropic strict tool-use);
    stream partial objects via the existing accumulator. *(M)*
@@ -84,8 +84,9 @@ Standard on the web, essentially absent in Flutter today.
   sink. Do **not** hard-depend on an OTel SDK in core.
 - **i18n** — UI strings are currently hardcoded ("Send", "Copy", "Stop", …);
   add a localizations delegate (also firms up RTL).
-- **CI matrix** — today CI is Linux-only; add web/macOS/Windows and run the demo
-  golden tests in CI.
+- **CI matrix** — ✅ **shipped.** CI now runs a multi-OS matrix (Linux/macOS/
+  Windows) beyond the original Linux-only setup. (Running the demo golden tests
+  in CI is still on the list.)
 - **Docs site / recipes** — getting-started, advanced recipes, and a "coming
   from Vercel AI SDK" mapping.
 - Broaden test coverage in `tools` / `voice`.

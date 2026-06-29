@@ -13,7 +13,8 @@ depend only "upward" toward `flutter_ai_core`.
 
 ## Phase 1 — UI elements (the visible win)
 
-- `flutter_ai_elements`: `AiConversation`, `AiMessage`, `AiResponse` (markdown via
+- `flutter_ai_elements`: `AiChat` (the conversation widget; `AiConversation` is
+  the core data model), `AiMessageBubble`, `AiResponse` (markdown via
   `flutter_markdown_plus`), `AiPromptInput` (Send↔Stop), `AiLoader`.
 - `AiThemeExtension` + `AiTheme.fallback()` (mobile-first 2026 default).
 - Accessibility: strip `Semantics` during streaming, announce on finish.
