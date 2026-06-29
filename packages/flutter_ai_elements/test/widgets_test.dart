@@ -441,6 +441,32 @@ void main() {
       expect(find.text('one'), findsOneWidget);
     });
 
+    testWidgets('AiResponse applies a code highlighter when provided',
+        (tester) async {
+      String? seenCode;
+      String? seenLanguage;
+      List<TextSpan>? highlight(String code, String? language, TextStyle base) {
+        seenCode = code;
+        seenLanguage = language;
+        return [TextSpan(text: code, style: base)];
+      }
+
+      await tester.pumpWidget(
+        _wrap(
+          SingleChildScrollView(
+            child: AiResponse(
+              text: '```dart\nfinal x = 1;\n```',
+              codeHighlighter: highlight,
+            ),
+          ),
+        ),
+      );
+
+      expect(seenCode, 'final x = 1;');
+      expect(seenLanguage, 'dart');
+      expect(find.byType(AiCodeBlock), findsOneWidget);
+    });
+
     testWidgets('AiResponse renders a Markdown table', (tester) async {
       await tester.pumpWidget(
         _wrap(
