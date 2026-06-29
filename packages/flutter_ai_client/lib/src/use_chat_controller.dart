@@ -154,6 +154,62 @@ class UseChatController extends ChangeNotifier {
     return _startStream();
   }
 
+  /// Edits the user message [messageId] to [text] — keeping any non-text parts
+  /// such as attachments — discards every message after it, and re-runs the
+  /// model from that point. A no-op if [messageId] is not a user message in the
+  /// transcript, or if the edit would leave the message empty.
+  ///
+  /// A reworded prompt starts a fresh branch set (the previous answer was to a
+  /// different question), like editing a sent message in a typical chat UI.
+  Future<void> editMessage(String messageId, String text) {
+    final all = _processor.conversation.messages;
+    final index = all.indexWhere((m) => m.id == messageId);
+    if (index == -1 || all[index].role != AiRole.user) {
+      return Future<void>.value();
+    }
+    final original = all[index];
+    // Replace the first text part in place (preserving attachment order); drop
+    // any other text parts. Append the new text if the message had none.
+    final parts = <AiPart>[];
+    var replaced = false;
+    for (final part in original.parts) {
+      if (part is TextPart) {
+        if (!replaced && text.isNotEmpty) {
+          parts.add(TextPart(text));
+          replaced = true;
+        }
+      } else {
+        parts.add(part);
+      }
+    }
+    if (!replaced && text.isNotEmpty) parts.add(TextPart(text));
+    if (parts.isEmpty) return Future<void>.value();
+
+    _stopActiveStream();
+    _error = null;
+    _stackTrace = null;
+    _capture = _Capture.reset;
+    _processor.reset(
+      _processor.conversation.copyWith(
+        messages: [
+          ...all.sublist(0, index),
+          original.copyWith(parts: parts, status: AiMessageStatus.complete),
+        ],
+      ),
+    );
+    _status = ChatStatus.submitted;
+    _scheduleNotify();
+    return _startStream();
+  }
+
+  /// Edits the most recent user message to [text] and re-runs from it. A no-op
+  /// if there is no user message. See [editMessage].
+  Future<void> editLastUserMessage(String text) {
+    final lastUser = _lastUserIndex();
+    if (lastUser == -1) return Future<void>.value();
+    return editMessage(_processor.conversation.messages[lastUser].id, text);
+  }
+
   /// Switches the latest turn to regenerated version [index] (0-based). A no-op
   /// out of range, while streaming, or if already showing it.
   void selectBranch(int index) {

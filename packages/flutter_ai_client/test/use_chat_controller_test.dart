@@ -417,6 +417,102 @@ void main() {
     });
   });
 
+  group('editMessage', () {
+    String Function() seqIds() {
+      var n = 0;
+      return () => 'u${n++}';
+    }
+
+    test('rewrites a user message, drops what follows, and re-runs', () async {
+      final provider = _CountingProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('first');
+      await controller.sendText('second');
+      expect(controller.messages, hasLength(4)); // 2 user + 2 assistant
+
+      final firstUserId =
+          controller.messages.firstWhere((m) => m.role == AiRole.user).id;
+      await controller.editMessage(firstUserId, 'first edited');
+
+      final users =
+          controller.messages.where((m) => m.role == AiRole.user).toList();
+      expect(users, hasLength(1)); // 'second' and its answer were discarded
+      expect(users.single.text, 'first edited');
+      expect(controller.messages, hasLength(2)); // edited user + fresh reply
+      expect(controller.branchCount, 1); // a reworded prompt resets branches
+      expect(provider.lastConversation?.messages.last.text, 'first edited');
+    });
+
+    test('editLastUserMessage edits the most recent user turn', () async {
+      final provider = _CountingProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('first');
+      await controller.sendText('second');
+      await controller.editLastUserMessage('second edited');
+
+      final users =
+          controller.messages.where((m) => m.role == AiRole.user).toList();
+      expect(users, hasLength(2));
+      expect(users.last.text, 'second edited');
+    });
+
+    test('preserves non-text parts (attachments) when editing text', () async {
+      final provider = _CountingProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+      );
+      addTearDown(controller.dispose);
+
+      final image = FilePart(
+        mediaType: 'image/png',
+        url: Uri.parse('https://example.com/cat.png'),
+      );
+      await controller.sendText('look', attachments: [image]);
+      final userId =
+          controller.messages.firstWhere((m) => m.role == AiRole.user).id;
+
+      await controller.editMessage(userId, 'look again');
+
+      final edited =
+          controller.messages.firstWhere((m) => m.role == AiRole.user);
+      expect(edited.text, 'look again');
+      expect(edited.parts.whereType<FilePart>(), hasLength(1));
+    });
+
+    test('is a no-op for an unknown id or a non-user message', () async {
+      final provider = _CountingProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hi');
+      final assistantId =
+          controller.messages.firstWhere((m) => m.role == AiRole.assistant).id;
+
+      await controller.editMessage('does-not-exist', 'x');
+      await controller.editMessage(assistantId, 'x');
+      expect(controller.messages, hasLength(2));
+      expect(controller.messages.first.text, 'hi'); // unchanged
+    });
+  });
+
   group('attachStore / ChatStore', () {
     test('auto-saves the settled conversation and can be reloaded', () async {
       final store = FakeChatStore();
@@ -540,6 +636,7 @@ class FakeChatStore implements ChatStore {
 /// versions are distinguishable.
 class _CountingProvider implements LlmProvider {
   int _n = 0;
+  AiConversation? lastConversation;
 
   @override
   Stream<AiStreamEvent> send(
@@ -547,6 +644,7 @@ class _CountingProvider implements LlmProvider {
     List<ToolDefinition>? tools,
     AiRequestOptions? options,
   }) async* {
+    lastConversation = conversation;
     _n++;
     final id = 'a$_n';
     yield MessageStarted(messageId: id, role: AiRole.assistant);

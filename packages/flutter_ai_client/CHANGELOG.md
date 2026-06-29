@@ -2,6 +2,10 @@
 
 ## 0.1.1
 
+- `editMessage(id, text)` / `editLastUserMessage(text)`: edit a sent user
+  message (keeping attachments), discard everything after it, and re-run from
+  that point — starting a fresh branch set. Closes the previously dead "edit"
+  affordance in `AiMessageActions`.
 - Persistence seam: a `ChatStore` interface (`load`/`save`) plus an
   `attachStore(controller, store, id)` helper that debounce-auto-saves the
   conversation once each turn settles. History is still in memory by default;
