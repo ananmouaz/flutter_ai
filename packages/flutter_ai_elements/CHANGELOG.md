@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.11
+
+- Reduce-motion: `AiLoader` and `AiShimmer` now hold a static state (and stop
+  their controllers) when the platform "reduce motion" setting is on, completing
+  the accessibility pass across the animated widgets.
+
 ## 0.1.10
 
 - `AiAnimatedResponse` shows a blinking caret at the streaming edge (the

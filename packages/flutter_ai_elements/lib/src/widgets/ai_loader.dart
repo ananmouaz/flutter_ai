@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
@@ -25,7 +27,19 @@ class _AiLoaderState extends State<AiLoader>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1100),
-  )..repeat();
+  );
+  bool _reduceMotion = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (_reduceMotion) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      unawaited(_controller.repeat());
+    }
+  }
 
   @override
   void dispose() {
@@ -36,11 +50,7 @@ class _AiLoaderState extends State<AiLoader>
   @override
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
-    return Semantics(
-      label: AiLocalizations.of(context).thinking,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) => Row(
+    Row dots(double Function(int) opacity) => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             for (var i = 0; i < 3; i++)
@@ -48,11 +58,19 @@ class _AiLoaderState extends State<AiLoader>
                 padding: EdgeInsets.only(
                   right: i == 2 ? 0 : widget.dotSpacing,
                 ),
-                child: _dot(theme.loaderColor, _opacityForDot(i)),
+                child: _dot(theme.loaderColor, opacity(i)),
               ),
           ],
-        ),
-      ),
+        );
+    return Semantics(
+      label: AiLocalizations.of(context).thinking,
+      child: _reduceMotion
+          // Static dots — no pulse under reduce-motion (WCAG 2.3.3).
+          ? dots((_) => 0.6)
+          : AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) => dots(_opacityForDot),
+            ),
     );
   }
 
