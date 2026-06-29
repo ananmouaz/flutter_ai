@@ -3,7 +3,7 @@ description: >-
   Model Context Protocol (MCP) integration for flutter_ai: connect to MCP servers
   over Streamable HTTP and expose their tools as flutter_ai tools that flow
   through the agent loop.
-version: 0.1.1
+version: 0.1.2
 homepage: https://github.com/ananmouaz/flutter_ai
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_mcp
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues

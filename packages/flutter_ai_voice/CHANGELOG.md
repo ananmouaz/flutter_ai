@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Declares supported `platforms:` (all 6) for the pub.dev listing.
+
 ## 0.1.1
 
 - Docs: added a clear "Scope — what this package is *not*" section to the README
