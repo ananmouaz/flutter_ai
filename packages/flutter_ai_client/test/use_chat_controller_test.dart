@@ -416,6 +416,124 @@ void main() {
       expect(controller.branchIndex, 0);
     });
   });
+
+  group('attachStore / ChatStore', () {
+    test('auto-saves the settled conversation and can be reloaded', () async {
+      final store = FakeChatStore();
+      final provider = ScriptedProvider(const [
+        MessageStarted(messageId: 'a1', role: AiRole.assistant),
+        TextDelta(messageId: 'a1', delta: 'hi'),
+        MessageFinished(messageId: 'a1', reason: FinishReason.stop),
+      ]);
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u1',
+      );
+      final detach = attachStore(
+        controller,
+        store,
+        'thread-1',
+        debounce: const Duration(milliseconds: 5),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hello');
+      // Let the debounce timer fire after the turn has settled.
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final saved = store.saves['thread-1'];
+      expect(saved, isNotNull);
+      expect(saved!.messages, hasLength(2));
+      expect(saved.messages.last.text, 'hi');
+
+      // A fresh controller seeded from the store restores the transcript.
+      final restored = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        initial: await store.load('thread-1'),
+      );
+      addTearDown(restored.dispose);
+      expect(restored.messages, hasLength(2));
+      expect(restored.messages.last.text, 'hi');
+
+      detach();
+    });
+
+    test('detach flushes a pending save without waiting for the debounce',
+        () async {
+      final store = FakeChatStore();
+      final provider = ScriptedProvider(const [
+        MessageStarted(messageId: 'a1', role: AiRole.assistant),
+        TextDelta(messageId: 'a1', delta: 'hi'),
+        MessageFinished(messageId: 'a1', reason: FinishReason.stop),
+      ]);
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u1',
+      );
+      // Long debounce: the save is scheduled but won't fire on its own here.
+      final detach = attachStore(
+        controller,
+        store,
+        'thread-2',
+        debounce: const Duration(seconds: 5),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hello');
+      expect(store.saves['thread-2'], isNull); // debounce hasn't elapsed
+
+      detach(); // flushes the pending save synchronously
+      expect(store.saves['thread-2'], isNotNull);
+      expect(store.saves['thread-2']!.messages.last.text, 'hi');
+    });
+
+    test('skips saving mid-stream, then saves once the turn settles', () async {
+      final store = FakeChatStore();
+      final provider = ManualProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u1',
+      );
+      final detach = attachStore(
+        controller,
+        store,
+        'thread-3',
+        debounce: const Duration(milliseconds: 5),
+      );
+      addTearDown(controller.dispose);
+
+      unawaited(controller.sendText('hello'));
+      provider.current.add(
+        const MessageStarted(messageId: 'a1', role: AiRole.assistant),
+      );
+      provider.current.add(const TextDelta(messageId: 'a1', delta: 'partial'));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(store.saves['thread-3'], isNull); // still streaming
+
+      controller.stop(); // turn settles
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(store.saves['thread-3'], isNotNull);
+
+      detach();
+    });
+  });
+}
+
+/// An in-memory [ChatStore] that records the latest save per id.
+class FakeChatStore implements ChatStore {
+  final Map<String, AiConversation> saves = {};
+
+  @override
+  Future<AiConversation?> load(String id) async => saves[id];
+
+  @override
+  Future<void> save(String id, AiConversation conversation) async {
+    saves[id] = conversation;
+  }
 }
 
 /// A provider whose reply text increments on every call, so regenerated
