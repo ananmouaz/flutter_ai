@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_demo/code_highlighter.dart';
 import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/demo_provider.dart';
 import 'package:flutter_ai_demo/demo_tools.dart';
+import 'package:flutter_ai_demo/feature_sections.dart';
 import 'package:flutter_ai_demo/live_demo.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 import 'package:flutter_ai_provider_gemini/flutter_ai_provider_gemini.dart';
@@ -92,7 +92,6 @@ class _HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<_HomePage> {
-  int _tab = 0;
   String _modelId = demoModels.first.id;
   final UseChatController _controller = UseChatController(
     provider: _buildProvider(),
@@ -125,93 +124,246 @@ class _HomePageState extends State<_HomePage> {
     _controller.setOptions(AiRequestOptions(model: id));
   }
 
+  void _openGallery() => unawaited(
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Every element'),
+            scrolledUnderElevation: 0,
+          ),
+          body: const SafeArea(child: GalleryScreen()),
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
+    // The whole page is one scroll: a hero (header + live chat) followed by the
+    // feature sections. The hero chat lives in a fixed-height region because
+    // AiChat owns its own scrollable transcript.
+    final media = MediaQuery.of(context);
+    final isWide = media.size.width >= 900;
+    final heroHeight = (media.size.height * 0.66).clamp(420.0, 620.0);
+
     return Scaffold(
-      body: Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 12, 8),
-              child: Row(
-                children: [
-                  const Text(
-                    'flutter_ai',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const Spacer(),
-                  // Model selector lives in the app bar (Chat tab).
-                  if (_tab == 0)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: AiModelSelector(
-                        models: demoModels,
-                        selectedId: _modelId,
-                        onSelected: _selectModel,
-                      ),
-                    ),
-                  IconButton(
-                    icon: Icon(
-                      widget.isDark
-                          ? Icons.light_mode_outlined
-                          : Icons.dark_mode_outlined,
-                    ),
-                    tooltip: 'Toggle theme',
-                    onPressed: widget.onToggleTheme,
-                  ),
-                  if (_tab == 0)
-                    IconButton(
-                      icon: const Icon(Icons.edit_square),
-                      tooltip: 'New chat',
-                      onPressed: _controller.clear,
-                    ),
-                ],
+      body: SafeArea(
+        bottom: false,
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: _Centered(
+                child: _HeroHeader(
+                  isDark: widget.isDark,
+                  modelId: _modelId,
+                  onSelectModel: _selectModel,
+                  onToggleTheme: widget.onToggleTheme,
+                  onNewChat: _controller.clear,
+                  onOpenGallery: _openGallery,
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: CupertinoSlidingSegmentedControl<int>(
-              groupValue: _tab,
-              backgroundColor: widget.isDark
-                  ? const Color(0xFF2A2A2E)
-                  : const Color(0xFFF0F0F2),
-              thumbColor: widget.isDark
-                  ? const Color(0xFF45454D)
-                  : Colors.white,
-              onValueChanged: (value) => setState(() => _tab = value ?? 0),
-              children: {
-                for (final entry in const {0: 'Chat', 1: 'Elements'}.entries)
-                  entry.key: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Text(
-                      entry.value,
-                      style: TextStyle(
-                        color: widget.isDark
-                            ? Colors.white
-                            : const Color(0xFF0D0D0D),
-                      ),
-                    ),
-                  ),
-              },
+            // Hero: the live, scripted chat — the "I want this" moment.
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: heroHeight,
+                child: ChatScreen(
+                  controller: _controller,
+                  toolRunner: _toolRunner,
+                ),
+              ),
             ),
+            SliverToBoxAdapter(
+              child: _Centered(
+                child: FeatureSections(
+                  isWide: isWide,
+                  onOpenGallery: _openGallery,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Centers its child at the package's reading width on wide screens, so prose
+/// and demos don't run edge-to-edge on desktop/web.
+class _Centered extends StatelessWidget {
+  const _Centered({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxWidth = AiThemeExtension.of(context).maxContentWidth;
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// The tight hero header: brand wordmark + value prop + badges, with the theme
+/// toggle, model selector, new-chat and gallery actions.
+class _HeroHeader extends StatelessWidget {
+  const _HeroHeader({
+    required this.isDark,
+    required this.modelId,
+    required this.onSelectModel,
+    required this.onToggleTheme,
+    required this.onNewChat,
+    required this.onOpenGallery,
+  });
+
+  final bool isDark;
+  final String modelId;
+  final ValueChanged<String> onSelectModel;
+  final VoidCallback onToggleTheme;
+  final VoidCallback onNewChat;
+  final VoidCallback onOpenGallery;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = AiThemeExtension.of(context);
+    final subdued = DefaultTextStyle.of(
+      context,
+    ).style.color?.withValues(alpha: 0.62);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 12, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row stays compact (glyph + wordmark + icon actions) so it never
+          // overflows on a narrow phone; the model selector rides in the Wrap
+          // below, which reflows freely at any width.
+          Row(
+            children: [
+              const _BrandGlyph(size: 30),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'flutter_ai',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                ),
+                tooltip: 'Toggle theme',
+                onPressed: onToggleTheme,
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_square),
+                tooltip: 'New chat',
+                onPressed: onNewChat,
+              ),
+            ],
           ),
           const SizedBox(height: 8),
-          Expanded(
-            child: IndexedStack(
-              index: _tab,
-              children: [
-                ChatScreen(controller: _controller, toolRunner: _toolRunner),
-                const GalleryScreen(),
-              ],
-            ),
+          Text(
+            'The complete AI chat toolkit for Flutter — streaming, tools, '
+            'generative UI, voice.',
+            style: TextStyle(fontSize: 16, height: 1.4, color: subdued),
           ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              AiModelSelector(
+                models: demoModels,
+                selectedId: modelId,
+                onSelected: onSelectModel,
+              ),
+              const _Badge(label: '9 packages'),
+              const _Badge(label: 'pub.dev'),
+              const _Badge(label: 'zero lock-in'),
+              _GalleryButton(theme: theme, onTap: onOpenGallery),
+            ],
+          ),
+          const SizedBox(height: 8),
         ],
+      ),
+    );
+  }
+}
+
+/// A small outlined badge chip used in the hero header.
+class _Badge extends StatelessWidget {
+  const _Badge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = AiThemeExtension.of(context);
+    final color = DefaultTextStyle.of(context).style.color;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.borderColor),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w500,
+          color: color?.withValues(alpha: 0.7),
+        ),
+      ),
+    );
+  }
+}
+
+/// A pill button that opens the full element gallery.
+class _GalleryButton extends StatelessWidget {
+  const _GalleryButton({required this.theme, required this.onTap});
+
+  final AiThemeExtension theme;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: theme.accentColor,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.grid_view_rounded,
+                size: 14,
+                color: theme.onAccentColor,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Every element',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: theme.onAccentColor,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -593,26 +745,61 @@ class ChatScreen extends StatelessWidget {
     }
   }
 
-  Widget _emptyState() => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const AiEmptyState(
-          title: 'Ask me anything',
-          subtitle: 'Powered by flutter_ai',
-        ),
-        AiSuggestions(
-          suggestions: const [
-            'Plan a weekend in Lisbon',
-            'Suggest a dinner recipe',
-            'How do I center a widget?',
-            'Summarize this article',
-          ],
-          onSelected: _onSuggestion,
-        ),
-      ],
-    ),
+  // The hero chat's empty state uses the built-in AiEmptyState, now with a
+  // brand [glyph] and tappable conversation-starter [suggestions] that seed the
+  // first turn — the modern-assistant onboarding pattern, in one widget.
+  Widget _emptyState() => AiEmptyState(
+    glyph: const _BrandGlyph(size: 56),
+    title: 'Ask me anything',
+    subtitle: 'A live, scripted demo — no API key required.',
+    suggestions: const [
+      'Plan a weekend in Lisbon',
+      'Suggest a dinner recipe',
+      'How do I center a widget?',
+      'Summarize this article',
+    ],
+    onSuggestionTap: _onSuggestion,
   );
+}
+
+/// The `flutter_ai` brand glyph — a luminous accent square with a soft glow,
+/// reused in the empty state and the hero header so the showcase feels branded.
+class _BrandGlyph extends StatelessWidget {
+  const _BrandGlyph({this.size = 40});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = AiThemeExtension.of(context);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.orbColor,
+            Color.lerp(theme.orbColor, theme.accentColor, 0.5)!,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.orbColor.withValues(alpha: 0.35),
+            blurRadius: size * 0.35,
+            spreadRadius: size * 0.02,
+          ),
+        ],
+      ),
+      child: Icon(
+        Icons.auto_awesome,
+        size: size * 0.5,
+        color: theme.onAccentColor,
+      ),
+    );
+  }
 }
 
 /// A scrolling gallery of every element with sample data.

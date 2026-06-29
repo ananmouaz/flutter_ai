@@ -77,7 +77,9 @@ void main() {
     await tester.pumpWidget(const FlutterAiDemoApp());
     await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.tap(find.text('Plan a weekend in Lisbon'));
+    // The starter chip is the first occurrence (the empty-state suggestion);
+    // the Theming feature section also previews this text further down the page.
+    await tester.tap(find.text('Plan a weekend in Lisbon').first);
     await tester.pump();
 
     for (var i = 0; i < 38; i++) {

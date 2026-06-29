@@ -22,10 +22,13 @@ void main() {
 
   testWidgets('chat streaming frames', (tester) async {
     await tester.pumpWidget(const FlutterAiDemoApp());
-    await tester.pumpAndSettle();
+    // Fixed pump rather than pumpAndSettle: the showcase has perpetual
+    // animations (the voice AiOrb), so pumpAndSettle would never return.
+    await tester.pump(const Duration(milliseconds: 350));
 
-    // Start a turn by tapping the first suggestion chip.
-    await tester.tap(find.text("What's the weather in London?"));
+    // Start a turn by tapping a conversation-starter chip in the empty state.
+    // (Use .first: the Theming feature section also previews this same text.)
+    await tester.tap(find.text('Plan a weekend in Lisbon').first);
     await tester.pump();
 
     for (var i = 0; i < 32; i++) {
