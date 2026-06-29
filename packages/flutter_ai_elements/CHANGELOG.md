@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.5
+
+- Performance: `AiConversationView` memoizes bubbles by message identity, so
+  only the changing message rebuilds while streaming.
+- `AiAnimatedResponse` honors reduce-motion (renders plain text) and isolates
+  its reveal in a `RepaintBoundary`.
+- `AiLocalizationsScope`: override UI strings with one widget, no delegate
+  wiring. Remaining hardcoded strings (reasoning, Allow/Deny, loader/shimmer/
+  avatar a11y labels) are now localized.
+
 ## 0.1.4
 
 - Internationalization: `AiLocalizations` (+ `AiLocalizationsDelegate`) holds the

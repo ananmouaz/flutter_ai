@@ -3,7 +3,7 @@ description: >-
   Dependency-free Dart foundation for AI chat: message and conversation models,
   a streaming MessageProcessor with granular mutations, and the provider and
   renderer contracts the rest of the flutter_ai family builds on.
-version: 0.1.5
+version: 0.1.6
 homepage: https://github.com/ananmouaz/flutter_ai
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_core
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues

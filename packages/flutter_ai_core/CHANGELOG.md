@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.6
+
+- `ReasoningPart` / `ReasoningDelta` gain an optional `signature` (preserved and
+  replayed so providers like Anthropic accept thinking blocks on tool rounds).
+- `MessageProcessor` keeps the last good partial tool-call args instead of
+  clobbering them to `{}` mid-stream.
+
 ## 0.1.5
 
 - `AiRequestOptions.cachePrompt`: hint that the stable prompt prefix (system +

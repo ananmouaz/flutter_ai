@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.5
+
+- Replays signed `thinking` blocks before `tool_use` in the assistant turn, so
+  extended thinking + tools no longer 400 on Claude 4.x.
+- A mid-stream stall surfaces a message-scoped `StreamErrorEvent` instead of
+  also finalizing (which masked the timeout).
+- Asserts a non-empty `apiKey` with an actionable message.
+
 ## 0.1.4
 
 - Prompt caching: when `AiRequestOptions.cachePrompt` is set, marks the system
