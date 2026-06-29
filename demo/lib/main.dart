@@ -358,8 +358,31 @@ class ChatScreen extends StatelessWidget {
     }
   }
 
-  // A tiny generative-UI catalog: render each part with the matching element,
-  // mapping DataParts to AiChainOfThought / AiTask.
+  // A tiny generative-UI catalog: an allowlist mapping each DataPart `dataType`
+  // to the widget that renders it.
+  AiWidgetRegistry get _genUi => AiWidgetRegistry()
+    ..register(
+      'chain_of_thought',
+      (context, data) =>
+          AiChainOfThought(initiallyExpanded: true, steps: _steps(data)),
+    )
+    ..register(
+      'task',
+      (context, data) => AiTask(
+        title: data['title'] as String? ?? 'Task',
+        items: _taskItems(data),
+      ),
+    )
+    ..register(
+      'confirmation',
+      (context, data) => AiConfirmation(
+        title: data['title'] as String? ?? 'Confirm?',
+        description: data['description'] as String?,
+        onConfirm: () => _snack(context, 'Done.'),
+        onDeny: () => _snack(context, 'Cancelled.'),
+      ),
+    );
+
   Widget _buildMessage(BuildContext context, AiMessage message) {
     if (message.role == AiRole.user) return AiMessageBubble(message: message);
     // Tool-result messages are folded into the assistant turn's tool cards.
@@ -448,26 +471,10 @@ class ChatScreen extends StatelessWidget {
           }
         case SourcePart():
           break; // rendered below
-        case DataPart(:final dataType, :final data):
-          if (dataType == 'chain_of_thought') {
-            add(AiChainOfThought(initiallyExpanded: true, steps: _steps(data)));
-          } else if (dataType == 'task') {
-            add(
-              AiTask(
-                title: data['title'] as String? ?? 'Task',
-                items: _taskItems(data),
-              ),
-            );
-          } else if (dataType == 'confirmation') {
-            add(
-              AiConfirmation(
-                title: data['title'] as String? ?? 'Confirm?',
-                description: data['description'] as String?,
-                onConfirm: () => _snack(context, 'Done.'),
-                onDeny: () => _snack(context, 'Cancelled.'),
-              ),
-            );
-          }
+        case DataPart():
+          // Generative UI via an allowlist registry: the model emits a DataPart
+          // and the registered builder renders the matching widget.
+          add(AiDataView(part: part, registry: _genUi));
       }
     }
 

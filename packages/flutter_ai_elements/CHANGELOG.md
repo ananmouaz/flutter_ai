@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+- Generative UI: `AiWidgetRegistry` (a `dataType`→widget allowlist) and
+  `AiDataView` render `DataPart`s the model emits as your own widgets — no
+  reflection, unknown types fall back. The demo wires its chain-of-thought / task
+  / confirmation cards through it.
+
 ## 0.1.1
 
 - `AiChat` now anchors the message you just sent to the **top** of the viewport

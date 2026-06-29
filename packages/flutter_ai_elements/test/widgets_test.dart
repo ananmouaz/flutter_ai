@@ -18,6 +18,39 @@ class _EchoProvider implements LlmProvider {
 }
 
 void main() {
+  group('AiWidgetRegistry (generative UI)', () {
+    testWidgets('renders a registered dataType and falls back otherwise',
+        (tester) async {
+      final registry = AiWidgetRegistry()
+        ..register(
+          'weather',
+          (context, data) => Text('It is ${data['temp']}°'),
+        );
+
+      await tester.pumpWidget(
+        _wrap(
+          AiDataView(
+            part: const DataPart(dataType: 'weather', data: {'temp': 21}),
+            registry: registry,
+          ),
+        ),
+      );
+      expect(find.text('It is 21°'), findsOneWidget);
+
+      // Unregistered type → fallback.
+      await tester.pumpWidget(
+        _wrap(
+          AiDataView(
+            part: const DataPart(dataType: 'unknown', data: {}),
+            registry: registry,
+            fallback: const Text('unsupported'),
+          ),
+        ),
+      );
+      expect(find.text('unsupported'), findsOneWidget);
+    });
+  });
+
   group('AiThemeExtension', () {
     test('of returns the fallback when none is registered', () {
       final fallback = AiThemeExtension.fallback();
