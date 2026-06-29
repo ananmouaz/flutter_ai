@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_haptics.dart';
 
 /// A horizontally scrolling row of tappable suggested prompts.
 ///
@@ -36,7 +37,10 @@ class AiSuggestions extends StatelessWidget {
             _Chip(
               label: suggestions[i],
               theme: theme,
-              onTap: () => onSelected(suggestions[i]),
+              onTap: () {
+                aiLightHaptic(theme);
+                onSelected(suggestions[i]);
+              },
             ),
           ],
         ],

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
+import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_loader.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_message_bubble.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
@@ -51,7 +52,8 @@ class AiConversationView extends StatefulWidget {
   final EdgeInsets padding;
 
   /// On wide screens, centers the conversation at this width (like ChatGPT on
-  /// tablet/desktop). `null` means full-width.
+  /// tablet/desktop). When `null`, falls back to
+  /// [AiThemeExtension.maxContentWidth]. Pass [double.infinity] for full-width.
   final double? maxContentWidth;
 
   /// Extra empty space reserved after the last item. Used by `AiChat` to let the
@@ -148,10 +150,14 @@ class _AiConversationViewState extends State<AiConversationView> {
         return bubble;
       },
     );
-    if (widget.maxContentWidth == null) return list;
+    // A width passed to the widget wins; otherwise fall back to the theme's
+    // reading-width default. `double.infinity` means full-width (no column).
+    final width =
+        widget.maxContentWidth ?? AiThemeExtension.of(context).maxContentWidth;
+    if (!width.isFinite) return list;
     return Center(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: widget.maxContentWidth!),
+        constraints: BoxConstraints(maxWidth: width),
         child: list,
       ),
     );

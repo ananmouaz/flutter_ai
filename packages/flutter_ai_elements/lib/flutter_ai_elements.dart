@@ -43,6 +43,7 @@ export 'src/widgets/ai_loader.dart';
 export 'src/widgets/ai_message_actions.dart';
 export 'src/widgets/ai_message_bubble.dart';
 export 'src/widgets/ai_model_selector.dart';
+export 'src/widgets/ai_orb.dart';
 export 'src/widgets/ai_prompt_input.dart';
 export 'src/widgets/ai_reasoning.dart';
 export 'src/widgets/ai_response.dart';

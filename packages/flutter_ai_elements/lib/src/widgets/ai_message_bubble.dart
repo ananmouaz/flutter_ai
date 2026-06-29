@@ -5,6 +5,7 @@ import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_attachment.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_reasoning.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
+import 'package:flutter_ai_elements/src/widgets/ai_shimmer.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_tool_invocation.dart';
 
 /// A single chat bubble that renders one [AiMessage]'s parts.
@@ -112,7 +113,13 @@ class AiMessageBubble extends StatelessWidget {
     for (final part in message.parts) {
       switch (part) {
         case TextPart(:final text):
-          children.add(textRenderer.render(text, isStreaming: isStreaming));
+          children.add(
+            _CrossfadeText(
+              text: text,
+              isStreaming: isStreaming,
+              renderer: textRenderer,
+            ),
+          );
         case ReasoningPart(:final text):
           children.add(AiReasoning(text: text));
         case ToolCallPart():
@@ -142,6 +149,56 @@ class AiMessageBubble extends StatelessWidget {
           children[i],
         ],
       ],
+    );
+  }
+}
+
+/// Crossfades from the streaming text view to the final rendered Markdown when
+/// a message finishes streaming, avoiding a hard pop. Under reduce-motion it
+/// swaps instantly (WCAG 2.3.3).
+class _CrossfadeText extends StatelessWidget {
+  const _CrossfadeText({
+    required this.text,
+    required this.isStreaming,
+    required this.renderer,
+  });
+
+  final String text;
+  final bool isStreaming;
+  final AiTextRenderer renderer;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = AiThemeExtension.of(context);
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    // Awaiting the first token: an assistant turn that is streaming but has no
+    // text yet. Show a skeleton shimmer that crossfades into the streamed text
+    // once the first delta lands.
+    final awaiting = isStreaming && text.isEmpty;
+    // Three phases the switcher crossfades between: shimmer → streaming → final.
+    final phase = awaiting ? 0 : (isStreaming ? 1 : 2);
+    final Widget rendered = awaiting
+        ? const AiShimmer()
+        : renderer.render(text, isStreaming: isStreaming);
+    final child = KeyedSubtree(
+      key: ValueKey(phase),
+      child: rendered,
+    );
+    if (reduceMotion) return child;
+    return AnimatedSwitcher(
+      duration: theme.motionDuration,
+      switchInCurve: theme.motionCurve,
+      switchOutCurve: theme.motionCurve,
+      // Cross-fade in place; size to the incoming child so the answer doesn't
+      // jump when it settles into Markdown.
+      layoutBuilder: (currentChild, previousChildren) => Stack(
+        alignment: AlignmentDirectional.topStart,
+        children: [
+          ...previousChildren,
+          if (currentChild != null) currentChild,
+        ],
+      ),
+      child: child,
     );
   }
 }

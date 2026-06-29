@@ -239,7 +239,11 @@ class _AiLiveSessionState extends State<AiLiveSession>
                       child: Opacity(
                         opacity: intro,
                         child: RepaintBoundary(
-                          child: _Orb(breathe: breathe, react: react),
+                          child: _Orb(
+                            breathe: breathe,
+                            react: react,
+                            color: theme.orbColor,
+                          ),
                         ),
                       ),
                     ),
@@ -283,7 +287,11 @@ class _AiLiveSessionState extends State<AiLiveSession>
 /// A simple, calm sky-blue sphere (ChatGPT-style) — a soft radial gradient with
 /// a light top-left highlight and an audio-reactive outer glow.
 class _Orb extends StatelessWidget {
-  const _Orb({required this.breathe, required this.react});
+  const _Orb({
+    required this.breathe,
+    required this.react,
+    required this.color,
+  });
 
   /// Breathing value (`0`–`1`).
   final double breathe;
@@ -291,26 +299,28 @@ class _Orb extends StatelessWidget {
   /// Audio reaction (`0`–`1`).
   final double react;
 
+  /// Base orb color (themed via [AiThemeExtension.orbColor]).
+  final Color color;
+
   @override
   Widget build(BuildContext context) {
+    // Derive the radial stops from the themed base so any color reads well.
+    final highlight = Color.lerp(color, Colors.white, 0.85)!;
+    final light = Color.lerp(color, Colors.white, 0.45)!;
+    final deep = Color.lerp(color, Colors.black, 0.30)!;
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const RadialGradient(
-          center: Alignment(-0.35, -0.45),
+        gradient: RadialGradient(
+          center: const Alignment(-0.35, -0.45),
           radius: 1.15,
-          colors: [
-            Color(0xFFEAF4FF),
-            Color(0xFF8FC3FF),
-            Color(0xFF2F7BE6),
-            Color(0xFF1657C4),
-          ],
-          stops: [0.0, 0.4, 0.75, 1.0],
+          colors: [highlight, light, color, deep],
+          stops: const [0.0, 0.4, 0.75, 1.0],
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3B86F0)
-                .withValues(alpha: 0.30 + 0.28 * react + 0.08 * breathe),
+            color:
+                color.withValues(alpha: 0.30 + 0.28 * react + 0.08 * breathe),
             blurRadius: 40 + 36 * react,
             spreadRadius: 2 + 6 * react,
           ),

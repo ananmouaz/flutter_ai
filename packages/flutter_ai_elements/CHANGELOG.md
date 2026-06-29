@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.12
+
+UX polish bundle:
+
+- Skeleton shimmer that crossfades into the first streamed token, and a
+  streaming→Markdown crossfade when a turn finishes (both reduced-motion aware).
+- Reading-width column: new `AiThemeExtension.maxContentWidth` (default 720)
+  centers long answers on wide screens; set to `double.infinity` to disable.
+- `AiEmptyState` gains a brand `glyph` and tappable `suggestions`.
+- Light haptics on turn completion, confirmation, and chip taps (opt-out via
+  `enableHaptics`; no-op on web/desktop).
+- Markdown: strikethrough, horizontal rules, and GFM task-list checkboxes;
+  link color is now themeable (`AiThemeExtension.linkColor`).
+- Source chips: numeric index badge, hover state, and an opt-in favicon
+  (`AiSources.showFavicons`, default off — fetching discloses cited hosts to a
+  third-party service).
+- `AiConfirmation.tone` (`neutral`/`caution`/`danger`) restyles the confirm
+  button; `danger` uses the theme error color.
+- New `AiOrb` widget and a themeable live-session orb (`AiThemeExtension.orbColor`).
+
 ## 0.1.11
 
 - Reduce-motion: `AiLoader` and `AiShimmer` now hold a static state (and stop
