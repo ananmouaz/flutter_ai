@@ -95,6 +95,17 @@ void main() {
     });
   });
 
+  group('AiChatView', () {
+    testWidgets('composes transcript + input from a controller',
+        (tester) async {
+      final controller = UseChatController(provider: _EchoProvider());
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(_wrap(AiChatView(controller: controller)));
+      expect(find.byType(AiChat), findsOneWidget);
+      expect(find.byType(AiPromptInput), findsOneWidget);
+    });
+  });
+
   group('AiConversationList', () {
     testWidgets('lists threads and fires select/new/delete', (tester) async {
       ChatThread? selected;
