@@ -30,7 +30,12 @@ class OpenAiProvider implements LlmProvider {
     this.defaultModel = 'gpt-4o-mini',
     this.maxRetries = 2,
     this.timeout = const Duration(seconds: 60),
-  })  : _baseUrl = baseUrl ?? Uri.parse('https://api.openai.com/v1'),
+  })  : assert(
+          apiKey.isNotEmpty,
+          'OpenAiProvider: apiKey is empty — pass a key or set OPENAI_API_KEY '
+          'via --dart-define (String.fromEnvironment yields "" when unset).',
+        ),
+        _baseUrl = baseUrl ?? Uri.parse('https://api.openai.com/v1'),
         _ownsClient = client == null,
         _client = client ?? http.Client();
 

@@ -45,7 +45,12 @@ class AnthropicProvider implements LlmProvider {
     this.anthropicVersion = '2023-06-01',
     this.maxRetries = 2,
     this.timeout = const Duration(seconds: 60),
-  })  : _baseUrl = baseUrl ?? Uri.parse('https://api.anthropic.com/v1'),
+  })  : assert(
+          apiKey.isNotEmpty,
+          'AnthropicProvider: apiKey is empty — pass a key or set '
+          'ANTHROPIC_API_KEY via --dart-define.',
+        ),
+        _baseUrl = baseUrl ?? Uri.parse('https://api.anthropic.com/v1'),
         _ownsClient = client == null,
         _client = client ?? http.Client();
 

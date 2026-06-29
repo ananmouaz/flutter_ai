@@ -596,6 +596,32 @@ void main() {
       expect(controller.status, ChatStatus.idle);
     });
 
+    test('stops the loop once the token budget is exceeded', () async {
+      final provider = _AlwaysToolProvider(); // 100 output tokens per turn
+      var executed = 0;
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        maxSteps: 10,
+        tokenBudget: 150,
+        onToolCalls: (calls) async {
+          executed++;
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: 'ok'),
+          ];
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('go');
+
+      // turn1 (100 < 150) continues; after turn2 (200 >= 150) the loop stops.
+      expect(provider.sendCount, 2);
+      expect(executed, 1);
+    });
+
     test('without onToolCalls, the turn ends with the tool call (manual mode)',
         () async {
       final provider = _ToolThenTextProvider();
@@ -919,6 +945,10 @@ class _AlwaysToolProvider implements LlmProvider {
     yield ToolCallStarted(messageId: id, toolCallId: callId, toolName: 'ping');
     yield ToolCallDelta(toolCallId: callId, argumentsDelta: '{}');
     yield ToolCallReady(toolCallId: callId);
-    yield MessageFinished(messageId: id, reason: FinishReason.toolCalls);
+    yield MessageFinished(
+      messageId: id,
+      reason: FinishReason.toolCalls,
+      usage: const AiUsage(outputTokens: 100),
+    );
   }
 }

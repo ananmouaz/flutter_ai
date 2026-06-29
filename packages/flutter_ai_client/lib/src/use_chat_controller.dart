@@ -54,6 +54,7 @@ class UseChatController extends ChangeNotifier {
         onToolCalls,
     int maxSteps = 8,
     int maxBranches = 20,
+    int? tokenBudget,
     void Function(VoidCallback callback)? scheduler,
     String Function()? idGenerator,
   })  : assert(maxSteps >= 1, 'maxSteps must be at least 1'),
@@ -64,6 +65,7 @@ class UseChatController extends ChangeNotifier {
         _onToolCalls = onToolCalls,
         _maxSteps = maxSteps,
         _maxBranches = maxBranches,
+        _tokenBudget = tokenBudget,
         _scheduler = scheduler ?? scheduleMicrotask,
         _newId = idGenerator ?? _sequentialIdGenerator(),
         _processor = MessageProcessor(conversation: initial);
@@ -74,6 +76,7 @@ class UseChatController extends ChangeNotifier {
   final Future<List<ToolResultPart>> Function(List<ToolCallPart>)? _onToolCalls;
   final int _maxSteps;
   final int _maxBranches;
+  final int? _tokenBudget; // stop the agent loop once cumulative tokens exceed
   final StreamController<AiStreamEvent> _events =
       StreamController<AiStreamEvent>.broadcast();
 
@@ -456,7 +459,12 @@ class UseChatController extends ChangeNotifier {
     _captureBranch();
 
     final pending = _pendingToolCalls();
-    if (_onToolCalls != null && pending.isNotEmpty && _step < _maxSteps) {
+    final overBudget = _tokenBudget != null &&
+        (totalUsage?.resolvedTotal ?? 0) >= _tokenBudget;
+    if (_onToolCalls != null &&
+        pending.isNotEmpty &&
+        _step < _maxSteps &&
+        !overBudget) {
       _scheduleNotify();
       unawaited(_continueWithTools(pending, _turn));
       return;

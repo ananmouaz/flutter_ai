@@ -1,3 +1,18 @@
+/// Thrown when an MCP tool call returns an error result (`isError: true`).
+class McpToolException implements Exception {
+  /// Creates an exception for tool [toolName] with [message].
+  const McpToolException(this.toolName, this.message);
+
+  /// The tool that failed.
+  final String toolName;
+
+  /// The error text the server returned.
+  final String message;
+
+  @override
+  String toString() => 'McpToolException($toolName): $message';
+}
+
 /// A tool discovered on an MCP server.
 class McpToolInfo {
   /// Creates a tool descriptor.
