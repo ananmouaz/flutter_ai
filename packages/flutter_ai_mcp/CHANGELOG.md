@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Declares supported `platforms:` (all 6) for the pub.dev listing.
+
 ## 0.1.1
 
 - `callTool` throws `McpToolException` when a tool returns `isError: true` (so
