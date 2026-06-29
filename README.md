@@ -1,15 +1,24 @@
-# flutter_ai
+<h1 align="center">flutter_ai</h1>
 
-[![CI](https://github.com/ananmouaz/flutter_ai/actions/workflows/ci.yml/badge.svg)](https://github.com/ananmouaz/flutter_ai/actions/workflows/ci.yml)
-[![License: BSD-3](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
-
-## ☕ Support this project
+<p align="center"><b>The complete AI chat toolkit for Flutter</b> — streaming, tools, generative UI, voice, and a batteries-included UI kit. Zero state-management lock-in.</p>
 
 <p align="center">
-  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.gif" width="300" alt="flutter_ai: a streaming answer with chain-of-thought and a generative-UI task card"/>
 </p>
 
-<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+<p align="center">
+  <a href="https://pub.dev/packages/flutter_ai_elements"><img src="https://img.shields.io/pub/v/flutter_ai_elements.svg?label=flutter_ai_elements" alt="flutter_ai_elements on pub.dev"/></a>
+  <a href="https://github.com/ananmouaz/flutter_ai/actions/workflows/ci.yml"><img src="https://github.com/ananmouaz/flutter_ai/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="License: BSD-3-Clause"/></a>
+</p>
+
+<p align="center">
+  <b>UI:</b> <a href="packages/flutter_ai_elements">elements</a> ·
+  <b>Engine:</b> <a href="packages/flutter_ai_core">core</a> · <a href="packages/flutter_ai_client">client</a> ·
+  <b>Providers:</b> <a href="packages/flutter_ai_provider_openai">openai</a> · <a href="packages/flutter_ai_provider_anthropic">anthropic</a> · <a href="packages/flutter_ai_provider_gemini">gemini</a> ·
+  <b>Add-ons:</b> <a href="packages/flutter_ai_tools">tools</a> · <a href="packages/flutter_ai_mcp">mcp</a> · <a href="packages/flutter_ai_voice">voice</a><br/>
+  <a href="docs/recipes.md">Recipes</a> · <a href="docs/migration-from-vercel-ai-sdk.md">Migrating from the Vercel AI SDK</a> · <a href="demo/">Demo app</a>
+</p>
 
 ---
 
@@ -18,13 +27,44 @@ the Flutter answer to Vercel's AI SDK + AI Elements. Drop in a polished chat UI,
 or compose the pieces yourself. Provider-agnostic (OpenAI, Anthropic, Gemini),
 state-manager-agnostic, mobile-first.
 
-<p>
-  <img src="demo/screenshots/chat.gif" width="250" alt="flutter_ai chat demo" />
-  <img src="demo/screenshots/live_orb.png" width="125" alt="Live voice mode" />
-  <img src="demo/screenshots/element_tool_group.png" width="220" alt="Tool calls" />
-</p>
+## Feature gallery
 
-<sub>Streaming chat with reasoning, tool calls, citations · Live voice mode · light & dark.</sub>
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-streaming.png" width="220" alt="Streaming chat"/><br/>
+      <b>Streaming chat</b><br/>
+      <sub>Tokens stream in, batched to the frame so high token rates never drop a frame.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-generative-ui.png" width="220" alt="Generative UI"/><br/>
+      <b>Generative UI</b><br/>
+      <sub>Tool results render as live Flutter widgets — task cards, not just JSON.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-tools.png" width="220" alt="Tools and function calling"/><br/>
+      <b>Tools &amp; agents</b><br/>
+      <sub>Function calling and MCP servers flow through the agent loop with no glue code.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-citations.png" width="220" alt="Grounded citations"/><br/>
+      <b>Citations</b><br/>
+      <sub>Grounded answers stream their web sources as inline citations.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-voice.png" width="220" alt="Live voice mode"/><br/>
+      <b>Voice</b><br/>
+      <sub>An animated live orb over engine-agnostic speech-to-text contracts.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-theming.png" width="220" alt="Theming, light and dark"/><br/>
+      <b>Theming</b><br/>
+      <sub>Restyle everything through one <code>AiThemeExtension</code> — light &amp; dark.</sub>
+    </td>
+  </tr>
+</table>
 
 ## How it fits together
 
@@ -214,6 +254,14 @@ settled. We follow [semver](https://semver.org); 1.0 marks an API-stability
 commitment.
 
 See [`ROADMAP.md`](ROADMAP.md) for what's planned on the way to 1.0.
+
+## ☕ Support this project
+
+<p align="center">
+  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+</p>
+
+<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
 
 ## Contributing
 

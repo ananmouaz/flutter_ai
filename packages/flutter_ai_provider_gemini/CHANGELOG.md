@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8
+
+- Docs: refreshed the README listing with a hero image, screenshot gallery,
+  and badges (consistent across the package family). No code changes.
+
 ## 0.1.7
 
 - Implements `EmbeddingProvider` (`embed` → `batchEmbedContents`, default

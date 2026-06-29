@@ -1,16 +1,28 @@
-# flutter_ai_client
+<h1 align="center">flutter_ai_client</h1>
 
-## ☕ Support this project
+<p align="center"><b>The <code>useChat</code> controller for Flutter</b> — wrap any <code>LlmProvider</code> and get optimistic send, batched streaming, cancel, and regenerate as a plain <code>Listenable</code>. No state-manager lock-in.</p>
 
 <p align="center">
-  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.gif" width="300" alt="flutter_ai: a streaming answer with chain-of-thought and a generative-UI task card"/>
 </p>
 
-<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+<p align="center">
+  <a href="https://pub.dev/packages/flutter_ai_client"><img src="https://img.shields.io/pub/v/flutter_ai_client.svg" alt="flutter_ai_client on pub.dev"/></a>
+  <a href="https://pub.dev/packages/flutter_ai_client"><img src="https://img.shields.io/pub/points/flutter_ai_client.svg" alt="pub points"/></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="License: BSD-3-Clause"/></a>
+</p>
+
+<p align="center">
+  <b>Family:</b> <a href="../../README.md">flutter_ai</a> ·
+  <a href="../flutter_ai_core">core</a> · <a href="../flutter_ai_elements">elements</a> ·
+  <a href="../flutter_ai_provider_openai">openai</a> · <a href="../flutter_ai_provider_anthropic">anthropic</a> · <a href="../flutter_ai_provider_gemini">gemini</a> ·
+  <a href="../flutter_ai_tools">tools</a> · <a href="../flutter_ai_mcp">mcp</a> · <a href="../flutter_ai_voice">voice</a><br/>
+  <a href="../../docs/recipes.md">Recipes</a> · <a href="../../docs/migration-from-vercel-ai-sdk.md">Migrating from the Vercel AI SDK</a>
+</p>
+
+<p align="center"><sub>The transcript above is driven by this package's <code>UseChatController</code> (rendered with <code>flutter_ai_elements</code>).</sub></p>
 
 ---
-
-<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/chat.gif" width="300" alt="Live chat driven by UseChatController"/></p>
 
 Provider-agnostic chat controller for the [`flutter_ai`](../../README.md) family.
 
@@ -81,3 +93,11 @@ class MyProvider implements LlmProvider {
 ## Status
 
 Published on pub.dev (see the CHANGELOG for versions); depends on `flutter_ai_core`.
+
+## ☕ Support this project
+
+<p align="center">
+  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+</p>
+
+<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>

@@ -1,27 +1,65 @@
-# flutter_ai_elements
+<h1 align="center">flutter_ai_elements</h1>
 
-## ☕ Support this project
+<p align="center"><b>The batteries-included AI chat UI kit for Flutter</b> — drop in a polished, streaming chat in one widget, or compose 30+ themeable pieces yourself.</p>
 
 <p align="center">
-  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.gif" width="300" alt="flutter_ai_elements: a streaming answer with chain-of-thought and a generative-UI task card"/>
 </p>
 
-<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+<p align="center">
+  <a href="https://pub.dev/packages/flutter_ai_elements"><img src="https://img.shields.io/pub/v/flutter_ai_elements.svg" alt="flutter_ai_elements on pub.dev"/></a>
+  <a href="https://pub.dev/packages/flutter_ai_elements"><img src="https://img.shields.io/pub/points/flutter_ai_elements.svg" alt="pub points"/></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="License: BSD-3-Clause"/></a>
+</p>
+
+<p align="center">
+  <b>Family:</b> <a href="../../README.md">flutter_ai</a> ·
+  <a href="../flutter_ai_core">core</a> · <a href="../flutter_ai_client">client</a> ·
+  <a href="../flutter_ai_provider_openai">openai</a> · <a href="../flutter_ai_provider_anthropic">anthropic</a> · <a href="../flutter_ai_provider_gemini">gemini</a> ·
+  <a href="../flutter_ai_tools">tools</a> · <a href="../flutter_ai_mcp">mcp</a> · <a href="../flutter_ai_voice">voice</a><br/>
+  <a href="../../docs/recipes.md">Recipes</a> · <a href="../../docs/migration-from-vercel-ai-sdk.md">Migrating from the Vercel AI SDK</a>
+</p>
 
 ---
 
-<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/chat.gif" width="300" alt="flutter_ai chat"/></p>
+## Gallery
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_response.png" width="210" alt="Markdown response"/>
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_tool_group.png" width="210" alt="Parallel tool calls"/>
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_sources.png" width="210" alt="Sources"/>
-</p>
-<p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_reasoning.png" width="210" alt="Reasoning"/>
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_chain_of_thought.png" width="210" alt="Chain of thought"/>
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/element_confirmation.png" width="210" alt="Confirmation"/>
-</p>
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-streaming.png" width="220" alt="Streaming response"/><br/>
+      <b>Streaming response</b><br/>
+      <sub><code>AiChat</code> · <code>AiResponse</code> · <code>AiLoader</code></sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-generative-ui.png" width="220" alt="Generative UI task card"/><br/>
+      <b>Generative UI</b><br/>
+      <sub><code>AiMessageBubble</code> (custom <code>DataPart</code> renderers)</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-tools.png" width="220" alt="Tool calls"/><br/>
+      <b>Tool calls</b><br/>
+      <sub><code>AiToolGroup</code> · <code>AiReasoning</code></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-citations.png" width="220" alt="Source citations"/><br/>
+      <b>Citations</b><br/>
+      <sub><code>AiSources</code> · <code>AiInlineCitation</code></sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-theming.png" width="220" alt="Theming"/><br/>
+      <b>Theming</b><br/>
+      <sub><code>AiThemeExtension</code> tokens</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-dark.png" width="220" alt="Dark mode"/><br/>
+      <b>Dark mode</b><br/>
+      <sub>One theme extension, light &amp; dark</sub>
+    </td>
+  </tr>
+</table>
 
 Composable, themeable Flutter UI for AI chat — the UI layer of the
 [`flutter_ai`](../../README.md) family.
@@ -118,3 +156,11 @@ AiChat(controller: controller, textRenderer: MyMarkdownRenderer());
 Published on pub.dev (see the CHANGELOG); depends on the sibling `flutter_ai`
 packages.
 See [`example/`](example/) for a full app.
+
+## ☕ Support this project
+
+<p align="center">
+  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+</p>
+
+<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>

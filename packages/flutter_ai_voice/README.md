@@ -1,16 +1,27 @@
-# flutter_ai_voice
+<h1 align="center">flutter_ai_voice</h1>
 
-## ☕ Support this project
+<p align="center"><b>Speech-to-text contracts for flutter_ai</b> — engine-agnostic STT models behind the animated live orb. Bring on-device Whisper, a cloud API, or the platform recognizer.</p>
 
 <p align="center">
-  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-voice.png" width="300" alt="Live voice mode with an animated orb"/>
 </p>
 
-<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+<p align="center">
+  <a href="https://pub.dev/packages/flutter_ai_voice"><img src="https://img.shields.io/pub/v/flutter_ai_voice.svg" alt="flutter_ai_voice on pub.dev"/></a>
+  <a href="https://pub.dev/packages/flutter_ai_voice"><img src="https://img.shields.io/pub/points/flutter_ai_voice.svg" alt="pub points"/></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="License: BSD-3-Clause"/></a>
+</p>
+
+<p align="center">
+  <b>Family:</b> <a href="../../README.md">flutter_ai</a> ·
+  <a href="../flutter_ai_core">core</a> · <a href="../flutter_ai_client">client</a> · <a href="../flutter_ai_elements">elements</a> ·
+  <a href="../flutter_ai_tools">tools</a> · <a href="../flutter_ai_mcp">mcp</a><br/>
+  <a href="../../docs/recipes.md">Recipes</a> · <a href="../../docs/migration-from-vercel-ai-sdk.md">Migrating from the Vercel AI SDK</a>
+</p>
+
+<p align="center"><sub>The orb lives in <code>flutter_ai_elements</code> (<code>AiLiveSession</code>); this package is the STT contract behind it.</sub></p>
 
 ---
-
-<p align="center"><img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/demo/screenshots/live_orb.png" width="240" alt="Live voice orb"/></p>
 
 Speech-to-text contracts and models for the [`flutter_ai`](../../README.md)
 family. Dependency-free; concrete engines plug in behind the interface.
@@ -74,3 +85,11 @@ chosen engine in the host app or a dedicated adapter package.
 Interface + models + callback adapter, fully unit-tested. No concrete audio
 engine, recording, or TTS ships in this package (see **Scope** above). See the
 CHANGELOG for version history.
+
+## ☕ Support this project
+
+<p align="center">
+  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
+</p>
+
+<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>

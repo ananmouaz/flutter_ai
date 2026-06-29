@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- Docs: refreshed the README listing with a hero image, screenshot gallery,
+  and badges (consistent across the package family). No code changes.
+
 ## 0.1.2
 
 - Declares supported `platforms:` (all 6) for the pub.dev listing.

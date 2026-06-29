@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7
+
+- Docs: refreshed the README listing with a hero image, screenshot gallery,
+  and badges (consistent across the package family). No code changes.
+
 ## 0.1.6
 
 - Implements `EmbeddingProvider`: `embed(inputs, {model})` POSTs `/embeddings`
