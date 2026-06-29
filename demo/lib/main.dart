@@ -339,11 +339,7 @@ class ChatScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Edit message'),
-        content: TextField(
-          controller: field,
-          autofocus: true,
-          maxLines: null,
-        ),
+        content: TextField(controller: field, autofocus: true, maxLines: null),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -517,7 +513,8 @@ class ChatScreen extends StatelessWidget {
               onBad: () => _snack(context, 'Thanks — we\'ll do better.'),
               onShare: () => _snack(context, 'Share sheet would open here.'),
               onRegenerate: () => unawaited(controller.regenerate()),
-              onEdit: () => unawaited(_editPrecedingUserMessage(context, message)),
+              onEdit: () =>
+                  unawaited(_editPrecedingUserMessage(context, message)),
             ),
             const Spacer(),
             // Real regeneration history: only the latest turn has branches.

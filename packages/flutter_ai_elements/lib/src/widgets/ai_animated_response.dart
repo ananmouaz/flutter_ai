@@ -164,8 +164,8 @@ class _AiAnimatedResponseState extends State<AiAnimatedResponse>
     _shown = _shown + step < target ? _shown + step : target;
 
     // Stamp the birth time of every word that just became fully revealed.
-    while (_settledCursor < _words.length &&
-        _words[_settledCursor][1] <= _shown) {
+    while (
+        _settledCursor < _words.length && _words[_settledCursor][1] <= _shown) {
       _births.putIfAbsent(_words[_settledCursor][0], () => elapsed);
       _settledCursor++;
     }
