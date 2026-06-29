@@ -37,7 +37,7 @@ state-manager-agnostic, mobile-first.
                                  ▼
         ┌─────────────────────────────────────────────────┐
         │            flutter_ai_elements   (UI)            │
-        │   AiChat · AiComposer · AiResponse ·             │
+        │   AiChat · AiPromptInput · AiResponse ·          │
         │   AiLiveSession · AiSources · AiToolGroup ...    │
         └───────────────────────┬─────────────────────────┘
                                  │ bound to
@@ -58,18 +58,18 @@ state-manager-agnostic, mobile-first.
         │  models · AiStreamEvent · LlmProvider ·          │
         │  MessageProcessor · ToolDefinition               │
         └─────────────────────────────────────────────────┘
-              ▲                                   ▲
-     optional │                                   │ optional
-     ┌────────┴────────┐                 ┌────────┴────────┐
-     │ flutter_ai_tools│                 │ flutter_ai_voice│
-     │  (tool calling) │                 │ (speech-to-text)│
-     └─────────────────┘                 └─────────────────┘
+              ▲                ▲                  ▲
+     optional │       optional │                  │ optional
+     ┌────────┴────────┐ ┌─────┴─────────┐ ┌──────┴──────────┐
+     │ flutter_ai_tools│ │ flutter_ai_mcp│ │ flutter_ai_voice│
+     │  (tool calling) │ │  (MCP tools)  │ │ (speech-to-text)│
+     └─────────────────┘ └───────────────┘ └─────────────────┘
 ```
 
 **What happens when you send a message:**
 
 ```
-You type → AiComposer → UseChatController.sendText()
+You type → AiPromptInput → UseChatController.sendText()
                               │
                               ▼
                   provider.send(conversation)  ───►  LLM API (streams back)
@@ -135,6 +135,11 @@ That streams responses, renders Markdown/code/tables, and swaps Send↔Stop whil
 generating. Swap `OpenAiProvider` for `AnthropicProvider` or `GeminiProvider` to
 change models — nothing else changes.
 
+`AiPromptInput` is the batteries-included input: bind it to a `UseChatController`
+and it sends, stages attachments, and toggles Send/Stop for you. Need full
+control of the input UI? Reach for its presentational primitive `AiComposer`
+(plain callbacks, no controller) and wire it yourself.
+
 ## Which package do I need?
 
 | I want to… | Add |
@@ -153,9 +158,9 @@ change models — nothing else changes.
 |---|---|
 | [`flutter_ai_core`](packages/flutter_ai_core) | Foundation (pure Dart): models, `AiStreamEvent`, `MessageProcessor`, `LlmProvider` & renderer contracts |
 | [`flutter_ai_client`](packages/flutter_ai_client) | `UseChatController` — a `Listenable` chat controller (optimistic send, cancel, regenerate, branches, tool results) |
-| [`flutter_ai_elements`](packages/flutter_ai_elements) | 30+ UI widgets + `AiThemeExtension`: `AiChat`, `AiComposer`, `AiResponse` (Markdown), `AiToolGroup`, `AiReasoning`, `AiSources`, `AiLiveSession`, … |
+| [`flutter_ai_elements`](packages/flutter_ai_elements) | 30+ UI widgets + `AiThemeExtension`: `AiChat`, `AiPromptInput`, `AiResponse` (Markdown), `AiToolGroup`, `AiReasoning`, `AiSources`, `AiLiveSession`, … |
 | [`flutter_ai_tools`](packages/flutter_ai_tools) | Tool calling (`ToolSpec`, `ToolRegistry`) + web-search adapter |
-| [`flutter_ai_mcp`](packages/flutter_ai_mcp) | Model Context Protocol client (Streamable HTTP) — MCP server tools flow through the agent loop |
+| [`flutter_ai_mcp`](packages/flutter_ai_mcp) | Model Context Protocol (MCP) integration for flutter_ai: connect to MCP servers over Streamable HTTP and expose their tools as flutter_ai tools that flow through the agent loop |
 | [`flutter_ai_voice`](packages/flutter_ai_voice) | Engine-agnostic speech-to-text contracts |
 | [`flutter_ai_provider_openai`](packages/flutter_ai_provider_openai) | OpenAI-compatible streaming provider (also works with Gemini's OpenAI endpoint) |
 | [`flutter_ai_provider_anthropic`](packages/flutter_ai_provider_anthropic) | Anthropic (Claude) Messages API provider |
