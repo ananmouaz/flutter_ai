@@ -151,10 +151,10 @@ class _ItemRow extends StatelessWidget {
     final (icon, color) = switch (item.status) {
       AiTaskStatus.complete => (
           Icons.check_circle,
-          const Color(0xFF16A34A),
+          theme.successColor,
         ),
       AiTaskStatus.active => (Icons.adjust, theme.accentColor),
-      AiTaskStatus.error => (Icons.error, const Color(0xFFDC2626)),
+      AiTaskStatus.error => (Icons.error, theme.errorColor),
       AiTaskStatus.pending => (
           Icons.radio_button_unchecked,
           textColor?.withValues(alpha: 0.4) ?? const Color(0xFF999999),

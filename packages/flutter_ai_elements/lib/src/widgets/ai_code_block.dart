@@ -44,8 +44,8 @@ class AiCodeBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
     final l = AiLocalizations.of(context);
-    const background = Color(0xFF1E1E1E);
-    const foreground = Color(0xFFE6E6E6);
+    final background = theme.codeBackgroundColor;
+    final foreground = theme.codeForegroundColor;
     return Container(
       decoration: BoxDecoration(
         color: background,

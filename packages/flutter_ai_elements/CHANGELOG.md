@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.8
+
+- Semantic theme tokens: `AiThemeExtension` gains `errorColor`, `successColor`,
+  `warningColor`, `codeBackgroundColor`, and `codeForegroundColor` (light + dark
+  defaults). Previously-hardcoded error/success/warning colors and the code
+  block's dark palette now read from the theme, so the family is fully
+  rebrandable.
+
 ## 0.1.7
 
 - `AiChatView`: a batteries-included drop-in (transcript + composer + layout +

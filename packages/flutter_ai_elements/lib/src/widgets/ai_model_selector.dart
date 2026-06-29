@@ -109,7 +109,10 @@ class AiModelSelector extends StatelessWidget {
                       ? null
                       : Text(model.description!),
                   trailing: model.id == selectedId
-                      ? const Icon(Icons.check, color: Color(0xFF16A34A))
+                      ? Icon(
+                          Icons.check,
+                          color: AiThemeExtension.of(sheetContext).successColor,
+                        )
                       : null,
                   onTap: () {
                     onSelected(model.id);
