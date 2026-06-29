@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// A compact "‹ 2/3 ›" control for navigating between alternate versions of a
@@ -32,6 +33,7 @@ class AiBranch extends StatelessWidget {
   Widget build(BuildContext context) {
     if (total <= 1) return const SizedBox.shrink();
     final theme = AiThemeExtension.of(context);
+    final l = AiLocalizations.of(context);
     final color = DefaultTextStyle.of(context).style.color?.withValues(
           alpha: 0.7,
         );
@@ -43,7 +45,7 @@ class AiBranch extends StatelessWidget {
       children: [
         _Arrow(
           icon: Icons.chevron_left,
-          label: 'Previous version',
+          label: l.previousVersion,
           color: color,
           onTap: canPrev ? onPrevious : null,
         ),
@@ -53,7 +55,7 @@ class AiBranch extends StatelessWidget {
         ),
         _Arrow(
           icon: Icons.chevron_right,
-          label: 'Next version',
+          label: l.nextVersion,
           color: color,
           onTap: canNext ? onNext : null,
         ),

@@ -18,6 +18,7 @@ library;
 export 'package:flutter_ai_client/flutter_ai_client.dart';
 
 export 'src/generative_ui/ai_widget_registry.dart';
+export 'src/l10n/ai_localizations.dart';
 export 'src/rendering/ai_text_renderer.dart';
 export 'src/theme/ai_theme_extension.dart';
 export 'src/widgets/ai_animated_response.dart';

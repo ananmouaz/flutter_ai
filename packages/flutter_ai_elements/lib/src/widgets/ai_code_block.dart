@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// Turns [code] in [language] into styled spans for syntax highlighting, using
@@ -42,6 +43,7 @@ class AiCodeBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
+    final l = AiLocalizations.of(context);
     const background = Color(0xFF1E1E1E);
     const foreground = Color(0xFFE6E6E6);
     return Container(
@@ -69,7 +71,7 @@ class AiCodeBlock extends StatelessWidget {
               IconButton(
                 icon:
                     const Icon(Icons.copy, size: 16, color: Color(0xFF9CA3AF)),
-                tooltip: 'Copy',
+                tooltip: l.copy,
                 onPressed: () => unawaited(
                   Clipboard.setData(ClipboardData(text: code)),
                 ),

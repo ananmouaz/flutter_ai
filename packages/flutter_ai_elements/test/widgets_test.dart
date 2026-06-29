@@ -51,6 +51,36 @@ void main() {
     });
   });
 
+  group('AiLocalizations', () {
+    test('delegate serves provided strings and reloads on change', () async {
+      const custom = AiLocalizations(copy: 'Copier', send: 'Envoyer');
+      const delegate = AiLocalizationsDelegate(custom);
+      expect(delegate.isSupported(const Locale('fr')), isTrue);
+      final loaded = await delegate.load(const Locale('fr'));
+      expect(loaded.copy, 'Copier');
+      expect(loaded.send, 'Envoyer');
+      expect(delegate.shouldReload(const AiLocalizationsDelegate()), isTrue);
+    });
+
+    testWidgets('widgets read overridden strings from the tree',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            AiLocalizationsDelegate(AiLocalizations(retry: 'Réessayer')),
+            DefaultMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: AiErrorBanner(message: 'boom', onRetry: () {}),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Réessayer'), findsOneWidget);
+    });
+  });
+
   group('AiConversationList', () {
     testWidgets('lists threads and fires select/new/delete', (tester) async {
       ChatThread? selected;

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// A modern message composer: a rounded input with a leading attach (`+`)
@@ -145,6 +146,7 @@ class _AiComposerState extends State<AiComposer> {
   @override
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
+    final l = AiLocalizations.of(context);
     final subdued = theme.assistantTextColor.withValues(alpha: 0.6);
 
     return Padding(
@@ -213,10 +215,10 @@ class _AiComposerState extends State<AiComposer> {
                     : _ToolIcon(
                         icon: Icons.add,
                         color: subdued,
-                        tooltip: 'Attach',
+                        tooltip: l.attach,
                         onTap: widget.enabled ? widget.onAttach : null,
                       );
-                final trailing = _trailing(theme, hasText, subdued);
+                final trailing = _trailing(theme, hasText, subdued, l);
 
                 return LayoutBuilder(
                   builder: (context, constraints) {
@@ -273,7 +275,12 @@ class _AiComposerState extends State<AiComposer> {
     );
   }
 
-  Widget _trailing(AiThemeExtension theme, bool hasText, Color subdued) {
+  Widget _trailing(
+    AiThemeExtension theme,
+    bool hasText,
+    Color subdued,
+    AiLocalizations l,
+  ) {
     final showStop = widget.isBusy && widget.onStop != null;
     final liveWhenEmpty = !hasText && !showStop && widget.onLive != null;
 
@@ -301,7 +308,7 @@ class _AiComposerState extends State<AiComposer> {
           _ToolIcon(
             icon: Icons.mic_none_rounded,
             color: subdued,
-            tooltip: 'Dictate',
+            tooltip: l.dictate,
             onTap: widget.enabled ? widget.onVoice : null,
           ),
         const SizedBox(width: 2),
@@ -310,12 +317,12 @@ class _AiComposerState extends State<AiComposer> {
           iconColor: theme.onAccentColor,
           icon: mainIcon,
           tooltip: showStop
-              ? 'Stop'
+              ? l.stop
               : hasText
-                  ? 'Send'
+                  ? l.send
                   : liveWhenEmpty
-                      ? 'Live'
-                      : 'Send',
+                      ? l.live
+                      : l.send,
           onPressed: widget.enabled ? mainTap : null,
         ),
       ],

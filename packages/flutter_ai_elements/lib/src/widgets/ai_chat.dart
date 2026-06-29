@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_ai_client/flutter_ai_client.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_conversation_view.dart';
@@ -315,7 +316,7 @@ class _JumpButton extends StatelessWidget {
     final theme = AiThemeExtension.of(context);
     return Semantics(
       button: true,
-      label: 'Scroll to latest',
+      label: AiLocalizations.of(context).scrollToLatest,
       child: Material(
         color: theme.assistantBubbleColor,
         shape: const CircleBorder(),
