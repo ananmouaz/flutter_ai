@@ -19,6 +19,7 @@ export 'package:flutter_ai_client/flutter_ai_client.dart';
 
 export 'src/rendering/ai_text_renderer.dart';
 export 'src/theme/ai_theme_extension.dart';
+export 'src/widgets/ai_animated_response.dart';
 export 'src/widgets/ai_attachment.dart';
 export 'src/widgets/ai_avatar.dart';
 export 'src/widgets/ai_branch.dart';

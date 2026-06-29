@@ -3,12 +3,22 @@
 ## 0.1.1
 
 - `AiChat` now anchors the message you just sent to the **top** of the viewport
-  (ChatGPT-style) and streams the answer into the space below it, reserving just
-  enough trailing space and releasing it as the answer grows — instead of
-  pinning every send to the very bottom.
+  (ChatGPT-style) and **holds it there** while the answer streams in below,
+  reserving just enough trailing space and releasing it as the answer grows.
+  A drag releases the pin; a floating "scroll to latest" button appears whenever
+  the conversation is scrolled above the bottom.
+- New `AiAnimatedResponse`: a light typewriter reveal so streamed answers appear
+  smoothly and gradually. `MarkdownTextRenderer` uses it automatically while a
+  message is streaming.
+- `AiMessageActions` is restyled with compact, evenly spaced icon buttons
+  (ChatGPT-style) and gains optional `onSpeak`/`onGood`/`onBad`/`onShare`
+  actions.
 - `AiSources` collapses past `maxVisible` chips (default 6) behind a "+N more"
   toggle, so grounded answers that return dozens of sources no longer flood the
   bubble.
+- Fixed the Markdown block parser hanging (and exhausting memory) when handed a
+  partial stream that ended mid-construct, e.g. a lone `#` before its heading
+  text arrived — the parser now always makes forward progress.
 
 ## 0.1.0
 

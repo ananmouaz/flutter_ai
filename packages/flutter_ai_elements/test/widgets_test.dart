@@ -140,6 +140,54 @@ void main() {
       expect(find.text('hi'), findsOneWidget);
       expect(find.text('Echo'), findsOneWidget);
     });
+
+    testWidgets('pins the just-sent question to the top of the viewport',
+        (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final longText = List.filled(
+        16,
+        'This is a fairly long prior line of the conversation.',
+      ).join(' ');
+      final initial = AiConversation(
+        id: 'c',
+        messages: [
+          for (var i = 0; i < 4; i++) ...[
+            AiMessage(
+              id: 'u$i',
+              role: AiRole.user,
+              parts: [TextPart('Question $i')],
+            ),
+            AiMessage(
+              id: 'a$i',
+              role: AiRole.assistant,
+              parts: [TextPart(longText)],
+              status: AiMessageStatus.complete,
+            ),
+          ],
+        ],
+      );
+      final controller =
+          UseChatController(provider: _EchoProvider(), initial: initial);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_wrap(AiChat(controller: controller)));
+      await tester.pumpAndSettle();
+      await controller.sendText('the new question');
+      await tester.pumpAndSettle();
+
+      // The question must sit near the top of the chat (pinned), not mid-screen
+      // showing previous answers above it.
+      final chatTop = tester.getTopLeft(find.byType(AiChat)).dy;
+      final qTop = tester.getTopLeft(find.text('the new question')).dy;
+      expect(qTop - chatTop, lessThan(80),
+          reason:
+              'question should be pinned to the top, was ${qTop - chatTop}px '
+              'below the top');
+    });
   });
 
   group('AiToolInvocation', () {
@@ -326,8 +374,19 @@ void main() {
           ),
         ),
       );
-      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.tap(find.byIcon(Icons.refresh_rounded));
       expect(regenerated, isTrue);
+    });
+
+    testWidgets('AiAnimatedResponse reveals the full text over time',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(const AiAnimatedResponse(text: 'Hello world')),
+      );
+      // Let the reveal ticker run to completion.
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Hello world'), findsOneWidget);
     });
 
     testWidgets('AiChat shows the empty state when idle and empty',
@@ -394,6 +453,24 @@ void main() {
       );
       expect(find.text('first'), findsNothing);
       expect(find.text('second'), findsOneWidget);
+    });
+
+    testWidgets('AiResponse renders a partial-heading prefix without hanging',
+        (tester) async {
+      // A streamed prefix can end on a lone `#` before its space/text arrive.
+      // The block parser must still make forward progress (no infinite loop /
+      // OOM) and treat it as text.
+      await tester.pumpWidget(
+        _wrap(const SingleChildScrollView(child: AiResponse(text: 'Intro\n#'))),
+      );
+      expect(find.byType(AiResponse), findsOneWidget);
+      // The completed heading then renders as a heading once it arrives.
+      await tester.pumpWidget(
+        _wrap(const SingleChildScrollView(
+          child: AiResponse(text: 'Intro\n# Title'),
+        )),
+      );
+      expect(find.text('Title'), findsOneWidget);
     });
 
     testWidgets('AiResponse does not italicize "2 * 3" or snake_case',

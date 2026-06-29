@@ -16,6 +16,10 @@ class AiMessageActions extends StatelessWidget {
     super.key,
     required this.message,
     this.onCopy,
+    this.onSpeak,
+    this.onGood,
+    this.onBad,
+    this.onShare,
     this.onRegenerate,
     this.onEdit,
     this.iconSize = 18,
@@ -26,6 +30,18 @@ class AiMessageActions extends StatelessWidget {
 
   /// Overrides the default copy-to-clipboard behavior.
   final VoidCallback? onCopy;
+
+  /// Shows a read-aloud action when non-null.
+  final VoidCallback? onSpeak;
+
+  /// Shows a thumbs-up action when non-null.
+  final VoidCallback? onGood;
+
+  /// Shows a thumbs-down action when non-null.
+  final VoidCallback? onBad;
+
+  /// Shows a share action when non-null.
+  final VoidCallback? onShare;
 
   /// Shows a Regenerate action when non-null.
   final VoidCallback? onRegenerate;
@@ -47,31 +63,39 @@ class AiMessageActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = DefaultTextStyle.of(context).style.color?.withValues(
-          alpha: 0.7,
+          alpha: 0.6,
         );
+    // Compact, evenly spaced icon buttons (ChatGPT-style): a uniform 36px target
+    // with tight, equal padding rather than the default ~48px IconButton gaps.
+    Widget button(IconData icon, String tooltip, VoidCallback onPressed) {
+      return IconButton(
+        icon: Icon(icon, size: iconSize),
+        color: color,
+        tooltip: tooltip,
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.all(6),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        style: const ButtonStyle(
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        onPressed: onPressed,
+      );
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-          icon: Icon(Icons.copy, size: iconSize),
-          color: color,
-          tooltip: 'Copy',
-          onPressed: _copy,
-        ),
+        button(Icons.copy_rounded, 'Copy', _copy),
+        if (onSpeak != null)
+          button(Icons.volume_up_outlined, 'Read aloud', onSpeak!),
+        if (onGood != null)
+          button(Icons.thumb_up_outlined, 'Good response', onGood!),
+        if (onBad != null)
+          button(Icons.thumb_down_outlined, 'Bad response', onBad!),
+        if (onShare != null) button(Icons.ios_share_rounded, 'Share', onShare!),
         if (onRegenerate != null)
-          IconButton(
-            icon: Icon(Icons.refresh, size: iconSize),
-            color: color,
-            tooltip: 'Regenerate',
-            onPressed: onRegenerate,
-          ),
-        if (onEdit != null)
-          IconButton(
-            icon: Icon(Icons.edit_outlined, size: iconSize),
-            color: color,
-            tooltip: 'Edit',
-            onPressed: onEdit,
-          ),
+          button(Icons.refresh_rounded, 'Regenerate', onRegenerate!),
+        if (onEdit != null) button(Icons.edit_outlined, 'Edit', onEdit!),
       ],
     );
   }
