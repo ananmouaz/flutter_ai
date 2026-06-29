@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- `AiConversationList`: a ChatGPT-style conversation sidebar (New chat + a list
+  of `ChatThread`s with select/delete) to pair with a `ChatThreadStore`.
+
 ## 0.1.2
 
 - Generative UI: `AiWidgetRegistry` (a `dataType`→widget allowlist) and

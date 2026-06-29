@@ -51,6 +51,40 @@ void main() {
     });
   });
 
+  group('AiConversationList', () {
+    testWidgets('lists threads and fires select/new/delete', (tester) async {
+      ChatThread? selected;
+      var created = 0;
+      ChatThread? deleted;
+      await tester.pumpWidget(
+        _wrap(
+          AiConversationList(
+            threads: const [
+              ChatThread(id: '1', title: 'Lisbon trip'),
+              ChatThread(id: '2', title: 'Dinner recipe'),
+            ],
+            selectedId: '1',
+            onSelect: (t) => selected = t,
+            onNew: () => created++,
+            onDelete: (t) => deleted = t,
+          ),
+        ),
+      );
+
+      expect(find.text('Lisbon trip'), findsOneWidget);
+      expect(find.text('Dinner recipe'), findsOneWidget);
+
+      await tester.tap(find.text('New chat'));
+      expect(created, 1);
+
+      await tester.tap(find.text('Dinner recipe'));
+      expect(selected?.id, '2');
+
+      await tester.tap(find.byIcon(Icons.delete_outline).first);
+      expect(deleted?.id, '1');
+    });
+  });
+
   group('AiThemeExtension', () {
     test('of returns the fallback when none is registered', () {
       final fallback = AiThemeExtension.fallback();

@@ -70,3 +70,83 @@ VoidCallback attachStore(
     }
   };
 }
+
+/// A lightweight summary of a stored conversation, for a thread list / sidebar.
+class ChatThread {
+  /// Creates a thread summary.
+  const ChatThread({required this.id, required this.title, this.updatedAt});
+
+  /// The conversation id (pass to [ChatStore.load]).
+  final String id;
+
+  /// A human-readable title (see [autoTitle]).
+  final String title;
+
+  /// When the thread was last saved, if tracked. Newest-first ordering.
+  final DateTime? updatedAt;
+}
+
+/// A [ChatStore] that can also enumerate and delete threads — enough to drive a
+/// conversation list / sidebar.
+abstract interface class ChatThreadStore implements ChatStore {
+  /// All stored threads, newest first.
+  Future<List<ChatThread>> listThreads();
+
+  /// Removes the thread [id] (no-op if absent).
+  Future<void> delete(String id);
+}
+
+/// Derives a short title from a conversation's first user message, falling back
+/// to [fallback]. Trims to [maxLength] characters.
+String autoTitle(
+  AiConversation conversation, {
+  String fallback = 'New chat',
+  int maxLength = 40,
+}) {
+  final firstUser = conversation.messages
+      .where((m) => m.role == AiRole.user)
+      .map((m) => m.text.trim())
+      .firstWhere((t) => t.isNotEmpty, orElse: () => '');
+  if (firstUser.isEmpty) return fallback;
+  final oneLine = firstUser.replaceAll(RegExp(r'\s+'), ' ');
+  return oneLine.length <= maxLength
+      ? oneLine
+      : '${oneLine.substring(0, maxLength).trimRight()}…';
+}
+
+/// An in-memory [ChatThreadStore] — handy for demos, tests, and prototyping
+/// before wiring real storage. Titles are derived via [autoTitle] on save.
+class InMemoryChatThreadStore implements ChatThreadStore {
+  final Map<String, AiConversation> _conversations = {};
+  final Map<String, ChatThread> _threads = {};
+
+  @override
+  Future<AiConversation?> load(String id) async => _conversations[id];
+
+  @override
+  Future<void> save(String id, AiConversation conversation) async {
+    _conversations[id] = conversation;
+    _threads[id] = ChatThread(
+      id: id,
+      title: autoTitle(conversation),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<List<ChatThread>> listThreads() async {
+    final threads = _threads.values.toList();
+    threads.sort((a, b) {
+      final at = a.updatedAt, bt = b.updatedAt;
+      if (at == null || bt == null) return 0;
+      return bt.compareTo(at); // newest first
+    });
+    return threads;
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    _conversations.remove(id);
+    _threads.remove(id);
+  }
+}

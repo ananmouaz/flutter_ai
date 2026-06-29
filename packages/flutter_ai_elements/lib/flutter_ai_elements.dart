@@ -30,6 +30,7 @@ export 'src/widgets/ai_code_block.dart';
 export 'src/widgets/ai_composer.dart';
 export 'src/widgets/ai_confirmation.dart';
 export 'src/widgets/ai_context_meter.dart';
+export 'src/widgets/ai_conversation_list.dart';
 export 'src/widgets/ai_conversation_view.dart';
 export 'src/widgets/ai_empty_state.dart';
 export 'src/widgets/ai_error_banner.dart';
