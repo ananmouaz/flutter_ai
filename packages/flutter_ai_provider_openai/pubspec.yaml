@@ -3,7 +3,7 @@ description: >-
   OpenAI-compatible LlmProvider for flutter_ai: streams Chat Completions
   (text, tool calls, finish reasons) as flutter_ai_core AiStreamEvents over an
   injectable HTTP client.
-version: 0.1.6
+version: 0.1.7
 homepage: https://github.com/ananmouaz/flutter_ai
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_provider_openai
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues

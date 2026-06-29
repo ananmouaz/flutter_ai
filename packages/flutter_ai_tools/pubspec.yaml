@@ -3,7 +3,7 @@ description: >-
   Provider-neutral tool calling for flutter_ai: declare tools with executors,
   run tool calls into results, and expose web search as a tool — all in pure
   Dart with no Flutter dependency.
-version: 0.1.2
+version: 0.1.3
 homepage: https://github.com/ananmouaz/flutter_ai
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_tools
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues
