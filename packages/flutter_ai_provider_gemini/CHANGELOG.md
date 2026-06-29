@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.6
+
+- Tool correlation: `functionResponse` parts are now emitted in the same order
+  as their turn's `functionCall`s and keyed by name, so two calls to the same
+  tool in one turn line up with their own results (Gemini matches by
+  name+position, having no id channel). Synthesized call ids are order-distinct.
+- Declares supported `platforms:` (all 6).
+
 ## 0.1.5
 
 - Throws typed `LlmException`s (auth/rate-limit/server/request) on HTTP errors

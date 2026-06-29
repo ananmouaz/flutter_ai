@@ -36,6 +36,7 @@ void main() {
             'usage': {
               'input_tokens': 10,
               'cache_read_input_tokens': 4,
+              'cache_creation_input_tokens': 6,
               'output_tokens': 1,
             },
           },
@@ -71,9 +72,34 @@ void main() {
       ]);
       final finished = events.last as MessageFinished;
       expect(finished.reason, FinishReason.stop);
-      expect(finished.usage?.inputTokens, 14); // 10 + 4 cache read
+      // input folds in cache read + cache write subsets: 10 + 4 + 6.
+      expect(finished.usage?.inputTokens, 20);
       expect(finished.usage?.cachedInputTokens, 4);
+      expect(finished.usage?.cacheCreationTokens, 6);
       expect(finished.usage?.outputTokens, 25);
+    });
+
+    test('cache_creation_input_tokens lands in cacheCreationTokens only', () {
+      final parser = AnthropicEventParser();
+      final events = [
+        ...parser.parse({
+          'type': 'message_start',
+          'message': {
+            'id': 'msg_cc',
+            'role': 'assistant',
+            'usage': {
+              'input_tokens': 50,
+              'cache_creation_input_tokens': 30,
+              'output_tokens': 1,
+            },
+          },
+        }),
+        ...parser.parse({'type': 'message_stop'}),
+      ];
+      final usage = (events.last as MessageFinished).usage!;
+      expect(usage.cacheCreationTokens, 30);
+      expect(usage.cachedInputTokens, isNull); // no cache read reported
+      expect(usage.inputTokens, 80); // 50 + 30 cache write subset
     });
 
     test('maps thinking deltas to ReasoningDelta', () {

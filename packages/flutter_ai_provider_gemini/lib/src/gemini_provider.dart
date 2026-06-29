@@ -20,8 +20,10 @@ import 'package:http/http.dart' as http;
 /// Notes:
 ///  * System messages are folded into `systemInstruction`.
 ///  * Assistant function calls map to `functionCall` parts; tool results map to
-///    `functionResponse` parts (the function name is recovered from the matching
-///    call earlier in the conversation).
+///    `functionResponse` parts emitted in the SAME order as that turn's calls
+///    (Gemini has no id channel and matches responses to calls by name +
+///    position, so call order is preserved to keep duplicate-named calls aligned
+///    with their own results).
 ///  * `temperature` / `maxOutputTokens` are sent under `generationConfig`.
 ///
 /// > The request/response mapping is unit-tested against recorded SSE chunks;
@@ -199,7 +201,15 @@ class GeminiProvider implements LlmProvider {
   ) {
     final systemBuffer = StringBuffer();
     final contents = <Map<String, Object?>>[];
-    final toolNameById = <String, String>{};
+    // Gemini's wire format has no id channel for function calls/responses: it
+    // matches a `functionResponse` to its `functionCall` by **function name +
+    // positional order** within the turn. So we track, per assistant turn, the
+    // ordered list of (id, name) for its calls. When the matching tool turn
+    // arrives, we emit one `functionResponse` per call in that SAME order,
+    // looking each result up by the internal tool-call id. This keeps two calls
+    // to the same tool (e.g. search, search) lined up with their own results
+    // even though the wire has no ids to disambiguate them.
+    var pendingCalls = <({String id, String name})>[];
 
     void add(String role, List<Map<String, Object?>> parts) {
       if (parts.isEmpty) return;
@@ -218,10 +228,11 @@ class GeminiProvider implements LlmProvider {
             for (final image in _images(message)) _imagePart(image),
           ]);
         case AiRole.assistant:
-          final calls = message.parts.whereType<ToolCallPart>();
-          for (final call in calls) {
-            toolNameById[call.toolCallId] = call.toolName;
-          }
+          final calls = message.parts.whereType<ToolCallPart>().toList();
+          pendingCalls = [
+            for (final call in calls)
+              (id: call.toolCallId, name: call.toolName),
+          ];
           add('model', [
             if (message.text.isNotEmpty) {'text': message.text},
             for (final call in calls)
@@ -230,15 +241,23 @@ class GeminiProvider implements LlmProvider {
               },
           ]);
         case AiRole.tool:
-          add('user', [
+          final resultsById = {
             for (final result in message.parts.whereType<ToolResultPart>())
-              {
-                'functionResponse': {
-                  'name': toolNameById[result.toolCallId] ?? result.toolCallId,
-                  'response': _asObject(result.result),
+              result.toolCallId: result,
+          };
+          // Emit responses in call order (keyed by name), so Gemini's
+          // name+position matching lines up — including duplicate names.
+          add('user', [
+            for (final call in pendingCalls)
+              if (resultsById[call.id] case final result?)
+                {
+                  'functionResponse': {
+                    'name': call.name,
+                    'response': _asObject(result.result),
+                  },
                 },
-              },
           ]);
+          pendingCalls = const [];
       }
     }
 

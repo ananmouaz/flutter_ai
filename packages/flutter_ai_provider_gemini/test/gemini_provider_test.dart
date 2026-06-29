@@ -126,6 +126,40 @@ void main() {
       );
     });
 
+    test('gives duplicate-named functionCalls in one chunk distinct ids', () {
+      final parser = GeminiEventParser(messageId: 'a1');
+      final events = parser.parse({
+        'candidates': [
+          {
+            'content': {
+              'parts': [
+                {
+                  'functionCall': {
+                    'name': 'search',
+                    'args': {'q': 'cats'},
+                  },
+                },
+                {
+                  'functionCall': {
+                    'name': 'search',
+                    'args': {'q': 'dogs'},
+                  },
+                },
+              ],
+            },
+            'finishReason': 'STOP',
+          },
+        ],
+      });
+
+      final started = events.whereType<ToolCallStarted>().toList();
+      expect(started, hasLength(2));
+      expect(started[0].toolName, 'search');
+      expect(started[1].toolName, 'search');
+      // Same name, but distinct ids so their results never collide.
+      expect(started[0].toolCallId, isNot(started[1].toolCallId));
+    });
+
     test('surfaces grounding chunks as SourcePart citations', () {
       final parser = GeminiEventParser();
       final events = parser.parse({
@@ -484,6 +518,93 @@ void main() {
       }
       // Two turns → two distinct assistant messages, not one merged bubble.
       expect(processor.conversation.messages.length, 2);
+    });
+
+    test('emits functionResponses in call order for duplicate-named tool calls',
+        () async {
+      late http.Request captured;
+      const stop =
+          'data: {"candidates":[{"content":{},"finishReason":"STOP"}]}\n';
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, _) async {
+          captured = request as http.Request;
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode(stop)),
+            200,
+          );
+        }),
+      );
+
+      // One assistant turn with TWO calls to the same tool, then a tool turn
+      // whose results are in the OPPOSITE order. The wire functionResponses
+      // must still be ordered to match the calls (Gemini matches by position).
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(
+                  id: 'u',
+                  role: AiRole.user,
+                  parts: [TextPart('search cats and dogs')],
+                ),
+                AiMessage(
+                  id: 'a',
+                  role: AiRole.assistant,
+                  parts: [
+                    ToolCallPart(
+                      toolCallId: 'call-0',
+                      toolName: 'search',
+                      args: {'q': 'cats'},
+                    ),
+                    ToolCallPart(
+                      toolCallId: 'call-1',
+                      toolName: 'search',
+                      args: {'q': 'dogs'},
+                    ),
+                  ],
+                ),
+                AiMessage(
+                  id: 't',
+                  role: AiRole.tool,
+                  parts: [
+                    // Deliberately reversed relative to the calls.
+                    ToolResultPart(
+                      toolCallId: 'call-1',
+                      result: {'hits': 'dogs-result'},
+                    ),
+                    ToolResultPart(
+                      toolCallId: 'call-0',
+                      result: {'hits': 'cats-result'},
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          )
+          .toList();
+
+      final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+      final contents = (body['contents']! as List).cast<Map<String, Object?>>();
+      final toolTurn = contents.last;
+      final responseParts = (toolTurn['parts']! as List)
+          .cast<Map<String, Object?>>()
+          .map((p) => (p['functionResponse']! as Map).cast<String, Object?>())
+          .toList();
+
+      // Two responses, in CALL order, each carrying its own call's payload.
+      expect(responseParts, hasLength(2));
+      expect(responseParts[0]['name'], 'search');
+      expect(responseParts[1]['name'], 'search');
+      expect(
+        (responseParts[0]['response'] as Map)['hits'],
+        'cats-result', // call-0 first
+      );
+      expect(
+        (responseParts[1]['response'] as Map)['hits'],
+        'dogs-result', // call-1 second
+      );
     });
 
     test('finalizes a stream that ends without a finishReason', () async {

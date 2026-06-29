@@ -282,13 +282,25 @@ class MessageProcessor {
     });
   }
 
+  // Text and reasoning deltas accumulate into a per-part [StringBuffer] rather
+  // than `last.text + delta`, which would reallocate the whole accumulated
+  // string on every token (quadratic on long answers). The buffer is appended
+  // to in place — O(delta) — and the resulting String is materialized lazily,
+  // only when a consumer reads `TextPart.text`/`ReasoningPart.text`. A buffered
+  // part already at the tail carries its buffer, so we keep writing to it; a
+  // plain part (e.g. rehydrated from a stored String) seeds a fresh buffer with
+  // its current text on the first delta. A non-text part at the tail forces a
+  // new buffer, so buffers never merge across a part boundary.
+
   AiMessage _appendText(AiMessage message, String delta) {
     final parts = [...message.parts];
     final last = parts.isEmpty ? null : parts.last;
     if (last is TextPart) {
-      parts[parts.length - 1] = last.copyWith(text: last.text + delta);
+      final buffer = last.buffer ?? (StringBuffer()..write(last.text));
+      buffer.write(delta);
+      parts[parts.length - 1] = TextPart.buffered(buffer);
     } else {
-      parts.add(TextPart(delta));
+      parts.add(TextPart.buffered(StringBuffer()..write(delta)));
     }
     return message.copyWith(parts: parts, status: AiMessageStatus.streaming);
   }
@@ -297,10 +309,15 @@ class MessageProcessor {
     final parts = [...message.parts];
     final last = parts.isEmpty ? null : parts.last;
     if (last is ReasoningPart) {
-      parts[parts.length - 1] =
-          last.copyWith(text: last.text + delta, signature: sig);
+      final buffer = last.buffer ?? (StringBuffer()..write(last.text));
+      buffer.write(delta);
+      parts[parts.length - 1] = ReasoningPart.buffered(
+        buffer,
+        signature: sig ?? last.signature,
+      );
     } else {
-      parts.add(ReasoningPart(delta, signature: sig));
+      parts.add(
+          ReasoningPart.buffered(StringBuffer()..write(delta), signature: sig));
     }
     return message.copyWith(parts: parts, status: AiMessageStatus.streaming);
   }

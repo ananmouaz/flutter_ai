@@ -45,6 +45,63 @@ void main() {
       final part = processor.conversation.messageById('m1')!.parts.single;
       expect(part, const ReasoningPart('because'));
     });
+
+    test('thousands of small deltas materialize to the exact concatenation',
+        () {
+      final processor = MessageProcessor();
+      processor.apply(
+        const MessageStarted(messageId: 'm1', role: AiRole.assistant),
+      );
+      final expected = StringBuffer();
+      for (var i = 0; i < 5000; i++) {
+        final token = 'tok$i ';
+        expected.write(token);
+        processor.apply(TextDelta(messageId: 'm1', delta: token));
+      }
+      processor.apply(
+        const MessageFinished(messageId: 'm1', reason: FinishReason.stop),
+      );
+
+      final message = processor.conversation.messageById('m1')!;
+      expect(message.parts, [TextPart(expected.toString())]);
+      expect(message.text, expected.toString());
+      expect(message.status, AiMessageStatus.complete);
+    });
+
+    test('a text part rehydrated from a String keeps accumulating correctly',
+        () {
+      const seed = AiConversation(
+        id: 'c1',
+        messages: [
+          AiMessage(
+            id: 'm1',
+            role: AiRole.assistant,
+            parts: [TextPart('Hello')],
+            status: AiMessageStatus.streaming,
+          ),
+        ],
+      );
+      final processor = MessageProcessor(conversation: seed);
+      processor.apply(const TextDelta(messageId: 'm1', delta: ', world'));
+      expect(processor.conversation.messageById('m1')!.text, 'Hello, world');
+    });
+
+    test('text after a tool call lands in a separate part, never merged', () {
+      final processor = MessageProcessor();
+      processor.apply(const TextDelta(messageId: 'm1', delta: 'before '));
+      processor.apply(
+        const ToolCallStarted(
+          messageId: 'm1',
+          toolCallId: 'c1',
+          toolName: 'noop',
+        ),
+      );
+      processor.apply(const TextDelta(messageId: 'm1', delta: 'after'));
+
+      final parts = processor.conversation.messageById('m1')!.parts;
+      expect(
+          parts.whereType<TextPart>().map((p) => p.text), ['before ', 'after']);
+    });
   });
 
   group('MessageProcessor tool calls', () {

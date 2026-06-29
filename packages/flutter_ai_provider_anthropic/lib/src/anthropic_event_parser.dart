@@ -31,6 +31,7 @@ class AnthropicEventParser {
   bool _finished = false;
   int? _inputTokens;
   int? _cachedInputTokens;
+  int? _cacheCreationTokens;
   int? _outputTokens;
 
   /// Emits a terminal [MessageFinished] if the stream ended after starting but
@@ -52,6 +53,7 @@ class AnthropicEventParser {
       inputTokens: _inputTokens,
       outputTokens: _outputTokens,
       cachedInputTokens: _cachedInputTokens,
+      cacheCreationTokens: _cacheCreationTokens,
     );
   }
 
@@ -69,8 +71,11 @@ class AnthropicEventParser {
           final cacheRead = (usage['cache_read_input_tokens'] as int?) ?? 0;
           final cacheCreate =
               (usage['cache_creation_input_tokens'] as int?) ?? 0;
+          // cache_read and cache_creation are subsets of inputTokens (kept
+          // folded in here, billed separately in AiUsage.estimateCost).
           _inputTokens = input + cacheRead + cacheCreate;
           _cachedInputTokens = cacheRead == 0 ? null : cacheRead;
+          _cacheCreationTokens = cacheCreate == 0 ? null : cacheCreate;
           _outputTokens = usage['output_tokens'] as int?;
         }
         return [MessageStarted(messageId: _messageId, role: AiRole.assistant)];

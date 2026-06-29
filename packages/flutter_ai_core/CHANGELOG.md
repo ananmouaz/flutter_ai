@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.8
+
+- Perf: streaming text/reasoning deltas accumulate into a per-part
+  `StringBuffer` and materialize the `String` lazily, instead of
+  `last.text + delta` reallocating the whole answer on every token (was
+  quadratic on long responses — the hottest path in the stack). Observably
+  identical: `TextPart.text`/`ReasoningPart.text` still return a plain `String`.
+- `AiUsage.cacheCreationTokens`: carries prompt-cache **write** tokens (a subset
+  of `inputTokens`) distinctly; `estimateCost` bills them at `cacheWritePer1M`
+  (defaulting to `1.25 * inputPer1M`) so cache writes aren't billed at the base
+  input rate.
+- Declares supported `platforms:` (all 6).
+
 ## 0.1.7
 
 - Typed errors: `LlmException` hierarchy (`LlmAuthException`,
