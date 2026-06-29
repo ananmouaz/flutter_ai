@@ -41,6 +41,14 @@ class AiLocalizations {
     this.nextVersion = 'Next version',
     this.scrollToLatest = 'Scroll to latest',
     this.messageHint = 'Message',
+    this.reasoning = 'Reasoning',
+    this.chainOfThought = 'Chain of thought',
+    this.allow = 'Allow',
+    this.deny = 'Deny',
+    this.thinking = 'Assistant is thinking',
+    this.loading = 'Loading',
+    this.you = 'You',
+    this.assistant = 'Assistant',
   });
 
   /// Copy-to-clipboard action.
@@ -106,15 +114,70 @@ class AiLocalizations {
   /// Composer placeholder text.
   final String messageHint;
 
-  /// The nearest [AiLocalizations], or the English defaults if none is provided.
+  /// Read-aloud / collapsible reasoning section title.
+  final String reasoning;
+
+  /// Chain-of-thought section title.
+  final String chainOfThought;
+
+  /// Approve action on a confirmation card.
+  final String allow;
+
+  /// Deny action on a confirmation card.
+  final String deny;
+
+  /// Accessibility label while the assistant is generating.
+  final String thinking;
+
+  /// Accessibility label for a loading placeholder.
+  final String loading;
+
+  /// Avatar accessibility label for the user.
+  final String you;
+
+  /// Avatar accessibility label for the assistant.
+  final String assistant;
+
+  /// The nearest [AiLocalizations]. Resolution order: an [AiLocalizationsScope]
+  /// in the tree (the simplest way to override — no delegate wiring), then a
+  /// `Localizations` delegate, then the English defaults.
   static AiLocalizations of(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<AiLocalizationsScope>()
+          ?.strings ??
       Localizations.of<AiLocalizations>(context, AiLocalizations) ??
       const AiLocalizations();
 
   /// A delegate serving the English defaults. Wrap your own
-  /// [AiLocalizations] with [AiLocalizationsDelegate] to translate.
+  /// [AiLocalizations] with [AiLocalizationsDelegate] to translate. Prefer
+  /// [AiLocalizationsScope] unless you switch strings by locale.
   static const LocalizationsDelegate<AiLocalizations> delegate =
       AiLocalizationsDelegate();
+}
+
+/// Overrides the [AiLocalizations] for the widgets below it — the simplest way
+/// to translate or customize labels, with no `localizationsDelegates` wiring:
+///
+/// ```dart
+/// AiLocalizationsScope(
+///   strings: const AiLocalizations(send: 'Envoyer', copy: 'Copier'),
+///   child: myChat,
+/// );
+/// ```
+class AiLocalizationsScope extends InheritedWidget {
+  /// Provides [strings] to descendants.
+  const AiLocalizationsScope({
+    super.key,
+    required this.strings,
+    required super.child,
+  });
+
+  /// The strings descendants read via [AiLocalizations.of].
+  final AiLocalizations strings;
+
+  @override
+  bool updateShouldNotify(AiLocalizationsScope oldWidget) =>
+      oldWidget.strings != strings;
 }
 
 /// Serves a fixed [AiLocalizations] instance. Provide a translated instance to

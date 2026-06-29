@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// A small circular avatar identifying a message's author.
@@ -43,7 +44,9 @@ class AiAvatar extends StatelessWidget {
         isUser ? userIcon : assistantIcon,
         size: size * 0.56,
         color: foreground,
-        semanticLabel: isUser ? 'You' : 'Assistant',
+        semanticLabel: isUser
+            ? AiLocalizations.of(context).you
+            : AiLocalizations.of(context).assistant,
       ),
     );
   }

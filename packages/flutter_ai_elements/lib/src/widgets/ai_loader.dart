@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// A three-dot "thinking" indicator shown while the assistant is preparing a
@@ -36,7 +37,7 @@ class _AiLoaderState extends State<AiLoader>
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
     return Semantics(
-      label: 'Assistant is thinking',
+      label: AiLocalizations.of(context).thinking,
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) => Row(

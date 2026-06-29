@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// An approve/deny card for actions an agent wants to take (running a tool,
@@ -9,8 +10,8 @@ class AiConfirmation extends StatelessWidget {
     super.key,
     required this.title,
     this.description,
-    this.confirmLabel = 'Allow',
-    this.denyLabel = 'Deny',
+    this.confirmLabel,
+    this.denyLabel,
     this.onConfirm,
     this.onDeny,
     this.icon = Icons.shield_outlined,
@@ -22,11 +23,11 @@ class AiConfirmation extends StatelessWidget {
   /// Optional supporting detail.
   final String? description;
 
-  /// Label for the confirm button.
-  final String confirmLabel;
+  /// Label for the confirm button. Defaults to the localized "Allow".
+  final String? confirmLabel;
 
-  /// Label for the deny button.
-  final String denyLabel;
+  /// Label for the deny button. Defaults to the localized "Deny".
+  final String? denyLabel;
 
   /// Called when the user approves.
   final VoidCallback? onConfirm;
@@ -40,6 +41,7 @@ class AiConfirmation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
+    final l = AiLocalizations.of(context);
     final color = DefaultTextStyle.of(context).style.color;
     return Container(
       padding: const EdgeInsets.all(14),
@@ -82,7 +84,7 @@ class AiConfirmation extends StatelessWidget {
             children: [
               Expanded(
                 child: _Button(
-                  label: denyLabel,
+                  label: denyLabel ?? l.deny,
                   onTap: onDeny,
                   filled: false,
                   theme: theme,
@@ -91,7 +93,7 @@ class AiConfirmation extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: _Button(
-                  label: confirmLabel,
+                  label: confirmLabel ?? l.allow,
                   onTap: onConfirm,
                   filled: true,
                   theme: theme,

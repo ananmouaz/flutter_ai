@@ -79,6 +79,20 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Réessayer'), findsOneWidget);
     });
+
+    testWidgets('AiLocalizationsScope overrides strings without a delegate',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AiLocalizationsScope(
+            strings: AiLocalizations(allow: 'Autoriser', deny: 'Refuser'),
+            child: AiConfirmation(title: 'Proceed?'),
+          ),
+        ),
+      );
+      expect(find.text('Autoriser'), findsOneWidget);
+      expect(find.text('Refuser'), findsOneWidget);
+    });
   });
 
   group('AiConversationList', () {
