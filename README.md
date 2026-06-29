@@ -177,6 +177,18 @@ cd demo
 flutter run --dart-define=GEMINI_API_KEY=your_key   # or OPENAI/ANTHROPIC
 ```
 
+## Learn more
+
+- [**Recipes**](docs/recipes.md) — a task-oriented cookbook: streaming chat,
+  bring-your-own-UI, tool calling / agent loops, structured output, embeddings &
+  RAG, token pre-flight & cost, history trimming, persistence & threads, theming,
+  generative UI, MCP tools, prompt caching, and error handling.
+- [**Migrating from the Vercel AI SDK**](docs/migration-from-vercel-ai-sdk.md) —
+  a concept map and side-by-side snippets for developers coming from the
+  TypeScript AI SDK (`useChat` → `UseChatController`, `streamText` →
+  `LlmProvider.send`, `generateObject`/`embed`/`tool()`, and more).
+- [**`demo/`**](demo/) — the runnable example app (see [Demo](#demo) above to run it).
+
 ## Development
 
 This is a [pub workspace](https://dart.dev/tools/pub/workspaces) (Dart ≥ 3.6) —
