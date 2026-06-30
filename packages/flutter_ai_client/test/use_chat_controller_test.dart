@@ -546,7 +546,7 @@ void main() {
         provider: provider,
         scheduler: syncScheduler,
         idGenerator: seqIds(),
-        onToolCalls: (calls) async {
+        onToolCalls: (calls, signal) async {
           executed++;
           return [
             for (final c in calls)
@@ -579,7 +579,7 @@ void main() {
         scheduler: syncScheduler,
         idGenerator: seqIds(),
         maxSteps: 3,
-        onToolCalls: (calls) async {
+        onToolCalls: (calls, signal) async {
           executed++;
           return [
             for (final c in calls)
@@ -605,7 +605,7 @@ void main() {
         idGenerator: seqIds(),
         maxSteps: 10,
         tokenBudget: 150,
-        onToolCalls: (calls) async {
+        onToolCalls: (calls, signal) async {
           executed++;
           return [
             for (final c in calls)
@@ -620,6 +620,48 @@ void main() {
       // turn1 (100 < 150) continues; after turn2 (200 >= 150) the loop stops.
       expect(provider.sendCount, 2);
       expect(executed, 1);
+    });
+
+    test('stop() cancels the in-flight tool-call signal', () async {
+      final provider = _ToolThenTextProvider();
+      final gate = Completer<void>(); // holds the executor open
+      var observedCancel = false;
+      AiToolCallSignal? captured;
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        onToolCalls: (calls, signal) async {
+          captured = signal;
+          unawaited(signal.whenCancelled.then((_) => observedCancel = true));
+          await gate.future; // long-running tool work
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: 'ok'),
+          ];
+        },
+      );
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+        controller.dispose();
+      });
+
+      unawaited(controller.sendText('weather?'));
+      // Let the first stream finish and the executor start awaiting the gate.
+      for (var i = 0; i < 10 && captured == null; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(captured, isNotNull);
+      expect(captured!.isCancelled, isFalse);
+
+      controller.stop();
+      await Future<void>.delayed(Duration.zero); // let whenCancelled fire
+
+      expect(captured!.isCancelled, isTrue);
+      expect(observedCancel, isTrue);
+      // throwIfCancelled now throws for the executor.
+      expect(captured!.throwIfCancelled, throwsA(isA<AiToolCallCancelled>()));
+      expect(controller.status, ChatStatus.idle);
     });
 
     test('without onToolCalls, the turn ends with the tool call (manual mode)',
@@ -845,7 +887,7 @@ void main() {
         scheduler: syncScheduler,
         idGenerator: seqIds(),
         tools: const [weatherTool],
-        onToolCalls: (calls) async {
+        onToolCalls: (calls, signal) async {
           for (final c in calls) {
             executedArgs.add(c.args);
           }
@@ -891,7 +933,7 @@ void main() {
         idGenerator: seqIds(),
         tools: const [weatherTool],
         validateToolArgs: false,
-        onToolCalls: (calls) async {
+        onToolCalls: (calls, signal) async {
           for (final c in calls) {
             executedArgs.add(c.args);
           }

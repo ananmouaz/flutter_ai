@@ -140,7 +140,7 @@ final controller = UseChatController(
   provider: provider,
   tools: tools,
   maxSteps: 8, // upper bound on model calls per turn (default 8)
-  onToolCalls: (calls) async {
+  onToolCalls: (calls, signal) async {
     return [
       for (final call in calls)
         ToolResultPart(
@@ -159,6 +159,20 @@ arguments violate the schema is **not executed**; instead an error
 `ToolResultPart` describing the violations is fed back to the model so it can
 correct itself (still bounded by `maxSteps`). Tools with no schema, and calls for
 unknown tool names, skip validation.
+
+**Cancellation.** The second argument is an `AiToolCallSignal`. The controller
+cancels it if the turn is stopped (`controller.stop()`), replaced by a new turn,
+or the controller is disposed while your executor is still running — so a
+long-running tool can abort instead of finishing only to have its result
+discarded:
+
+```dart
+onToolCalls: (calls, signal) async {
+  final result = await Future.any([fetchSlow(calls.first), signal.whenCancelled]);
+  if (signal.isCancelled) return const []; // bail out, nothing to feed back
+  return [ToolResultPart(toolCallId: calls.first.toolCallId, result: result)];
+},
+```
 
 Prefer to drive tools yourself? Omit `onToolCalls`: the turn ends with the tool
 calls, and you call `controller.addToolResults([...])` manually. The
@@ -179,7 +193,7 @@ final registry = ToolRegistry([
 final controller = UseChatController(
   provider: provider,
   tools: registry.definitions,
-  onToolCalls: (calls) =>
+  onToolCalls: (calls, signal) =>
       Future.wait(calls.map(registry.run)),
 );
 ```
@@ -429,7 +443,7 @@ final registry = ToolRegistry(await mcpToolSpecs(mcp));
 final controller = UseChatController(
   provider: provider,
   tools: registry.definitions,       // advertise MCP tools to the model
-  onToolCalls: (calls) =>            // execute them via the MCP server
+  onToolCalls: (calls, signal) =>            // execute them via the MCP server
       Future.wait(calls.map(registry.run)),
 );
 ```
