@@ -48,7 +48,7 @@ for (final spec in await mcpToolSpecs(mcp)) {
 final controller = UseChatController(
   provider: provider,
   tools: registry.definitions,
-  onToolCalls: (calls) => Future.wait(calls.map(registry.run)),
+  onToolCalls: (calls, signal) => Future.wait(calls.map(registry.run)),
 );
 ```
 

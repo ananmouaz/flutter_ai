@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.14
+
+- Widen the `flutter_ai_client` constraint to `>=0.1.0 <0.3.0` so it resolves
+  with client 0.2.0 (which adds the tool-call cancellation signal). No API
+  changes here.
+
 ## 0.1.13
 
 - Docs: refreshed the README listing with a hero image, screenshot gallery,

@@ -157,7 +157,7 @@ final controller = UseChatController(
   provider: provider,
   tools: registry.definitions,
   maxSteps: 5,
-  onToolCalls: (calls) => Future.wait(calls.map(registry.run)),
+  onToolCalls: (calls, signal) => Future.wait(calls.map(registry.run)),
 );
 ```
 

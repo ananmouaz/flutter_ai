@@ -46,6 +46,12 @@ class UseChatController extends ChangeNotifier {
   /// unchanged: the turn ends with the tool calls and the host drives execution
   /// manually via [addToolResults].
   ///
+  /// [onToolCalls] receives an [AiToolCallSignal] as its second argument. The
+  /// controller cancels it if the turn is stopped, replaced, or disposed while
+  /// the executor is still running, so a long-running tool can abort in-flight
+  /// work (e.g. cancel an HTTP request via [AiToolCallSignal.whenCancelled])
+  /// instead of running to completion only to have its result discarded.
+  ///
   /// ### Tool-argument validation
   ///
   /// When [validateToolArgs] is true (the default) and a tool's
@@ -70,8 +76,10 @@ class UseChatController extends ChangeNotifier {
     AiConversation? initial,
     List<ToolDefinition> tools = const [],
     AiRequestOptions? options,
-    Future<List<ToolResultPart>> Function(List<ToolCallPart> calls)?
-        onToolCalls,
+    Future<List<ToolResultPart>> Function(
+      List<ToolCallPart> calls,
+      AiToolCallSignal signal,
+    )? onToolCalls,
     int maxSteps = 8,
     int maxBranches = 20,
     int? tokenBudget,
@@ -97,7 +105,13 @@ class UseChatController extends ChangeNotifier {
   final MessageProcessor _processor;
   final void Function(VoidCallback callback) _scheduler;
   final String Function() _newId;
-  final Future<List<ToolResultPart>> Function(List<ToolCallPart>)? _onToolCalls;
+  final Future<List<ToolResultPart>> Function(
+    List<ToolCallPart>,
+    AiToolCallSignal,
+  )? _onToolCalls;
+  // The signal for the tool batch currently executing, cancelled if the turn is
+  // torn down (stop/replace/dispose) while the executor runs.
+  AiToolCallSignal? _activeToolSignal;
   final int _maxSteps;
   final int _maxBranches;
   final bool _validateToolArgs;
@@ -518,9 +532,12 @@ class UseChatController extends ChangeNotifier {
 
     List<ToolResultPart> executed = const [];
     if (valid.isNotEmpty) {
+      final signal = AiToolCallSignal();
+      _activeToolSignal = signal;
       try {
-        executed = await _onToolCalls!(valid);
+        executed = await _onToolCalls!(valid, signal);
       } catch (error, stackTrace) {
+        if (identical(_activeToolSignal, signal)) _activeToolSignal = null;
         if (_disposed || !identical(_turn, turn)) return;
         _error = error;
         _stackTrace = stackTrace;
@@ -529,6 +546,7 @@ class UseChatController extends ChangeNotifier {
         _scheduleNotify();
         return;
       }
+      if (identical(_activeToolSignal, signal)) _activeToolSignal = null;
     }
     if (_disposed || !identical(_turn, turn) || turn == null) return;
     final results = [...validationErrors, ...executed];
@@ -615,6 +633,9 @@ class UseChatController extends ChangeNotifier {
   /// and `StreamSubscription.cancel` stops delivery immediately.
   void _stopActiveStream() {
     _turnSeq++; // invalidate any in-flight subscription's late events
+    // Tell a tool executor running between streams to abort its in-flight work.
+    _activeToolSignal?._cancel();
+    _activeToolSignal = null;
     final sub = _subscription;
     _subscription = null;
     if (sub != null) unawaited(sub.cancel());
@@ -639,6 +660,8 @@ class UseChatController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _activeToolSignal?._cancel();
+    _activeToolSignal = null;
     unawaited(_subscription?.cancel());
     _completeTurn();
     unawaited(_events.close());
@@ -653,3 +676,61 @@ class UseChatController extends ChangeNotifier {
 
 /// How [UseChatController] folds the next completed turn into branch history.
 enum _Capture { reset, append, update }
+
+/// A cancellation signal handed to an `onToolCalls` executor as its second
+/// argument.
+///
+/// [UseChatController] cancels it when the turn that launched the tool batch is
+/// stopped, replaced (a new turn started), or the controller is disposed while
+/// the executor is still running. A long-running tool should observe it and
+/// abort its in-flight work — its returned results are discarded once the turn
+/// is gone anyway, so honoring cancellation just frees resources sooner.
+///
+/// Three ways to consume it:
+/// ```dart
+/// onToolCalls: (calls, signal) async {
+///   // 1) Race cancellable I/O against cancellation:
+///   final res = await Future.any([httpCall(), signal.whenCancelled]);
+///   if (signal.isCancelled) return const [];      // 2) poll before/after work
+///   signal.throwIfCancelled();                    // 3) bail between steps
+///   ...
+/// }
+/// ```
+class AiToolCallSignal {
+  /// Creates an uncancelled signal. The controller constructs one per tool
+  /// batch; hosts rarely need to create their own.
+  AiToolCallSignal();
+
+  final Completer<void> _completer = Completer<void>();
+  bool _cancelled = false;
+
+  /// Whether the owning turn has been cancelled.
+  bool get isCancelled => _cancelled;
+
+  /// Completes when the owning turn is cancelled (never with an error). Race it
+  /// against cancellable work with [Future.any].
+  Future<void> get whenCancelled => _completer.future;
+
+  /// Throws [AiToolCallCancelled] if [isCancelled]. Call between steps of a
+  /// long tool to bail out promptly.
+  void throwIfCancelled() {
+    if (_cancelled) throw const AiToolCallCancelled();
+  }
+
+  void _cancel() {
+    if (_cancelled) return;
+    _cancelled = true;
+    if (!_completer.isCompleted) _completer.complete();
+  }
+}
+
+/// Thrown by [AiToolCallSignal.throwIfCancelled] when the turn was cancelled.
+class AiToolCallCancelled implements Exception {
+  /// Creates the exception.
+  const AiToolCallCancelled();
+
+  @override
+  String toString() =>
+      'AiToolCallCancelled: the tool-call batch was cancelled (the turn was '
+      'stopped, replaced, or disposed).';
+}

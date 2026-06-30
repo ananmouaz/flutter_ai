@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0
+
+- **BREAKING**: `onToolCalls` now receives a second argument, an
+  `AiToolCallSignal`. The controller cancels it when the turn is stopped,
+  replaced, or disposed while the executor is still running, so long-running
+  tools can abort in-flight work instead of finishing only to have their result
+  discarded. Observe it via `signal.isCancelled`, `await signal.whenCancelled`,
+  or `signal.throwIfCancelled()`.
+
+  Migration: change `onToolCalls: (calls) async { ... }` to
+  `onToolCalls: (calls, signal) async { ... }`. Honoring the signal is optional;
+  adding the parameter is required.
+
 ## 0.1.8
 
 - Docs: refreshed the README listing with a hero image, screenshot gallery,
