@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_ai_core/flutter_ai_core.dart';
+import 'package:flutter_ai_provider_gemini/src/default_http_client.dart';
 import 'package:flutter_ai_provider_gemini/src/gemini_event_parser.dart';
 import 'package:flutter_ai_provider_gemini/src/http_retry.dart';
 import 'package:http/http.dart' as http;
@@ -33,7 +34,9 @@ class GeminiProvider implements LlmProvider, EmbeddingProvider, TokenCounter {
   ///
   /// [apiKey] authenticates requests (sent as `x-goog-api-key`). [baseUrl]
   /// defaults to the public Generative Language v1beta endpoint. [client] is
-  /// injectable. [defaultModel] is used when [AiRequestOptions.model] is unset.
+  /// injectable (defaults to a streaming-capable client — a fetch-based client
+  /// on the web, [http.Client] elsewhere). [defaultModel] is used when
+  /// [AiRequestOptions.model] is unset.
   /// [enableGrounding] adds the Google Search tool to every request. [timeout]
   /// bounds both the initial connection and the idle gap between streamed
   /// chunks.
@@ -53,7 +56,7 @@ class GeminiProvider implements LlmProvider, EmbeddingProvider, TokenCounter {
         _baseUrl = baseUrl ??
             Uri.parse('https://generativelanguage.googleapis.com/v1beta'),
         _ownsClient = client == null,
-        _client = client ?? http.Client();
+        _client = client ?? createDefaultHttpClient();
 
   /// The API key sent as the `x-goog-api-key` header.
   final String apiKey;

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_ai_core/flutter_ai_core.dart';
 import 'package:flutter_ai_provider_anthropic/src/anthropic_event_parser.dart';
+import 'package:flutter_ai_provider_anthropic/src/default_http_client.dart';
 import 'package:flutter_ai_provider_anthropic/src/http_retry.dart';
 import 'package:http/http.dart' as http;
 
@@ -32,7 +33,8 @@ class AnthropicProvider implements LlmProvider {
   ///
   /// [apiKey] authenticates requests (sent as `x-api-key`). [baseUrl] defaults
   /// to the public Anthropic v1 endpoint; override it for a proxy or gateway.
-  /// [client] is injectable (defaults to a new [http.Client]). [defaultModel]
+  /// [client] is injectable (defaults to a streaming-capable client — a
+  /// fetch-based client on the web, [http.Client] elsewhere). [defaultModel]
   /// and [defaultMaxTokens] are used when [AiRequestOptions] omits them.
   /// [timeout] bounds both the initial connection and the idle gap between
   /// streamed chunks.
@@ -52,7 +54,7 @@ class AnthropicProvider implements LlmProvider {
         ),
         _baseUrl = baseUrl ?? Uri.parse('https://api.anthropic.com/v1'),
         _ownsClient = client == null,
-        _client = client ?? http.Client();
+        _client = client ?? createDefaultHttpClient();
 
   /// The API key sent as the `x-api-key` header.
   final String apiKey;

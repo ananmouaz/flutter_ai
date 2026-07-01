@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_ai_core/flutter_ai_core.dart';
+import 'package:flutter_ai_provider_openai/src/default_http_client.dart';
 import 'package:flutter_ai_provider_openai/src/http_retry.dart';
 import 'package:flutter_ai_provider_openai/src/openai_chunk_parser.dart';
 import 'package:http/http.dart' as http;
@@ -20,7 +21,8 @@ class OpenAiProvider implements LlmProvider, EmbeddingProvider {
   ///
   /// [apiKey] authenticates requests. [baseUrl] defaults to the public OpenAI
   /// v1 endpoint; override it for Azure OpenAI, a proxy, or a compatible server.
-  /// [client] is injectable (defaults to a new [http.Client]). [defaultModel] is
+  /// [client] is injectable (defaults to a streaming-capable client — a
+  /// fetch-based client on the web, [http.Client] elsewhere). [defaultModel] is
   /// used when [AiRequestOptions.model] is not set. [timeout] bounds both the
   /// initial connection and the idle gap between streamed chunks.
   OpenAiProvider({
@@ -37,7 +39,7 @@ class OpenAiProvider implements LlmProvider, EmbeddingProvider {
         ),
         _baseUrl = baseUrl ?? Uri.parse('https://api.openai.com/v1'),
         _ownsClient = client == null,
-        _client = client ?? http.Client();
+        _client = client ?? createDefaultHttpClient();
 
   /// The API key sent as a bearer token.
   final String apiKey;
