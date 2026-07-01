@@ -34,8 +34,8 @@ Future<Map<String, Object?>> _capture(AiRequestOptions options) async {
 
 void main() {
   test('maps reasoningEffort to reasoning_effort', () async {
-    final payload =
-        await _capture(const AiRequestOptions(reasoningEffort: ReasoningEffort.high));
+    final payload = await _capture(
+        const AiRequestOptions(reasoningEffort: ReasoningEffort.high));
     expect(payload['reasoning_effort'], 'high');
   });
 
