@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2
+
+- Agent guardrail: `maxIdenticalToolCalls` (opt-in, 0 = off) halts the agent
+  loop with a typed `AgentLoopException` when the model keeps requesting the
+  same tool call (identical name + args) after it has already run that many
+  times in a turn — a runaway-loop guard that stops before burning tokens up to
+  `maxSteps`. Complements the existing `tokenBudget` token ceiling.
+
 ## 0.2.1
 
 - Fix: raise the `flutter_ai_core` lower bound to `^0.1.11` — the controller

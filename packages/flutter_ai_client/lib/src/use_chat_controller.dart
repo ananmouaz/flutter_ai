@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_ai_client/src/chat_status.dart';
@@ -63,6 +64,14 @@ class UseChatController extends ChangeNotifier {
   /// [maxSteps]). Tools with no schema, and calls for unknown tool names, skip
   /// validation.
   ///
+  /// ### Runaway-loop guard
+  ///
+  /// [maxIdenticalToolCalls] (0 = off, the default) halts the agent loop if the
+  /// model requests the same tool call — identical name **and** arguments —
+  /// after it has already run that many times in the turn. Instead of looping
+  /// up to [maxSteps] and spending tokens, the turn ends with [error] set to an
+  /// [AgentLoopException]. Complements [tokenBudget], which caps total tokens.
+  ///
   /// ### History trimming
   ///
   /// [trimHistory], when provided, maps the full conversation to the (smaller)
@@ -83,12 +92,15 @@ class UseChatController extends ChangeNotifier {
     int maxSteps = 8,
     int maxBranches = 20,
     int? tokenBudget,
+    int maxIdenticalToolCalls = 0,
     bool validateToolArgs = true,
     AiConversation Function(AiConversation conversation)? trimHistory,
     void Function(VoidCallback callback)? scheduler,
     String Function()? idGenerator,
   })  : assert(maxSteps >= 1, 'maxSteps must be at least 1'),
         assert(maxBranches >= 1, 'maxBranches must be at least 1'),
+        assert(maxIdenticalToolCalls >= 0,
+            'maxIdenticalToolCalls must be >= 0 (0 disables loop detection)'),
         _provider = provider,
         _tools = List.unmodifiable(tools),
         _options = options,
@@ -96,6 +108,7 @@ class UseChatController extends ChangeNotifier {
         _maxSteps = maxSteps,
         _maxBranches = maxBranches,
         _tokenBudget = tokenBudget,
+        _maxIdenticalToolCalls = maxIdenticalToolCalls,
         _validateToolArgs = validateToolArgs,
         _trimHistory = trimHistory,
         _scheduler = scheduler ?? scheduleMicrotask,
@@ -117,6 +130,11 @@ class UseChatController extends ChangeNotifier {
   final bool _validateToolArgs;
   final AiConversation Function(AiConversation)? _trimHistory;
   final int? _tokenBudget; // stop the agent loop once cumulative tokens exceed
+  // Halt the agent loop if the model requests the same (toolName, args) call
+  // this many times in one turn — a runaway-loop guard. 0 disables it.
+  final int _maxIdenticalToolCalls;
+  // Per-turn count of executed tool-call signatures, for loop detection.
+  final Map<String, int> _toolCallCounts = {};
   final StreamController<AiStreamEvent> _events =
       StreamController<AiStreamEvent>.broadcast();
 
@@ -210,6 +228,7 @@ class UseChatController extends ChangeNotifier {
     _stackTrace = null;
     _capture = _Capture.reset; // a new user turn starts a fresh branch set
     _step = 0;
+    _toolCallCounts.clear();
     _processor.reset(_processor.conversation.append(userMessage));
     _status = ChatStatus.submitted;
     _scheduleNotify();
@@ -227,6 +246,7 @@ class UseChatController extends ChangeNotifier {
     _stackTrace = null;
     _capture = _Capture.append; // keep the prior version, add a new one
     _step = 0;
+    _toolCallCounts.clear();
     _processor.reset(
       _processor.conversation.copyWith(messages: all.sublist(0, lastUser + 1)),
     );
@@ -271,6 +291,7 @@ class UseChatController extends ChangeNotifier {
     _stackTrace = null;
     _capture = _Capture.reset;
     _step = 0;
+    _toolCallCounts.clear();
     _processor.reset(
       _processor.conversation.copyWith(
         messages: [
@@ -502,6 +523,23 @@ class UseChatController extends ChangeNotifier {
     _captureBranch();
 
     final pending = _pendingToolCalls();
+    // Runaway-loop guard: if the model keeps requesting a tool call it has
+    // already run `maxIdenticalToolCalls` times with identical args, halt with
+    // a typed error instead of looping (and burning tokens) to `maxSteps`.
+    if (_onToolCalls != null &&
+        pending.isNotEmpty &&
+        _maxIdenticalToolCalls > 0) {
+      for (final call in pending) {
+        if ((_toolCallCounts[_toolCallSignature(call)] ?? 0) >=
+            _maxIdenticalToolCalls) {
+          _error = AgentLoopException(call.toolName, _maxIdenticalToolCalls);
+          _status = ChatStatus.error;
+          _completeTurn();
+          _scheduleNotify();
+          return;
+        }
+      }
+    }
     final overBudget = _tokenBudget != null &&
         (totalUsage?.resolvedTotal ?? 0) >= _tokenBudget;
     if (_onToolCalls != null &&
@@ -529,6 +567,15 @@ class UseChatController extends ChangeNotifier {
     final (valid, validationErrors) = _validateToolArgs
         ? _splitInvalidCalls(calls)
         : (calls, const <ToolResultPart>[]);
+
+    // Record what we're about to run so the loop guard in _onStreamDone can spot
+    // the model re-requesting an identical call.
+    if (_maxIdenticalToolCalls > 0) {
+      for (final call in valid) {
+        final sig = _toolCallSignature(call);
+        _toolCallCounts[sig] = (_toolCallCounts[sig] ?? 0) + 1;
+      }
+    }
 
     List<ToolResultPart> executed = const [];
     if (valid.isNotEmpty) {
@@ -572,6 +619,11 @@ class UseChatController extends ChangeNotifier {
 
   /// Tool calls in the latest assistant message that have no matching
   /// [ToolResultPart] anywhere in the transcript yet.
+  /// A stable identity for a tool call — name plus JSON-encoded args — used to
+  /// detect the model re-requesting the exact same call.
+  String _toolCallSignature(ToolCallPart call) =>
+      '${call.toolName}(${jsonEncode(call.args)})';
+
   List<ToolCallPart> _pendingToolCalls() {
     final msgs = _processor.conversation.messages;
     final lastAssistant =
@@ -733,4 +785,24 @@ class AiToolCallCancelled implements Exception {
   String toString() =>
       'AiToolCallCancelled: the tool-call batch was cancelled (the turn was '
       'stopped, replaced, or disposed).';
+}
+
+/// Surfaced on [UseChatController.error] when the agent loop is halted because
+/// the model requested the same tool call (identical name + args) more than the
+/// controller's `maxIdenticalToolCalls` limit — a runaway-loop guard that stops
+/// the turn instead of looping (and spending tokens) up to `maxSteps`.
+class AgentLoopException implements Exception {
+  /// Creates the exception for [toolName] after hitting [limit] identical calls.
+  const AgentLoopException(this.toolName, this.limit);
+
+  /// The tool whose repeated identical calls tripped the guard.
+  final String toolName;
+
+  /// The configured `maxIdenticalToolCalls` limit that was reached.
+  final int limit;
+
+  @override
+  String toString() =>
+      'AgentLoopException: tool "$toolName" was requested with identical '
+      'arguments more than $limit times; halting the agent loop.';
 }
