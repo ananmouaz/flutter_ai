@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.11
+
+- Map `AiRequestOptions.reasoningEffort` to extended thinking
+  (`thinking.budget_tokens`): raises `max_tokens` above the budget when needed
+  and drops `temperature` (the API rejects both together). An explicit
+  `thinking` block in `extra` takes precedence. Requires `flutter_ai_core`
+  ^0.1.13.
+
 ## 0.1.10
 
 - Fix (Web): the default HTTP client now streams token-by-token on Flutter Web.

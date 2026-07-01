@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.10
+
+- Map `AiRequestOptions.reasoningEffort` to OpenAI's `reasoning_effort`. An
+  explicit `reasoning_effort` in `extra` still takes precedence. Requires
+  `flutter_ai_core` ^0.1.13.
+
 ## 0.1.9
 
 - Fix (Web): the default HTTP client now streams token-by-token on Flutter Web.

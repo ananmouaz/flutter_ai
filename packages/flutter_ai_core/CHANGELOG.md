@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.13
+
+- `ReasoningEffort` (minimal/low/medium/high) + `AiRequestOptions.reasoningEffort`:
+  a provider-neutral knob for how hard a reasoning model should think. Exposes
+  `budgetTokens` (a canonical effort→budget heuristic) and `openAiValue` for
+  providers to map onto their native control. Additive and opt-in.
+
 ## 0.1.12
 
 - Docs: shortened the pubspec `description` into pub.dev's 60–180 character

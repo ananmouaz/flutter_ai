@@ -109,6 +109,10 @@ class GeminiProvider implements LlmProvider, EmbeddingProvider, TokenCounter {
         'responseMimeType': 'application/json',
         'responseSchema': options!.responseFormat!.schema,
       },
+      if (options?.reasoningEffort != null)
+        'thinkingConfig': {
+          'thinkingBudget': options!.reasoningEffort!.budgetTokens,
+        },
     };
 
     final payload = <String, Object?>{
