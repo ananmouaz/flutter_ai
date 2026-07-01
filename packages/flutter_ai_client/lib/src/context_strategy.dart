@@ -38,6 +38,69 @@ AiConversation Function(AiConversation) keepLastMessages(int count) {
   };
 }
 
+/// Keeps the system prefix plus a rolling **summary** of older turns, plus the
+/// most recent [count] non-system messages.
+///
+/// This is the compaction counterpart to [keepLastMessages]: instead of
+/// silently dropping older context (losing load-bearing facts — "context rot"),
+/// it folds a caller-supplied summary of the trimmed span into the request as a
+/// synthetic `system` message, right after any real system messages.
+///
+/// [summary] is called on each request and should return the current rolling
+/// summary text (empty to inject nothing). The controller does **not** produce
+/// the summary — your app owns that, exactly as the roadmap intends: run your
+/// own periodic summarization (any model, or a cheap heuristic), persist the
+/// result with the conversation via `ChatStore`, and return it here. That keeps
+/// durable, cross-session memory without this package owning a memory service.
+///
+/// As with [keepLastMessages], leading `tool` results in the kept window are
+/// skipped so none is orphaned. The stored transcript is never modified — only
+/// what each request sends.
+AiConversation Function(AiConversation) keepLastWithSummary({
+  required String Function() summary,
+  required int count,
+  String summaryLabel = 'Summary of earlier conversation:',
+}) {
+  assert(count >= 0, 'count must be >= 0');
+  return (conversation) {
+    final messages = conversation.messages;
+    final system = [
+      for (final m in messages)
+        if (m.role == AiRole.system) m,
+    ];
+    final rest = [
+      for (final m in messages)
+        if (m.role != AiRole.system) m,
+    ];
+
+    var start = rest.length <= count ? 0 : rest.length - count;
+    while (start < rest.length && rest[start].role == AiRole.tool) {
+      start++;
+    }
+    final kept = rest.sublist(start);
+
+    // Only inject a summary when something was actually dropped and the app
+    // supplied non-empty text.
+    final summaryText = start > 0 ? summary().trim() : '';
+    final summaryMessages = summaryText.isEmpty
+        ? const <AiMessage>[]
+        : [
+            AiMessage(
+              id: 'summary',
+              role: AiRole.system,
+              parts: [TextPart('$summaryLabel\n$summaryText')],
+            ),
+          ];
+
+    if (summaryMessages.isEmpty && kept.length == rest.length) {
+      return conversation;
+    }
+    return conversation.copyWith(
+      messages: [...system, ...summaryMessages, ...kept],
+    );
+  };
+}
+
 /// Keeps the system prefix plus as many of the most recent non-system messages
 /// as fit within [maxTokens], estimated from text length.
 ///

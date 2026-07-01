@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.4
+
+- `keepLastWithSummary`: a context strategy that folds a caller-supplied rolling
+  summary of older turns into the request (as a synthetic `system` message)
+  instead of silently dropping them — compaction that preserves load-bearing
+  context. Your app owns producing/persisting the summary (any model or
+  heuristic, saved via `ChatStore`); the strategy just injects it and windows
+  the recent messages. No memory service baked in.
+
 ## 0.2.3
 
 - Observability: `UseChatController(observer:)` accepts a `ChatObserver` that
