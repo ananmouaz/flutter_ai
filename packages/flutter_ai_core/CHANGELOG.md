@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.12
+
+- Docs: shortened the pubspec `description` into pub.dev's 60–180 character
+  window so it renders in full in search results. No code changes.
+
 ## 0.1.11
 
 - Docs: refreshed the README listing with a hero image, screenshot gallery,

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.9
+
+- Fix: raise the `flutter_ai_core` lower bound to `^0.1.11` — the parser emits
+  `AiUsage` (added in core 0.1.3) and later APIs, so the old `^0.1.0` bound let
+  dependency downgrades resolve a core that couldn't compile.
+- Docs: shortened the pubspec `description` into pub.dev's 60–180 character
+  window.
+
 ## 0.1.8
 
 - Docs: refreshed the README listing with a hero image, screenshot gallery,

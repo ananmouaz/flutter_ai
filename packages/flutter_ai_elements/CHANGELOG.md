@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.15
+
+- Fix: raise the `flutter_ai_core` (`^0.1.11`) and `flutter_ai_client`
+  (`^0.2.0`) lower bounds so dependency downgrades can't resolve sibling
+  versions the widgets can't compile against.
+- Docs: shortened the pubspec `description` into pub.dev's 60–180 character
+  window.
+
 ## 0.1.14
 
 - Widen the `flutter_ai_client` constraint to `>=0.1.0 <0.3.0` so it resolves
