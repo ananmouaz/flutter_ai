@@ -596,6 +596,59 @@ void main() {
       expect(controller.status, ChatStatus.idle);
     });
 
+    test('halts with AgentLoopException on a runaway identical-call loop',
+        () async {
+      final provider = _AlwaysToolProvider(); // always requests ping({})
+      var executed = 0;
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        maxSteps: 20,
+        maxIdenticalToolCalls: 2,
+        onToolCalls: (calls, signal) async {
+          executed++;
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: 'ok'),
+          ];
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('go');
+
+      // ping({}) runs twice (counts 1, 2); the third request trips the guard
+      // well before maxSteps (20).
+      expect(executed, 2);
+      expect(provider.sendCount, 3);
+      expect(controller.status, ChatStatus.error);
+      expect(controller.error, isA<AgentLoopException>());
+      expect((controller.error as AgentLoopException).toolName, 'ping');
+    });
+
+    test('does not trip the loop guard when it is disabled (default)',
+        () async {
+      final provider = _AlwaysToolProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        maxSteps: 3, // bounded by maxSteps, not the loop guard
+        onToolCalls: (calls, signal) async => [
+          for (final c in calls)
+            ToolResultPart(toolCallId: c.toolCallId, result: 'ok'),
+        ],
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('go');
+
+      expect(controller.status, ChatStatus.idle);
+      expect(controller.error, isNull);
+      expect(provider.sendCount, 3);
+    });
+
     test('stops the loop once the token budget is exceeded', () async {
       final provider = _AlwaysToolProvider(); // 100 output tokens per turn
       var executed = 0;
