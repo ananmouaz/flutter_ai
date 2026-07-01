@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.9
+
+- Fix (Web): the default HTTP client now streams token-by-token on Flutter Web.
+  `http.Client()` resolves to the XHR-backed `BrowserClient` on the web, which
+  buffers the entire response body before the stream emits — silently degrading
+  streaming to all-at-once. The default is now a `fetch`-based client (via a
+  conditional import) that reads the response `ReadableStream` incrementally.
+  Native platforms are unchanged. Inject your own `client` to override.
+
 ## 0.1.8
 
 - Fix: raise the `flutter_ai_core` lower bound to `^0.1.11` — the parser emits
