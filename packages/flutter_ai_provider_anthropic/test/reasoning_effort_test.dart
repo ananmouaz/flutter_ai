@@ -1,0 +1,68 @@
+import 'dart:convert';
+
+import 'package:flutter_ai_provider_anthropic/flutter_ai_provider_anthropic.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:test/test.dart';
+
+Future<Map<String, Object?>> _capture(AiRequestOptions options) async {
+  late Map<String, Object?> payload;
+  final provider = AnthropicProvider(
+    apiKey: 'secret',
+    client: MockClient.streaming((request, bodyStream) async {
+      payload = (jsonDecode(await bodyStream.bytesToString()) as Map)
+          .cast<String, Object?>();
+      return http.StreamedResponse(const Stream<List<int>>.empty(), 200);
+    }),
+  );
+  await provider
+      .send(
+        const AiConversation(
+          id: 'c',
+          messages: [
+            AiMessage(id: 'm', role: AiRole.user, parts: [TextPart('Hi')]),
+          ],
+        ),
+        options: options,
+      )
+      .toList();
+  return payload;
+}
+
+void main() {
+  test('reasoningEffort enables thinking with the mapped budget', () async {
+    final payload = await _capture(
+        const AiRequestOptions(reasoningEffort: ReasoningEffort.low));
+    final thinking = (payload['thinking'] as Map).cast<String, Object?>();
+    expect(thinking['type'], 'enabled');
+    expect(thinking['budget_tokens'], ReasoningEffort.low.budgetTokens);
+  });
+
+  test('raises max_tokens above the budget when needed', () async {
+    // high budget (24576) exceeds the default max_tokens (4096).
+    final payload = await _capture(
+        const AiRequestOptions(reasoningEffort: ReasoningEffort.high));
+    expect(payload['max_tokens'] as int,
+        greaterThan(ReasoningEffort.high.budgetTokens));
+  });
+
+  test('drops temperature when thinking is enabled', () async {
+    final payload = await _capture(const AiRequestOptions(
+      reasoningEffort: ReasoningEffort.medium,
+      temperature: 0.7,
+    ));
+    expect(payload.containsKey('temperature'), isFalse);
+    expect(payload.containsKey('thinking'), isTrue);
+  });
+
+  test('an explicit thinking block in extra takes precedence', () async {
+    final payload = await _capture(const AiRequestOptions(
+      reasoningEffort: ReasoningEffort.high,
+      extra: {
+        'thinking': {'type': 'enabled', 'budget_tokens': 5000},
+      },
+    ));
+    final thinking = (payload['thinking'] as Map).cast<String, Object?>();
+    expect(thinking['budget_tokens'], 5000);
+  });
+}

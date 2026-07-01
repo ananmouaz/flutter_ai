@@ -79,6 +79,9 @@ class OpenAiProvider implements LlmProvider, EmbeddingProvider {
       // caller override passed via options.extra.
       'stream_options':
           options?.extra['stream_options'] ?? {'include_usage': true},
+      if (options?.reasoningEffort != null &&
+          !(options?.extra.containsKey('reasoning_effort') ?? false))
+        'reasoning_effort': options!.reasoningEffort!.openAiValue,
       if (options?.temperature != null) 'temperature': options!.temperature,
       if (options?.maxOutputTokens != null)
         'max_tokens': options!.maxOutputTokens,

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.11
+
+- Map `AiRequestOptions.reasoningEffort` to `generationConfig.thinkingConfig.
+  thinkingBudget`. Requires `flutter_ai_core` ^0.1.13.
+
 ## 0.1.10
 
 - Fix (Web): the default HTTP client now streams token-by-token on Flutter Web.

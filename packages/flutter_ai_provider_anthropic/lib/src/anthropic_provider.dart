@@ -23,8 +23,11 @@ import 'package:http/http.dart' as http;
 ///    `tool_use` / `tool_result` content blocks.
 ///  * `temperature` is forwarded only when set; newer Claude models reject
 ///    sampling parameters, so leave it unset for those.
-///  * To enable extended thinking, pass it through [AiRequestOptions.extra],
-///    e.g. `{'thinking': {'type': 'adaptive'}}`.
+///  * Set [AiRequestOptions.reasoningEffort] to enable extended thinking with a
+///    mapped `budget_tokens` (max_tokens is raised above the budget when needed,
+///    and `temperature` is dropped since the API rejects both together). For
+///    full control, pass an explicit `thinking` block via
+///    [AiRequestOptions.extra], which takes precedence.
 ///
 /// > The request/response mapping is unit-tested against recorded SSE events;
 /// > supply an API key to use it against the live API.
@@ -113,10 +116,23 @@ class AnthropicProvider implements LlmProvider {
         'cache_control': cacheControl,
       };
     }
+    // Extended thinking: enable when reasoningEffort is set (unless the caller
+    // supplied an explicit `thinking` block via extra). budget_tokens must be
+    // below max_tokens, and the API rejects `temperature` alongside thinking.
+    final effort = options?.reasoningEffort;
+    final thinkingEnabled =
+        effort != null && !(options?.extra.containsKey('thinking') ?? false);
+    final budget = effort?.budgetTokens ?? 0;
+    var maxTokens = options?.maxOutputTokens ?? defaultMaxTokens;
+    if (thinkingEnabled && maxTokens <= budget) {
+      maxTokens = budget + defaultMaxTokens;
+    }
     final payload = <String, Object?>{
       if (options?.extra != null) ...options!.extra,
       'model': options?.model ?? defaultModel,
-      'max_tokens': options?.maxOutputTokens ?? defaultMaxTokens,
+      'max_tokens': maxTokens,
+      if (thinkingEnabled)
+        'thinking': {'type': 'enabled', 'budget_tokens': budget},
       'stream': true,
       'messages': messages,
       if (system != null && system.isNotEmpty)
@@ -129,7 +145,8 @@ class AnthropicProvider implements LlmProvider {
                 },
               ]
             : system,
-      if (options?.temperature != null) 'temperature': options!.temperature,
+      if (options?.temperature != null && !thinkingEnabled)
+        'temperature': options!.temperature,
       if (toolList.isNotEmpty) 'tools': toolList,
       if (responseFormat != null)
         'tool_choice': {'type': 'tool', 'name': responseFormat.name},
