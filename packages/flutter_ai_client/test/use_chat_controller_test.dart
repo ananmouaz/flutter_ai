@@ -649,6 +649,55 @@ void main() {
       expect(provider.sendCount, 3);
     });
 
+    test('ChatObserver receives the full lifecycle across a tool loop',
+        () async {
+      final provider = _ToolThenTextProvider();
+      final observer = _RecordingObserver();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        observer: observer,
+        onToolCalls: (calls, signal) async => [
+          for (final c in calls)
+            ToolResultPart(toolCallId: c.toolCallId, result: {'temp': 25}),
+        ],
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('weather?');
+
+      expect(observer.events, [
+        'turnStart',
+        'request:1',
+        'response:1:toolCalls',
+        'toolCalls:1',
+        'toolResults:1',
+        'request:2',
+        'response:2:stop',
+        'turnEnd',
+      ]);
+    });
+
+    test('ChatObserver.onError fires before onTurnEnd on a failed turn',
+        () async {
+      final provider = ScriptedProvider([
+        const StreamErrorEvent(error: 'boom'),
+      ]);
+      final observer = _RecordingObserver();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        observer: observer,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('go');
+
+      expect(observer.events, ['turnStart', 'request:1', 'error', 'turnEnd']);
+    });
+
     test('stops the loop once the token budget is exceeded', () async {
       final provider = _AlwaysToolProvider(); // 100 output tokens per turn
       var executed = 0;
@@ -1152,6 +1201,40 @@ class _ToolThenTextProvider implements LlmProvider {
       yield const MessageFinished(messageId: 'a2', reason: FinishReason.stop);
     }
   }
+}
+
+/// Records the observer callbacks it receives as compact strings, for
+/// order-sensitive assertions.
+class _RecordingObserver extends ChatObserver {
+  final List<String> events = [];
+
+  @override
+  void onTurnStart(AiConversation conversation) => events.add('turnStart');
+
+  @override
+  void onModelRequest(int step) => events.add('request:$step');
+
+  @override
+  void onModelResponse({
+    required int step,
+    AiUsage? usage,
+    FinishReason? finishReason,
+  }) =>
+      events.add('response:$step:${finishReason?.name}');
+
+  @override
+  void onToolCalls(List<ToolCallPart> calls) =>
+      events.add('toolCalls:${calls.length}');
+
+  @override
+  void onToolResults(List<ToolResultPart> results) =>
+      events.add('toolResults:${results.length}');
+
+  @override
+  void onError(Object error, StackTrace? stackTrace) => events.add('error');
+
+  @override
+  void onTurnEnd({AiUsage? totalUsage}) => events.add('turnEnd');
 }
 
 /// Every send returns a fresh tool call, so the agent loop only stops at

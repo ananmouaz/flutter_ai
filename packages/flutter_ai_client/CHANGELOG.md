@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.3
+
+- Observability: `UseChatController(observer:)` accepts a `ChatObserver` that
+  receives the agent lifecycle — turn start, each model request, response with
+  token `AiUsage` + finish reason, tool calls/results, errors, and turn end.
+  Shaped after the OpenTelemetry GenAI semantic conventions, with no OTel
+  dependency — map the callbacks onto your own tracer or analytics sink. Opt-in
+  and no-op by default.
+
 ## 0.2.2
 
 - Agent guardrail: `maxIdenticalToolCalls` (opt-in, 0 = off) halts the agent

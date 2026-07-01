@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_ai_client/src/chat_observer.dart';
 import 'package:flutter_ai_client/src/chat_status.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
 
@@ -72,6 +73,13 @@ class UseChatController extends ChangeNotifier {
   /// up to [maxSteps] and spending tokens, the turn ends with [error] set to an
   /// [AgentLoopException]. Complements [tokenBudget], which caps total tokens.
   ///
+  /// ### Observability
+  ///
+  /// Pass a [ChatObserver] to receive lifecycle callbacks (turn start, each
+  /// model request, response + token usage, tool calls/results, errors, turn
+  /// end) shaped after the OpenTelemetry GenAI semantic conventions — with no
+  /// OpenTelemetry dependency. Map them onto your own tracer or analytics sink.
+  ///
   /// ### History trimming
   ///
   /// [trimHistory], when provided, maps the full conversation to the (smaller)
@@ -94,6 +102,7 @@ class UseChatController extends ChangeNotifier {
     int? tokenBudget,
     int maxIdenticalToolCalls = 0,
     bool validateToolArgs = true,
+    ChatObserver? observer,
     AiConversation Function(AiConversation conversation)? trimHistory,
     void Function(VoidCallback callback)? scheduler,
     String Function()? idGenerator,
@@ -109,6 +118,7 @@ class UseChatController extends ChangeNotifier {
         _maxBranches = maxBranches,
         _tokenBudget = tokenBudget,
         _maxIdenticalToolCalls = maxIdenticalToolCalls,
+        _observer = observer,
         _validateToolArgs = validateToolArgs,
         _trimHistory = trimHistory,
         _scheduler = scheduler ?? scheduleMicrotask,
@@ -135,6 +145,10 @@ class UseChatController extends ChangeNotifier {
   final int _maxIdenticalToolCalls;
   // Per-turn count of executed tool-call signatures, for loop detection.
   final Map<String, int> _toolCallCounts = {};
+  // Optional lifecycle observer for tracing/metrics.
+  final ChatObserver? _observer;
+  // The finish reason from the most recent MessageFinished, for the observer.
+  FinishReason? _lastFinishReason;
   final StreamController<AiStreamEvent> _events =
       StreamController<AiStreamEvent>.broadcast();
 
@@ -447,6 +461,7 @@ class UseChatController extends ChangeNotifier {
   Future<void> _beginTurn() {
     final completer = Completer<void>();
     _turn = completer;
+    _observer?.onTurnStart(_processor.conversation);
     _dispatch();
     return completer.future;
   }
@@ -454,6 +469,7 @@ class UseChatController extends ChangeNotifier {
   /// Subscribes to one provider stream, folding events into the conversation.
   void _dispatch() {
     _step++; // one model call
+    _observer?.onModelRequest(_step);
     // Capture the turn this subscription belongs to. A late event from a
     // cancelled stream (a microtask already queued when the turn was torn down)
     // must not mutate the conversation or leak onto the events stream after a
@@ -469,6 +485,7 @@ class UseChatController extends ChangeNotifier {
         if (_disposed || seq != _turnSeq) return;
         _processor.apply(event);
         if (!_events.isClosed) _events.add(event);
+        if (event is MessageFinished) _lastFinishReason = event.reason;
         // A message-scoped error event is fatal: record the error and tear the
         // turn down so a misbehaving provider cannot keep mutating the
         // conversation past the failure. A tool-scoped error is left to the
@@ -476,6 +493,7 @@ class UseChatController extends ChangeNotifier {
         if (event is StreamErrorEvent && event.toolCallId == null) {
           _error = event.error;
           _status = ChatStatus.error;
+          _observer?.onError(event.error, null);
           final sub = _subscription;
           _subscription = null;
           if (sub != null) unawaited(sub.cancel());
@@ -492,6 +510,7 @@ class UseChatController extends ChangeNotifier {
         _error = error;
         _stackTrace = stackTrace;
         _status = ChatStatus.error;
+        _observer?.onError(error, stackTrace);
         final last = _processor.conversation.lastMessage;
         if (last != null && last.status == AiMessageStatus.streaming) {
           _processor.apply(
@@ -521,6 +540,11 @@ class UseChatController extends ChangeNotifier {
     }
     _status = ChatStatus.idle;
     _captureBranch();
+    _observer?.onModelResponse(
+      step: _step,
+      usage: _processor.conversation.lastMessage?.usage,
+      finishReason: _lastFinishReason,
+    );
 
     final pending = _pendingToolCalls();
     // Runaway-loop guard: if the model keeps requesting a tool call it has
@@ -564,6 +588,7 @@ class UseChatController extends ChangeNotifier {
     // Split off calls whose arguments violate the tool's parametersSchema:
     // those are answered with an error result (so the model can retry) instead
     // of being handed to the executor.
+    _observer?.onToolCalls(calls);
     final (valid, validationErrors) = _validateToolArgs
         ? _splitInvalidCalls(calls)
         : (calls, const <ToolResultPart>[]);
@@ -589,6 +614,7 @@ class UseChatController extends ChangeNotifier {
         _error = error;
         _stackTrace = stackTrace;
         _status = ChatStatus.error;
+        _observer?.onError(error, stackTrace);
         _completeTurn();
         _scheduleNotify();
         return;
@@ -597,6 +623,7 @@ class UseChatController extends ChangeNotifier {
     }
     if (_disposed || !identical(_turn, turn) || turn == null) return;
     final results = [...validationErrors, ...executed];
+    _observer?.onToolResults(results);
     if (results.isEmpty) {
       _completeTurn();
       _scheduleNotify();
@@ -697,7 +724,10 @@ class UseChatController extends ChangeNotifier {
   void _completeTurn() {
     final turn = _turn;
     _turn = null;
-    if (turn != null && !turn.isCompleted) turn.complete();
+    if (turn != null && !turn.isCompleted) {
+      turn.complete();
+      _observer?.onTurnEnd(totalUsage: totalUsage);
+    }
   }
 
   void _scheduleNotify() {

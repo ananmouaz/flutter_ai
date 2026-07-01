@@ -11,6 +11,7 @@ library;
 
 export 'package:flutter_ai_core/flutter_ai_core.dart';
 
+export 'src/chat_observer.dart';
 export 'src/chat_status.dart';
 export 'src/chat_store.dart';
 export 'src/context_strategy.dart';
