@@ -64,12 +64,12 @@ void main() {
       processor.apply(
         const MessageStarted(messageId: 'm1', role: AiRole.assistant),
       );
-      final first =
-          processor.apply(const TextDelta(messageId: 'm1', delta: 'Hel'))
-              .conversation;
-      final second =
-          processor.apply(const TextDelta(messageId: 'm1', delta: 'lo'))
-              .conversation;
+      final first = processor
+          .apply(const TextDelta(messageId: 'm1', delta: 'Hel'))
+          .conversation;
+      final second = processor
+          .apply(const TextDelta(messageId: 'm1', delta: 'lo'))
+          .conversation;
 
       // A consumer that dedupes by equality (Bloc/Riverpod/distinct) must see a
       // change between the two streamed snapshots.

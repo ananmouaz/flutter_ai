@@ -81,7 +81,10 @@ void main() {
           ],
         }),
         ...parser.parse({
-          'error': {'message': 'The server had an error', 'type': 'server_error'},
+          'error': {
+            'message': 'The server had an error',
+            'type': 'server_error'
+          },
         }),
         ...parser.finalize(),
       ];

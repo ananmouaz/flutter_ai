@@ -360,13 +360,15 @@ void main() {
                 AiMessage(id: 'u', role: AiRole.user, parts: [TextPart('Hi')]),
               ],
             ),
-            options: const AiRequestOptions(reasoningEffort: ReasoningEffort.low),
+            options:
+                const AiRequestOptions(reasoningEffort: ReasoningEffort.low),
           )
           .toList();
 
       final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
       final config = (body['generationConfig'] as Map).cast<String, Object?>();
-      final thinking = (config['thinkingConfig'] as Map).cast<String, Object?>();
+      final thinking =
+          (config['thinkingConfig'] as Map).cast<String, Object?>();
       expect(thinking['thinkingBudget'], ReasoningEffort.low.budgetTokens);
       // Without includeThoughts the reasoning is billed but never surfaced.
       expect(thinking['includeThoughts'], true);

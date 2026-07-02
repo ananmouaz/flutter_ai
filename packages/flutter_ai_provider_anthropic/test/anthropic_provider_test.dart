@@ -209,7 +209,10 @@ void main() {
     test('an error event suppresses the synthetic finalize (no fake success)',
         () {
       final parser = AnthropicEventParser();
-      parser.parse({'type': 'message_start', 'message': {'id': 'a1'}});
+      parser.parse({
+        'type': 'message_start',
+        'message': {'id': 'a1'}
+      });
       parser.parse({
         'type': 'error',
         'error': {'type': 'overloaded_error', 'message': 'Overloaded'},

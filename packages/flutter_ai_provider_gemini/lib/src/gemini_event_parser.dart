@@ -57,16 +57,14 @@ class GeminiEventParser {
     final error = chunk['error'];
     if (error is Map) {
       _finished = true;
-      final message =
-          error['message'] as String? ?? 'Gemini stream error';
+      final message = error['message'] as String? ?? 'Gemini stream error';
       events.add(StreamErrorEvent(error: message, messageId: _messageId));
       return events;
     }
 
     // A blocked prompt arrives as `promptFeedback.blockReason` with no
     // candidates; finish as content-filtered rather than an empty success.
-    final feedback =
-        (chunk['promptFeedback'] as Map?)?.cast<String, Object?>();
+    final feedback = (chunk['promptFeedback'] as Map?)?.cast<String, Object?>();
     if (feedback?['blockReason'] is String) {
       _finished = true;
       events.add(
