@@ -5,6 +5,9 @@
 - Fix: a mid-stream `error` payload is now surfaced as a `StreamErrorEvent`, and
   a blocked prompt (`promptFeedback.blockReason`) finishes as content-filtered —
   instead of both being ignored and rendered as an empty, successful message.
+- Fix: tool results delivered across consecutive tool messages (one result per
+  message) are no longer dropped — they coalesce into a single `functionResponse`
+  turn in call order.
 
 ## 0.1.11
 

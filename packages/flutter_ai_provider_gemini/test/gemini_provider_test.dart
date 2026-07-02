@@ -630,6 +630,81 @@ void main() {
       );
     });
 
+    test('coalesces tool results split across consecutive tool messages',
+        () async {
+      late http.Request captured;
+      const stop =
+          'data: {"candidates":[{"content":{},"finishReason":"STOP"}]}\n';
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, _) async {
+          captured = request as http.Request;
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode(stop)),
+            200,
+          );
+        }),
+      );
+
+      // Two calls answered by TWO separate tool messages (one result each).
+      // Neither result may be dropped.
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(
+                  id: 'u',
+                  role: AiRole.user,
+                  parts: [TextPart('search cats and dogs')],
+                ),
+                AiMessage(
+                  id: 'a',
+                  role: AiRole.assistant,
+                  parts: [
+                    ToolCallPart(
+                      toolCallId: 'call-0',
+                      toolName: 'search',
+                      args: {'q': 'cats'},
+                    ),
+                    ToolCallPart(
+                      toolCallId: 'call-1',
+                      toolName: 'search',
+                      args: {'q': 'dogs'},
+                    ),
+                  ],
+                ),
+                AiMessage(id: 't0', role: AiRole.tool, parts: [
+                  ToolResultPart(
+                    toolCallId: 'call-0',
+                    result: {'hits': 'cats-result'},
+                  ),
+                ]),
+                AiMessage(id: 't1', role: AiRole.tool, parts: [
+                  ToolResultPart(
+                    toolCallId: 'call-1',
+                    result: {'hits': 'dogs-result'},
+                  ),
+                ]),
+              ],
+            ),
+          )
+          .toList();
+
+      final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+      final contents = (body['contents']! as List).cast<Map<String, Object?>>();
+      final toolTurn = contents.last;
+      final responseParts = (toolTurn['parts']! as List)
+          .cast<Map<String, Object?>>()
+          .map((p) => (p['functionResponse']! as Map).cast<String, Object?>())
+          .toList();
+
+      // A single coalesced tool turn carrying BOTH results in call order.
+      expect(responseParts, hasLength(2));
+      expect((responseParts[0]['response'] as Map)['hits'], 'cats-result');
+      expect((responseParts[1]['response'] as Map)['hits'], 'dogs-result');
+    });
+
     test('finalizes a stream that ends without a finishReason', () async {
       const body =
           'data: {"candidates":[{"content":{"parts":[{"text":"hi"}]}}]}\n';
