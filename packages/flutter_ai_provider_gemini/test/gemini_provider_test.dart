@@ -337,6 +337,41 @@ void main() {
       expect((config['responseSchema'] as Map)['type'], 'object');
     });
 
+    test('reasoningEffort sets thinkingBudget and requests thoughts', () async {
+      late http.Request captured;
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, _) async {
+          captured = request as http.Request;
+          const body =
+              'data: {"candidates":[{"content":{},"finishReason":"STOP"}]}\n';
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode(body)),
+            200,
+          );
+        }),
+      );
+
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(id: 'u', role: AiRole.user, parts: [TextPart('Hi')]),
+              ],
+            ),
+            options: const AiRequestOptions(reasoningEffort: ReasoningEffort.low),
+          )
+          .toList();
+
+      final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+      final config = (body['generationConfig'] as Map).cast<String, Object?>();
+      final thinking = (config['thinkingConfig'] as Map).cast<String, Object?>();
+      expect(thinking['thinkingBudget'], ReasoningEffort.low.budgetTokens);
+      // Without includeThoughts the reasoning is billed but never surfaced.
+      expect(thinking['includeThoughts'], true);
+    });
+
     test('emits a StreamErrorEvent on a non-200 response', () async {
       final provider = GeminiProvider(
         apiKey: 'bad',

@@ -112,6 +112,9 @@ class GeminiProvider implements LlmProvider, EmbeddingProvider, TokenCounter {
       if (options?.reasoningEffort != null)
         'thinkingConfig': {
           'thinkingBudget': options!.reasoningEffort!.budgetTokens,
+          // Without this Gemini never emits `thought: true` parts, so the paid
+          // thinking is invisible (the ReasoningDelta path would be dead code).
+          'includeThoughts': true,
         },
     };
 

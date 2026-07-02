@@ -8,6 +8,9 @@
 - Fix: tool results delivered across consecutive tool messages (one result per
   message) are no longer dropped — they coalesce into a single `functionResponse`
   turn in call order.
+- Fix: `reasoningEffort` now also sets `thinkingConfig.includeThoughts`, so the
+  paid thinking is actually surfaced as `ReasoningDelta`s instead of being
+  invisible.
 
 ## 0.1.11
 
