@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4
 
 - Fix: `StreamableHttpMcpConnection.callTool` now has a per-call timeout
   (`callTimeout`, default 60s). The underlying transport only bounds the

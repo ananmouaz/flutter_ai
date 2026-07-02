@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.16
 
 - Fix: `AiChat` auto-scroll no longer fights mouse-wheel, trackpad, or keyboard
   scrolling during streaming. The top-pin now releases on any upward

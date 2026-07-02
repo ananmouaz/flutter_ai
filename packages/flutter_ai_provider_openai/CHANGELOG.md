@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.11
 
 - Fix: `maxOutputTokens` now maps to `max_completion_tokens` instead of the
   deprecated `max_tokens`, which reasoning models (o-series, gpt-5) reject with a

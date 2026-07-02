@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.12
 
 - Fix: `reasoningEffort` now emits adaptive thinking (`{type: adaptive}`) on
   Claude 4.6+ models — including the default `claude-opus-4-8`, which rejects the

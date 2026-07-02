@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.5
 
 - Fix: the controller no longer reports `idle` while the agent loop runs its tool
   executor between model calls. A new `ChatStatus.executingTools` (included in

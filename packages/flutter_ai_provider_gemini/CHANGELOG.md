@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.12
 
 - Fix: a mid-stream `error` payload is now surfaced as a `StreamErrorEvent`, and
   a blocked prompt (`promptFeedback.blockReason`) finishes as content-filtered —
