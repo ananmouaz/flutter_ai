@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.13
+
+- Formatting-only: reflow `gemini_event_parser.dart` to `dart format` style (no
+  behavior change). Restores the pub.dev static-analysis score.
+
 ## 0.1.12
 
 - Fix: a mid-stream `error` payload is now surfaced as a `StreamErrorEvent`, and
