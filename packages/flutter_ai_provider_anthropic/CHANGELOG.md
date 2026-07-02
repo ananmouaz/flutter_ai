@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Fix: `reasoningEffort` now emits adaptive thinking (`{type: adaptive}`) on
+  Claude 4.6+ models — including the default `claude-opus-4-8`, which rejects the
+  legacy `budget_tokens` shape with a 400. Claude 3.7 and 4.0–4.5 continue to use
+  the budgeted shape. An explicit `thinking` block in `extra` still takes
+  precedence.
+
 ## 0.1.11
 
 - Map `AiRequestOptions.reasoningEffort` to extended thinking

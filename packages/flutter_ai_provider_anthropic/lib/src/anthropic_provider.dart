@@ -117,22 +117,30 @@ class AnthropicProvider implements LlmProvider {
       };
     }
     // Extended thinking: enable when reasoningEffort is set (unless the caller
-    // supplied an explicit `thinking` block via extra). budget_tokens must be
-    // below max_tokens, and the API rejects `temperature` alongside thinking.
+    // supplied an explicit `thinking` block via extra). Claude 4.6+ (including
+    // the default model) uses adaptive thinking and rejects `budget_tokens`;
+    // Claude 3.7 and 4.0–4.5 take the legacy budgeted shape. The API rejects
+    // `temperature` alongside thinking.
+    final model = options?.model ?? defaultModel;
     final effort = options?.reasoningEffort;
     final thinkingEnabled =
         effort != null && !(options?.extra.containsKey('thinking') ?? false);
+    final useLegacyThinking = thinkingEnabled && _usesBudgetedThinking(model);
     final budget = effort?.budgetTokens ?? 0;
     var maxTokens = options?.maxOutputTokens ?? defaultMaxTokens;
-    if (thinkingEnabled && maxTokens <= budget) {
+    // Only the legacy budgeted shape needs headroom above budget_tokens;
+    // adaptive thinking draws from max_tokens directly.
+    if (useLegacyThinking && maxTokens <= budget) {
       maxTokens = budget + defaultMaxTokens;
     }
     final payload = <String, Object?>{
       if (options?.extra != null) ...options!.extra,
-      'model': options?.model ?? defaultModel,
+      'model': model,
       'max_tokens': maxTokens,
       if (thinkingEnabled)
-        'thinking': {'type': 'enabled', 'budget_tokens': budget},
+        'thinking': useLegacyThinking
+            ? {'type': 'enabled', 'budget_tokens': budget}
+            : {'type': 'adaptive'},
       'stream': true,
       'messages': messages,
       if (system != null && system.isNotEmpty)
@@ -226,6 +234,21 @@ class AnthropicProvider implements LlmProvider {
     final base = _baseUrl.toString().replaceAll(RegExp(r'/+$'), '');
     return Uri.parse('$base/messages');
   }
+
+  /// Matches models that take the legacy budgeted extended-thinking shape
+  /// (`{type: 'enabled', budget_tokens: N}`): Claude 3.x and Claude 4.0–4.5.
+  static final RegExp _budgetedThinkingModel =
+      RegExp(r'^claude-3|^claude-(?:opus|sonnet|haiku)-4-[0-5](?![0-9])');
+
+  /// Whether [model] uses the legacy budgeted extended-thinking shape rather
+  /// than adaptive thinking.
+  ///
+  /// Claude 4.6+ (including the default `claude-opus-4-8`) removed
+  /// `budget_tokens` in favor of adaptive thinking (`{type: 'adaptive'}`);
+  /// sending the budgeted shape there is a 400. Unknown or newer model ids
+  /// default to adaptive, matching the current flagship models.
+  static bool _usesBudgetedThinking(String model) =>
+      _budgetedThinkingModel.hasMatch(model);
 
   /// Builds the top-level `system` string and the `messages` array. Messages
   /// with empty content are dropped (the API rejects them).

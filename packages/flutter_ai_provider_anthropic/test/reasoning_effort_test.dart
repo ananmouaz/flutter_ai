@@ -30,18 +30,34 @@ Future<Map<String, Object?>> _capture(AiRequestOptions options) async {
 }
 
 void main() {
-  test('reasoningEffort enables thinking with the mapped budget', () async {
+  test('reasoningEffort enables adaptive thinking on 4.6+ (default model)',
+      () async {
+    // The default model (claude-opus-4-8) is adaptive-only: it rejects
+    // budget_tokens, so we must emit {type: adaptive}.
     final payload = await _capture(
         const AiRequestOptions(reasoningEffort: ReasoningEffort.low));
+    final thinking = (payload['thinking'] as Map).cast<String, Object?>();
+    expect(thinking['type'], 'adaptive');
+    expect(thinking.containsKey('budget_tokens'), isFalse);
+  });
+
+  test('reasoningEffort uses the budgeted shape on legacy models', () async {
+    final payload = await _capture(const AiRequestOptions(
+      model: 'claude-3-7-sonnet-latest',
+      reasoningEffort: ReasoningEffort.low,
+    ));
     final thinking = (payload['thinking'] as Map).cast<String, Object?>();
     expect(thinking['type'], 'enabled');
     expect(thinking['budget_tokens'], ReasoningEffort.low.budgetTokens);
   });
 
-  test('raises max_tokens above the budget when needed', () async {
-    // high budget (24576) exceeds the default max_tokens (4096).
-    final payload = await _capture(
-        const AiRequestOptions(reasoningEffort: ReasoningEffort.high));
+  test('raises max_tokens above the budget on legacy models', () async {
+    // high budget (24576) exceeds the default max_tokens (4096); only the
+    // budgeted shape needs the bump.
+    final payload = await _capture(const AiRequestOptions(
+      model: 'claude-sonnet-4-5',
+      reasoningEffort: ReasoningEffort.high,
+    ));
     expect(payload['max_tokens'] as int,
         greaterThan(ReasoningEffort.high.budgetTokens));
   });
