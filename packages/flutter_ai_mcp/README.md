@@ -3,7 +3,7 @@
 <p align="center"><b>Model Context Protocol for flutter_ai</b> — connect to MCP servers over Streamable HTTP and expose their tools to the agent loop with no glue code.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.png" width="300" alt="MCP tools flowing through the flutter_ai agent loop"/>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.png" width="300" alt="flutter_ai streaming chat — the agent loop MCP tools plug into"/>
 </p>
 
 <p align="center">
@@ -28,7 +28,11 @@ loop — no glue code.
 
 ## Usage
 
+> Driving the agent loop uses `flutter_ai_client` — add it to your
+> `pubspec.yaml` alongside `flutter_ai_mcp` and `flutter_ai_tools`.
+
 ```dart
+import 'package:flutter_ai_client/flutter_ai_client.dart';
 import 'package:flutter_ai_mcp/flutter_ai_mcp.dart';
 import 'package:flutter_ai_tools/flutter_ai_tools.dart';
 
@@ -64,10 +68,4 @@ final controller = UseChatController(
 Published on pub.dev (see the CHANGELOG). Built on
 [`mcp_client`](https://pub.dev/packages/mcp_client).
 
-## ☕ Support this project
-
-<p align="center">
-  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
-</p>
-
-<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+_If `flutter_ai` saves you time, you can [buy me a coffee ☕](https://ko-fi.com/ananmouaz)._

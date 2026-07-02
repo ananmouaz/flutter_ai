@@ -128,21 +128,55 @@ void main() {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const AiMessageBubble(
-                    message: AiMessage(
-                      id: 'u',
-                      role: AiRole.user,
-                      parts: [TextPart('Plan a weekend in Lisbon')],
+                  // A full transcript fills the frame (the old preview left the
+                  // dark screen mostly empty): message → reasoning → answer →
+                  // tool card, with the composer pinned below.
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: const [
+                          AiMessageBubble(
+                            message: AiMessage(
+                              id: 'u',
+                              role: AiRole.user,
+                              parts: [TextPart('Plan a weekend in Lisbon')],
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          AiReasoning(
+                            text:
+                                'Check the weekend weather, find the top '
+                                'sights, then build a two-day plan.',
+                            initiallyExpanded: true,
+                          ),
+                          SizedBox(height: 12),
+                          AiResponse(
+                            text:
+                                '## Day 1\n- Belém Tower & pastéis de nata\n'
+                                '- Alfama and the castle\n\n## Day 2\n'
+                                '- Sintra day trip\n\nSunny, **~24°C** — pack '
+                                'light. See the [guide](https://x.test).',
+                          ),
+                          SizedBox(height: 12),
+                          AiToolInvocation(
+                            call: ToolCallPart(
+                              toolCallId: 'c1',
+                              toolName: 'get_weather',
+                              args: {'city': 'Lisbon', 'units': 'metric'},
+                              state: ToolCallState.outputAvailable,
+                            ),
+                            result: ToolResultPart(
+                              toolCallId: 'c1',
+                              result: {'tempC': 24, 'condition': 'Sunny'},
+                            ),
+                            initiallyExpanded: true,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const AiResponse(
-                    text:
-                        '## Day 1\n- Belém Tower & pastéis de nata\n'
-                        '- Alfama and the castle\n\nSunny, **~24°C** — pack '
-                        'light. See the [guide](https://x.test).',
-                  ),
-                  const Spacer(),
                   AiComposer(
                     onSend: (_) {},
                     onAttach: () {},

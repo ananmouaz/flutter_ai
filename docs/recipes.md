@@ -431,7 +431,9 @@ to flutter_ai `ToolSpec`s with `mcpToolSpecs`, and feed them through the same
 agent loop as native tools.
 
 ```dart
+import 'package:flutter_ai_client/flutter_ai_client.dart';
 import 'package:flutter_ai_mcp/flutter_ai_mcp.dart';
+import 'package:flutter_ai_tools/flutter_ai_tools.dart';
 
 final mcp = await StreamableHttpMcpConnection.connect(
   baseUrl: 'https://my-mcp-server.example.com',

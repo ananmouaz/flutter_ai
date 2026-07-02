@@ -121,6 +121,29 @@ You type → AiPromptInput → UseChatController.sendText()
             controller notifies → AiChat rebuilds → reply streams in
 ```
 
+## How it compares
+
+Most Flutter "AI chat" packages do **one** of two jobs — render messages, or
+orchestrate an LLM. `flutter_ai` does both, as composable pieces you can take
+à la carte.
+
+| | **flutter_ai** | `flutter_chat_ui`, `dash_chat_2` | `langchain_dart` | `flutter_ai_toolkit` (Firebase) |
+|---|:---:|:---:|:---:|:---:|
+| Chat UI widgets | ✅ streaming-native, themed | ✅ render-only | ❌ | ✅ monolithic, Material |
+| Runs the conversation (streaming reducer + agent loop) | ✅ | ❌ bring your own | ✅ chains/RAG | ✅ |
+| Provider-agnostic | ✅ OpenAI · Anthropic · Gemini | n/a | ✅ | Firebase/Vertex-centric |
+| State-manager agnostic | ✅ | ✅ | n/a | partial |
+| Tools · MCP · citations · voice | ✅ | ❌ | tools only | partial |
+| Shape | family of small packages | UI only | logic only | one package |
+
+- **vs. chat-UI packages** (`flutter_chat_ui`, `dash_chat_2`): they paint bubbles;
+  you still wire up streaming, tool loops, and state. `flutter_ai` ships the UI
+  *and* runs the turn.
+- **vs. `langchain_dart`**: it's orchestration (chains, RAG) with no UI — and it
+  composes here: wrap a chain behind an `LlmProvider` and keep the flutter_ai UI.
+- **vs. `flutter_ai_toolkit`**: a great Firebase/Vertex drop-in, but Material-locked
+  and provider-narrow; `flutter_ai` is provider- and design-system-neutral.
+
 ## Quick start
 
 A minimal app is **one UI package + one provider**:
@@ -210,12 +233,17 @@ control of the input UI? Reach for its presentational primitive `AiComposer`
 
 A showcase app lives in [`demo/`](demo/) — a live chat (streams reasoning → tool
 call → answer → citation), real function calling, Live voice mode, and a gallery
-of every element. Run it against a real model:
+of every element. It runs out of the box on a built-in **scripted provider** (no
+API key needed). To talk to a live model, pass a Gemini key:
 
 ```bash
 cd demo
-flutter run --dart-define=GEMINI_API_KEY=your_key   # or OPENAI/ANTHROPIC
+flutter run                                       # scripted provider, no key
+flutter run --dart-define=GEMINI_API_KEY=your_key # live Gemini (with grounding)
 ```
+
+For OpenAI or Anthropic, swap the provider in [`demo/lib/main.dart`](demo/lib/main.dart)
+(`_buildProvider`) — see each provider package's README.
 
 ## Learn more
 

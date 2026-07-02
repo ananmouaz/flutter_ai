@@ -40,10 +40,10 @@ or adapt to Bloc / Riverpod / Provider.
 ### Chat: `useChat` → `UseChatController`
 
 ```ts
-// Vercel AI SDK (React)
-const { messages, input, handleSubmit, stop } = useChat({
-  api: '/api/chat',
-});
+// Vercel AI SDK v5 (React)
+const { messages, sendMessage, status, stop } = useChat();
+// v5 dropped `input`/`handleSubmit` from useChat — you own the input state and
+// call sendMessage({ text }).
 ```
 
 ```dart

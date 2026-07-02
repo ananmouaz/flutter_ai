@@ -81,10 +81,4 @@ Part of the `flutter_ai` ecosystem; the UI layer (`flutter_ai_elements`) and
 provider/controller layer (`flutter_ai_client`) build on these types. See the
 CHANGELOG for version history.
 
-## ☕ Support this project
-
-<p align="center">
-  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
-</p>
-
-<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+_If `flutter_ai` saves you time, you can [buy me a coffee ☕](https://ko-fi.com/ananmouaz)._
