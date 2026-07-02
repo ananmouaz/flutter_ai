@@ -43,6 +43,10 @@ ffmpeg -y -framerate 8 -i test/shots/chat_%03d.png \
   screenshots/chat.gif
 ```
 
+A few of these are also mirrored into `packages/flutter_ai_elements/screenshots/`
+for the pub.dev listing (referenced by that package's `screenshots:` field); copy
+the updated files over after regenerating.
+
 ## Elements
 
 | | | |

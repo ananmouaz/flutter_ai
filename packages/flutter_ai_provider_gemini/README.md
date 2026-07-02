@@ -70,10 +70,4 @@ final controller = UseChatController(
 The request/response mapping is unit-tested against recorded SSE chunks. Supply
 an API key to use it against the live API.
 
-## ☕ Support this project
-
-<p align="center">
-  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
-</p>
-
-<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+_If `flutter_ai` saves you time, you can [buy me a coffee ☕](https://ko-fi.com/ananmouaz)._

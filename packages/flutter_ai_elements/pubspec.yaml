@@ -12,6 +12,19 @@ topics:
   - streaming
   - widgets
 
+# Rendered on the pub.dev listing (up to 5).
+screenshots:
+  - description: "A streamed assistant message with Markdown formatting."
+    path: screenshots/element_message_assistant.png
+  - description: "Collapsible chain-of-thought reasoning disclosure."
+    path: screenshots/element_reasoning.png
+  - description: "A tool invocation card with arguments and result."
+    path: screenshots/element_tool_invocation.png
+  - description: "Syntax-highlighted code block with a copy action."
+    path: screenshots/element_code_block.png
+  - description: "Grounded answer with source citations."
+    path: screenshots/element_sources.png
+
 environment:
   sdk: ^3.6.0
   flutter: ">=3.27.0"

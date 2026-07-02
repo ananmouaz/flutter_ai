@@ -81,6 +81,8 @@ restyle everything via theme tokens.
 - `AiLoader` — a pulsing three-dot thinking indicator.
 
 **Controller-bound** (wire to a `UseChatController` — what you usually want):
+- `AiChatView` — the batteries-included one-widget chat: transcript + composer +
+  layout. The fastest way to drop in a full chat.
 - `AiChat` — live transcript with auto-scroll and a thinking loader.
 - `AiPromptInput` — the drop-in composer: wraps `AiComposer` and wires it to
   `sendText` / `stop`. Prefer this over `AiComposer`.
@@ -163,10 +165,4 @@ Published on pub.dev (see the CHANGELOG); depends on the sibling `flutter_ai`
 packages.
 See [`example/`](example/) for a full app.
 
-## ☕ Support this project
-
-<p align="center">
-  <a href="https://ko-fi.com/ananmouaz"><img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy me a coffee on Ko-fi" height="72"></a>
-</p>
-
-<p align="center"><b>If <code>flutter_ai</code> saves you time, <a href="https://ko-fi.com/ananmouaz">buy me a coffee ☕</a> — it keeps the whole family maintained.</b></p>
+_If `flutter_ai` saves you time, you can [buy me a coffee ☕](https://ko-fi.com/ananmouaz)._

@@ -9,6 +9,7 @@ topics:
   - llm
   - anthropic
   - claude
+  - chatbot
 
 
 environment:
