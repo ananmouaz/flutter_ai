@@ -9,6 +9,10 @@
 - Fix: `selectBranch` is now a no-op whenever a turn is in flight (including the
   tool-execution phase), preventing a mid-loop branch switch from corrupting the
   transcript.
+- Fix: the default message-id generator now uses a per-controller random prefix
+  (`msg-<prefix>-<n>`) instead of restarting at `msg-0`, so seeding a controller
+  with a rehydrated `ChatStore` transcript no longer produces colliding ids. Pass
+  a custom `idGenerator` to override.
 
 ## 0.2.4
 

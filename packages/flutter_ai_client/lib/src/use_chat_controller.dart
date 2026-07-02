@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_ai_client/src/chat_observer.dart';
@@ -756,9 +757,20 @@ class UseChatController extends ChangeNotifier {
     super.dispose();
   }
 
+  /// The default message-id generator: a per-controller random prefix plus an
+  /// incrementing counter, e.g. `msg-k3f9a1-0`.
+  ///
+  /// The random prefix is what makes ids collision-resistant. A plain `msg-N`
+  /// counter restarts at 0 for every controller, so seeding a controller with a
+  /// rehydrated transcript (`ChatStore.load`, which already contains `msg-0…N`)
+  /// would make the first new message reuse an existing id — silently corrupting
+  /// `messageById`/`replace`/`editMessage` and producing duplicate widget keys.
+  /// The prefix also keeps two controllers writing to the same store from
+  /// colliding. Pass a custom `idGenerator` to override.
   static String Function() _sequentialIdGenerator() {
+    final prefix = (Random().nextInt(1 << 32)).toRadixString(36);
     var n = 0;
-    return () => 'msg-${n++}';
+    return () => 'msg-$prefix-${n++}';
   }
 }
 

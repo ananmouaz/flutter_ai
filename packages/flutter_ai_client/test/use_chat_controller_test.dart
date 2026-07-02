@@ -49,6 +49,39 @@ void main() {
   // Run scheduled notifications synchronously for deterministic assertions.
   void syncScheduler(void Function() callback) => callback();
 
+  group('message ids', () {
+    test('default generator does not collide with a rehydrated transcript', () {
+      // A transcript persisted by a previous session, using the old msg-N ids.
+      const rehydrated = AiConversation(
+        id: 'thread-1',
+        messages: [
+          AiMessage(id: 'msg-0', role: AiRole.user, parts: [TextPart('hi')]),
+          AiMessage(
+            id: 'msg-1',
+            role: AiRole.assistant,
+            parts: [TextPart('hello')],
+            status: AiMessageStatus.complete,
+          ),
+        ],
+      );
+      final controller = UseChatController(
+        provider: ManualProvider(),
+        scheduler: syncScheduler,
+        initial: rehydrated,
+        // No idGenerator override: exercise the real default.
+      );
+      addTearDown(controller.dispose);
+
+      unawaited(controller.sendText('second question'));
+
+      final ids = controller.messages.map((m) => m.id).toList();
+      expect(ids.toSet(), hasLength(ids.length), reason: 'ids must be unique');
+      expect(ids, containsAll(<String>['msg-0', 'msg-1']));
+      // The newly appended user message must not reuse a rehydrated id.
+      expect(ids.where((id) => id == 'msg-0' || id == 'msg-1'), hasLength(2));
+    });
+  });
+
   group('sendText / submit', () {
     test('appends the user message optimistically before any response', () {
       final provider = ManualProvider();
