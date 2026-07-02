@@ -7,6 +7,9 @@
   legacy `budget_tokens` shape with a 400. Claude 3.7 and 4.0–4.5 continue to use
   the budgeted shape. An explicit `thinking` block in `extra` still takes
   precedence.
+- Fix: a mid-stream `error` event (e.g. `overloaded_error`) is no longer
+  overwritten by a synthetic successful finish — the message now settles as
+  errored.
 
 ## 0.1.11
 

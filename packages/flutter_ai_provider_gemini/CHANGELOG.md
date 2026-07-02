@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fix: a mid-stream `error` payload is now surfaced as a `StreamErrorEvent`, and
+  a blocked prompt (`promptFeedback.blockReason`) finishes as content-filtered —
+  instead of both being ignored and rendered as an empty, successful message.
+
 ## 0.1.11
 
 - Map `AiRequestOptions.reasoningEffort` to `generationConfig.thinkingConfig.

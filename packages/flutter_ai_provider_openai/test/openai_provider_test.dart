@@ -69,6 +69,29 @@ void main() {
       expect(finished.usage?.cachedInputTokens, 4);
     });
 
+    test('surfaces a mid-stream error object and suppresses finalize', () {
+      final parser = OpenAiChunkParser();
+      final events = [
+        ...parser.parse({
+          'id': 'chatcmpl-1',
+          'choices': [
+            {
+              'delta': {'content': 'partial'},
+            },
+          ],
+        }),
+        ...parser.parse({
+          'error': {'message': 'The server had an error', 'type': 'server_error'},
+        }),
+        ...parser.finalize(),
+      ];
+
+      final err = events.whereType<StreamErrorEvent>().single;
+      expect(err.error, 'The server had an error');
+      // finalize() must not add a MessageFinished(stop) after the error.
+      expect(events.whereType<MessageFinished>(), isEmpty);
+    });
+
     test('threads streamed tool calls by index and readies them', () {
       final parser = OpenAiChunkParser();
       final events = [

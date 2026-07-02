@@ -168,6 +168,10 @@ class AnthropicEventParser {
         ];
 
       case 'error':
+        // Anthropic closes the stream after an error event. Mark the message
+        // finished so finalize() doesn't paper over it with a synthetic
+        // MessageFinished(stop) that would overwrite the error status.
+        _finished = true;
         final error = (event['error'] as Map?)?.cast<String, Object?>();
         final message =
             error?['message'] as String? ?? 'Anthropic stream error';

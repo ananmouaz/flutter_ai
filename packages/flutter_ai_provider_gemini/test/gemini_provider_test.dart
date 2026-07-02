@@ -90,6 +90,29 @@ void main() {
       expect(events.whereType<ReasoningDelta>().single.delta, 'thinking…');
     });
 
+    test('surfaces a mid-stream error payload and suppresses finalize', () {
+      final parser = GeminiEventParser(messageId: 'a1');
+      final events = parser.parse({
+        'error': {'code': 429, 'message': 'Resource exhausted'},
+      });
+      final err = events.whereType<StreamErrorEvent>().single;
+      expect(err.error, 'Resource exhausted');
+      expect(err.messageId, 'a1');
+      // No synthetic MessageFinished(stop) after the error.
+      expect(parser.finalize(), isEmpty);
+    });
+
+    test('a blocked prompt finishes as content-filtered, not empty success',
+        () {
+      final parser = GeminiEventParser(messageId: 'a1');
+      final events = parser.parse({
+        'promptFeedback': {'blockReason': 'SAFETY'},
+      });
+      final finished = events.whereType<MessageFinished>().single;
+      expect(finished.reason, FinishReason.contentFilter);
+      expect(parser.finalize(), isEmpty);
+    });
+
     test(
         'expands a functionCall into start/delta/ready and finishes as toolCalls',
         () {

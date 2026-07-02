@@ -52,6 +52,33 @@ class GeminiEventParser {
       _usage = _mapUsage(usageMeta.cast<String, Object?>());
     }
 
+    // A stream-level error payload (quota, server error) carries no candidates;
+    // surface it instead of letting finalize() emit a fake success.
+    final error = chunk['error'];
+    if (error is Map) {
+      _finished = true;
+      final message =
+          error['message'] as String? ?? 'Gemini stream error';
+      events.add(StreamErrorEvent(error: message, messageId: _messageId));
+      return events;
+    }
+
+    // A blocked prompt arrives as `promptFeedback.blockReason` with no
+    // candidates; finish as content-filtered rather than an empty success.
+    final feedback =
+        (chunk['promptFeedback'] as Map?)?.cast<String, Object?>();
+    if (feedback?['blockReason'] is String) {
+      _finished = true;
+      events.add(
+        MessageFinished(
+          messageId: _messageId,
+          reason: FinishReason.contentFilter,
+          usage: _usage,
+        ),
+      );
+      return events;
+    }
+
     final candidates = chunk['candidates'];
     if (candidates is! List || candidates.isEmpty) return events;
     final candidate = (candidates.first as Map).cast<String, Object?>();
