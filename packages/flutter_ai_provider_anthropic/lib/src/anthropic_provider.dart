@@ -121,10 +121,15 @@ class AnthropicProvider implements LlmProvider {
     // the default model) uses adaptive thinking and rejects `budget_tokens`;
     // Claude 3.7 and 4.0–4.5 take the legacy budgeted shape. The API rejects
     // `temperature` alongside thinking.
+    //
+    // Structured output forces a tool (`tool_choice: {type: tool}`), which the
+    // API rejects while thinking is enabled — so thinking is dropped when a
+    // responseFormat is set (structured output takes precedence).
     final model = options?.model ?? defaultModel;
     final effort = options?.reasoningEffort;
-    final thinkingEnabled =
-        effort != null && !(options?.extra.containsKey('thinking') ?? false);
+    final thinkingEnabled = effort != null &&
+        responseFormat == null &&
+        !(options?.extra.containsKey('thinking') ?? false);
     final useLegacyThinking = thinkingEnabled && _usesBudgetedThinking(model);
     final budget = effort?.budgetTokens ?? 0;
     var maxTokens = options?.maxOutputTokens ?? defaultMaxTokens;

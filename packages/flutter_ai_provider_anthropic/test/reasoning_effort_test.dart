@@ -71,6 +71,20 @@ void main() {
     expect(payload.containsKey('thinking'), isTrue);
   });
 
+  test('drops thinking when a responseFormat is set (forced tool choice)',
+      () async {
+    final payload = await _capture(const AiRequestOptions(
+      reasoningEffort: ReasoningEffort.high,
+      responseFormat: AiResponseFormat(
+        name: 'result',
+        schema: {'type': 'object'},
+      ),
+    ));
+    // Forced tool_choice + thinking is a 400; structured output wins.
+    expect(payload.containsKey('thinking'), isFalse);
+    expect((payload['tool_choice'] as Map)['type'], 'tool');
+  });
+
   test('an explicit thinking block in extra takes precedence', () async {
     final payload = await _capture(const AiRequestOptions(
       reasoningEffort: ReasoningEffort.high,

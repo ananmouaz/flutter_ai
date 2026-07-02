@@ -10,6 +10,9 @@
 - Fix: a mid-stream `error` event (e.g. `overloaded_error`) is no longer
   overwritten by a synthetic successful finish — the message now settles as
   errored.
+- Fix: setting both `responseFormat` and `reasoningEffort` no longer sends an
+  invalid forced-tool-choice-plus-thinking request (a guaranteed 400). Thinking
+  is dropped when structured output is requested.
 
 ## 0.1.11
 
