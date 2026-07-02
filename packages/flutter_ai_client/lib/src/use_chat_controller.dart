@@ -378,13 +378,7 @@ class UseChatController extends ChangeNotifier {
 
   /// Cancels the in-flight turn, finalizing the streaming message as stopped.
   void stop() {
-    _stopActiveStream();
-    final last = _processor.conversation.lastMessage;
-    if (last != null && last.status == AiMessageStatus.streaming) {
-      _processor.apply(
-        MessageFinished(messageId: last.id, reason: FinishReason.stop),
-      );
-    }
+    _stopActiveStream(); // finalizes the trailing streaming message
     _status = ChatStatus.idle;
     _scheduleNotify();
   }
@@ -496,6 +490,17 @@ class UseChatController extends ChangeNotifier {
           _error = event.error;
           _status = ChatStatus.error;
           _observer?.onError(event.error, null);
+          // A messageId-less error is a no-op in the processor, so the trailing
+          // message would stay stuck `streaming`. Finalize it as errored (the
+          // onError callback does the same for transport failures).
+          final last = _processor.conversation.lastMessage;
+          if (event.messageId == null &&
+              last != null &&
+              last.status == AiMessageStatus.streaming) {
+            _processor.apply(
+              StreamErrorEvent(error: event.error, messageId: last.id),
+            );
+          }
           final sub = _subscription;
           _subscription = null;
           if (sub != null) unawaited(sub.cancel());
@@ -725,6 +730,16 @@ class UseChatController extends ChangeNotifier {
     final sub = _subscription;
     _subscription = null;
     if (sub != null) unawaited(sub.cancel());
+    // Finalize a still-streaming message so it doesn't linger in the transcript
+    // as a permanent typing indicator (and get persisted that way). Callers that
+    // discard the message afterwards (clear/regenerate/editMessage) are
+    // unaffected; submit/addToolResults keep it, so it must settle here.
+    final last = _processor.conversation.lastMessage;
+    if (last != null && last.status == AiMessageStatus.streaming) {
+      _processor.apply(
+        MessageFinished(messageId: last.id, reason: FinishReason.stop),
+      );
+    }
     _completeTurn();
   }
 

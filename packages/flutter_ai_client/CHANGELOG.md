@@ -13,6 +13,10 @@
   (`msg-<prefix>-<n>`) instead of restarting at `msg-0`, so seeding a controller
   with a rehydrated `ChatStore` transcript no longer produces colliding ids. Pass
   a custom `idGenerator` to override.
+- Fix: interrupting a stream with `submit`/`addToolResults`, and an in-band
+  `StreamErrorEvent` with no `messageId`, no longer leave the interrupted message
+  stuck in the `streaming` state (a permanent typing indicator that also got
+  persisted). The trailing message is now finalized.
 
 ## 0.2.4
 

@@ -206,6 +206,58 @@ void main() {
     });
   });
 
+  group('interrupting a stream finalizes the trailing message', () {
+    test('submit mid-stream settles the interrupted assistant message',
+        () async {
+      final provider = ManualProvider();
+      var n = 0;
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u${n++}',
+      );
+      addTearDown(controller.dispose);
+
+      unawaited(controller.sendText('Hello'));
+      provider.current
+        ..add(const MessageStarted(messageId: 'a1', role: AiRole.assistant))
+        ..add(const TextDelta(messageId: 'a1', delta: 'partial'));
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.messages.firstWhere((m) => m.id == 'a1').status,
+          AiMessageStatus.streaming);
+
+      // Start a new turn before the first finished.
+      unawaited(controller.sendText('Again'));
+
+      // The interrupted assistant message must not linger as a typing
+      // indicator (which would also be persisted by attachStore).
+      final a1 = controller.messages.firstWhere((m) => m.id == 'a1');
+      expect(a1.status, isNot(AiMessageStatus.streaming));
+    });
+
+    test('an in-band messageId-less error settles the streaming message',
+        () async {
+      final provider = ManualProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u1',
+      );
+      addTearDown(controller.dispose);
+
+      final turn = controller.sendText('Hello');
+      provider.current
+        ..add(const MessageStarted(messageId: 'a1', role: AiRole.assistant))
+        ..add(const TextDelta(messageId: 'a1', delta: 'partial'))
+        ..add(const StreamErrorEvent(error: 'boom')); // messageId: null
+      await turn;
+
+      expect(controller.status, ChatStatus.error);
+      final a1 = controller.messages.firstWhere((m) => m.id == 'a1');
+      expect(a1.status, AiMessageStatus.error);
+    });
+  });
+
   group('regenerate', () {
     test('drops the prior assistant turn and re-runs from the user message',
         () async {
