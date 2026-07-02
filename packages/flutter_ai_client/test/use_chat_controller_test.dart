@@ -571,6 +571,62 @@ void main() {
       );
     });
 
+    test('stays busy (executingTools) while the tool executor runs', () async {
+      final provider = _ToolThenTextProvider();
+      ChatStatus? statusDuringExecutor;
+      late UseChatController controller;
+      controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        onToolCalls: (calls, signal) async {
+          statusDuringExecutor = controller.status;
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: {'temp': 25}),
+          ];
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('weather in Lisbon?');
+
+      // The turn must not appear idle between the model's tool call and the
+      // executor's results — that flicker re-enables input and lets stores
+      // persist a mid-turn transcript.
+      expect(statusDuringExecutor, ChatStatus.executingTools);
+      expect(statusDuringExecutor!.isBusy, isTrue);
+      expect(controller.status, ChatStatus.idle);
+    });
+
+    test('selectBranch is a no-op while the tool executor runs', () async {
+      final provider = _ToolThenTextProvider();
+      var branchAttemptRejected = false;
+      late UseChatController controller;
+      controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        onToolCalls: (calls, signal) async {
+          // Attempting a branch switch mid-loop must be rejected (no _turn is
+          // ever null here), preventing transcript corruption.
+          final before = controller.messages.length;
+          controller.selectBranch(0);
+          branchAttemptRejected = controller.messages.length == before;
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: {'temp': 25}),
+          ];
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('weather in Lisbon?');
+
+      expect(branchAttemptRejected, isTrue);
+      expect(controller.status, ChatStatus.idle);
+    });
+
     test('stops at maxSteps when tools never resolve', () async {
       final provider = _AlwaysToolProvider();
       var executed = 0;

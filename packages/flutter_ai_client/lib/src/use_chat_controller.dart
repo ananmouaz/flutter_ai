@@ -328,12 +328,13 @@ class UseChatController extends ChangeNotifier {
   }
 
   /// Switches the latest turn to regenerated version [index] (0-based). A no-op
-  /// out of range, while streaming, or if already showing it.
+  /// out of range, while a turn is in flight, or if already showing it.
   void selectBranch(int index) {
     if (index < 0 || index >= _branches.length || index == _branchIndex) return;
-    if (_status == ChatStatus.streaming || _status == ChatStatus.submitted) {
-      return;
-    }
+    // Never switch branches while a turn is in flight — including the agent
+    // loop's tool-execution phase, whose live continuation would otherwise
+    // append tool results onto the swapped transcript and corrupt it.
+    if (_turn != null) return;
     final lastUser = _lastUserIndex();
     if (lastUser == -1) return;
     final head = _processor.conversation.messages.sublist(0, lastUser + 1);
@@ -538,7 +539,6 @@ class UseChatController extends ChangeNotifier {
       _scheduleNotify();
       return;
     }
-    _status = ChatStatus.idle;
     _captureBranch();
     _observer?.onModelResponse(
       step: _step,
@@ -570,10 +570,15 @@ class UseChatController extends ChangeNotifier {
         pending.isNotEmpty &&
         _step < _maxSteps &&
         !overBudget) {
+      // The turn stays in flight while the tool executor runs; keep the
+      // controller busy so UIs don't re-enable input and stores don't persist a
+      // mid-turn transcript with unanswered tool calls (see selectBranch).
+      _status = ChatStatus.executingTools;
       _scheduleNotify();
       unawaited(_continueWithTools(pending, _turn));
       return;
     }
+    _status = ChatStatus.idle;
     _completeTurn();
     _scheduleNotify();
   }
@@ -625,6 +630,7 @@ class UseChatController extends ChangeNotifier {
     final results = [...validationErrors, ...executed];
     _observer?.onToolResults(results);
     if (results.isEmpty) {
+      _status = ChatStatus.idle;
       _completeTurn();
       _scheduleNotify();
       return;

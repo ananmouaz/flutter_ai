@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Fix: the controller no longer reports `idle` while the agent loop runs its tool
+  executor between model calls. A new `ChatStatus.executingTools` (included in
+  `isBusy`) keeps the turn marked busy, so UIs don't re-enable input mid-turn and
+  `attachStore` doesn't persist a transcript with unanswered tool calls.
+- Fix: `selectBranch` is now a no-op whenever a turn is in flight (including the
+  tool-execution phase), preventing a mid-loop branch switch from corrupting the
+  transcript.
+
 ## 0.2.4
 
 - `keepLastWithSummary`: a context strategy that folds a caller-supplied rolling
