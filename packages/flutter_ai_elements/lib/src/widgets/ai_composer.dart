@@ -282,14 +282,17 @@ class _AiComposerState extends State<AiComposer> {
     AiLocalizations l,
   ) {
     final showStop = widget.isBusy && widget.onStop != null;
-    final liveWhenEmpty = !hasText && !showStop && widget.onLive != null;
+    // Staged attachments are sendable even with no text (_handleSend allows an
+    // attachment-only send), so the main button must be Send — not Live — then.
+    final hasSendable = hasText || widget.attachments.isNotEmpty;
+    final liveWhenEmpty = !hasSendable && !showStop && widget.onLive != null;
 
     final IconData mainIcon;
     final VoidCallback? mainTap;
     if (showStop) {
       mainIcon = Icons.stop_rounded;
       mainTap = _handleStop;
-    } else if (hasText) {
+    } else if (hasSendable) {
       mainIcon = Icons.arrow_upward_rounded;
       mainTap = _handleSend;
     } else if (liveWhenEmpty) {
@@ -320,7 +323,7 @@ class _AiComposerState extends State<AiComposer> {
           icon: mainIcon,
           tooltip: showStop
               ? l.stop
-              : hasText
+              : hasSendable
                   ? l.send
                   : liveWhenEmpty
                       ? l.live
