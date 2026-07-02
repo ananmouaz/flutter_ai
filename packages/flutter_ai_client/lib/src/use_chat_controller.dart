@@ -471,12 +471,23 @@ class UseChatController extends ChangeNotifier {
     // must not mutate the conversation or leak onto the events stream after a
     // new turn started.
     final seq = _turnSeq;
-    // The provider sees the (optionally trimmed) conversation; the stored
-    // transcript is never trimmed.
-    final outgoing =
-        _trimHistory?.call(_processor.conversation) ?? _processor.conversation;
-    _subscription =
-        _provider.send(outgoing, tools: _tools, options: _options).listen(
+    // Building the request can throw synchronously: trimHistory is a
+    // caller-supplied callback, and the LlmProvider contract permits send() to
+    // throw for unrecoverable transport faults. Without this guard the thrown
+    // error escapes (leaving status stuck at `submitted` and the turn future
+    // never completing, or an unhandled zone error inside the agent loop).
+    final Stream<AiStreamEvent> stream;
+    try {
+      // The provider sees the (optionally trimmed) conversation; the stored
+      // transcript is never trimmed.
+      final outgoing = _trimHistory?.call(_processor.conversation) ??
+          _processor.conversation;
+      stream = _provider.send(outgoing, tools: _tools, options: _options);
+    } catch (error, stackTrace) {
+      _failTurn(error, stackTrace);
+      return;
+    }
+    _subscription = stream.listen(
       (event) {
         if (_disposed || seq != _turnSeq) return;
         _processor.apply(event);
@@ -487,25 +498,7 @@ class UseChatController extends ChangeNotifier {
         // conversation past the failure. A tool-scoped error is left to the
         // tool result instead and streaming continues.
         if (event is StreamErrorEvent && event.toolCallId == null) {
-          _error = event.error;
-          _status = ChatStatus.error;
-          _observer?.onError(event.error, null);
-          // A messageId-less error is a no-op in the processor, so the trailing
-          // message would stay stuck `streaming`. Finalize it as errored (the
-          // onError callback does the same for transport failures).
-          final last = _processor.conversation.lastMessage;
-          if (event.messageId == null &&
-              last != null &&
-              last.status == AiMessageStatus.streaming) {
-            _processor.apply(
-              StreamErrorEvent(error: event.error, messageId: last.id),
-            );
-          }
-          final sub = _subscription;
-          _subscription = null;
-          if (sub != null) unawaited(sub.cancel());
-          _completeTurn();
-          _scheduleNotify();
+          _failTurn(event.error, null);
           return;
         } else if (_status == ChatStatus.submitted) {
           _status = ChatStatus.streaming;
@@ -514,19 +507,7 @@ class UseChatController extends ChangeNotifier {
       },
       onError: (Object error, StackTrace stackTrace) {
         if (_disposed || seq != _turnSeq) return;
-        _error = error;
-        _stackTrace = stackTrace;
-        _status = ChatStatus.error;
-        _observer?.onError(error, stackTrace);
-        final last = _processor.conversation.lastMessage;
-        if (last != null && last.status == AiMessageStatus.streaming) {
-          _processor.apply(
-            StreamErrorEvent(error: error, messageId: last.id),
-          );
-        }
-        _subscription = null;
-        _completeTurn();
-        _scheduleNotify();
+        _failTurn(error, stackTrace);
       },
       onDone: () {
         if (_disposed || seq != _turnSeq) return;
@@ -741,6 +722,27 @@ class UseChatController extends ChangeNotifier {
       );
     }
     _completeTurn();
+  }
+
+  /// Routes a turn-fatal [error] to the error state: records it, notifies the
+  /// observer, finalizes any trailing streaming message, cancels the active
+  /// stream, and completes the turn. Shared by the async `onError`, a fatal
+  /// in-band `StreamErrorEvent`, and a synchronous throw from
+  /// `provider.send`/`trimHistory`.
+  void _failTurn(Object error, StackTrace? stackTrace) {
+    _error = error;
+    _stackTrace = stackTrace;
+    _status = ChatStatus.error;
+    _observer?.onError(error, stackTrace);
+    final last = _processor.conversation.lastMessage;
+    if (last != null && last.status == AiMessageStatus.streaming) {
+      _processor.apply(StreamErrorEvent(error: error, messageId: last.id));
+    }
+    final sub = _subscription;
+    _subscription = null;
+    if (sub != null) unawaited(sub.cancel());
+    _completeTurn();
+    _scheduleNotify();
   }
 
   void _completeTurn() {

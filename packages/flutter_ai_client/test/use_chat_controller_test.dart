@@ -328,6 +328,34 @@ void main() {
       expect(controller.error, 'upstream timeout');
     });
 
+    test('a synchronous throw from provider.send fails the turn cleanly',
+        () async {
+      final controller = UseChatController(
+        provider: _SyncThrowingProvider(),
+        scheduler: syncScheduler,
+      );
+      addTearDown(controller.dispose);
+
+      // Must complete (not hang) and land in error, not stay `submitted`.
+      await controller.sendText('hi');
+      expect(controller.status, ChatStatus.error);
+      expect(controller.error, isA<StateError>());
+    });
+
+    test('a synchronous throw from trimHistory fails the turn cleanly',
+        () async {
+      final controller = UseChatController(
+        provider: ManualProvider(),
+        scheduler: syncScheduler,
+        trimHistory: (_) => throw StateError('trim boom'),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hi');
+      expect(controller.status, ChatStatus.error);
+      expect(controller.error, isA<StateError>());
+    });
+
     test('captures the stack trace alongside a thrown provider error',
         () async {
       final provider = _ThrowingProvider();
@@ -1278,6 +1306,19 @@ class _ThrowingProvider implements LlmProvider {
     AiRequestOptions? options,
   }) async* {
     throw StateError('provider exploded');
+  }
+}
+
+/// Throws synchronously from `send` (not via the stream), as the LlmProvider
+/// contract permits for unrecoverable transport faults.
+class _SyncThrowingProvider implements LlmProvider {
+  @override
+  Stream<AiStreamEvent> send(
+    AiConversation conversation, {
+    List<ToolDefinition>? tools,
+    AiRequestOptions? options,
+  }) {
+    throw StateError('sync boom');
   }
 }
 
