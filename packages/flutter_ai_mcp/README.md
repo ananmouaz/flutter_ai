@@ -3,7 +3,7 @@
 <p align="center"><b>Model Context Protocol for flutter_ai</b> — connect to MCP servers over Streamable HTTP and expose their tools to the agent loop with no glue code.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.png" width="300" alt="MCP tools flowing through the flutter_ai agent loop"/>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.png" width="300" alt="flutter_ai streaming chat — the agent loop MCP tools plug into"/>
 </p>
 
 <p align="center">
@@ -28,7 +28,11 @@ loop — no glue code.
 
 ## Usage
 
+> Driving the agent loop uses `flutter_ai_client` — add it to your
+> `pubspec.yaml` alongside `flutter_ai_mcp` and `flutter_ai_tools`.
+
 ```dart
+import 'package:flutter_ai_client/flutter_ai_client.dart';
 import 'package:flutter_ai_mcp/flutter_ai_mcp.dart';
 import 'package:flutter_ai_tools/flutter_ai_tools.dart';
 

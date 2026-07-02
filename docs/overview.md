@@ -31,16 +31,26 @@ driven entirely by Flutter `ThemeExtension`. No web aesthetic is inherited.
 
 ## The package family
 
+Shipped on pub.dev:
+
 | Package | Layer | Purpose |
 |---|---|---|
-| `flutter_ai_core` | Logic | Message / conversation models, streaming `MessageProcessor`, no Flutter dep |
-| `flutter_ai_client` | Logic | Provider abstraction, transport, `UseChatController` (Listenable) |
-| `flutter_ai_elements` | UI | Conversation, Message, PromptInput, Reasoning, Tool, Attachment widgets + `AiThemeExtension` |
-| `flutter_ai_tools` | Logic | Tool-calling contracts, structured actions, web-search adapters |
-| `flutter_ai_voice` | Optional | Speech-to-text, audio input (batch-first, realtime experimental) |
-| `flutter_ai_provider_local` | Optional | On-device inference (FFI kept out of core) |
-| `flutter_ai_attachments` | Future | Split out of elements only if attachment handling grows large |
-| `flutter_ai_design_system` | Future | Extracted skin, only once the default theme earns its own cadence |
+| `flutter_ai_core` | Logic | Message / conversation models, streaming `MessageProcessor`, provider contracts — no Flutter dep |
+| `flutter_ai_client` | Logic | `UseChatController` (Listenable), agent loop, persistence, context strategies |
+| `flutter_ai_elements` | UI | Conversation, Message, Composer, Reasoning, Tool, Attachment widgets + `AiThemeExtension` |
+| `flutter_ai_tools` | Logic | Tool-calling contracts, JSON-schema validation, web-search adapter |
+| `flutter_ai_mcp` | Logic | Model Context Protocol connection (Streamable HTTP) → flutter_ai tools |
+| `flutter_ai_voice` | Optional | Speech-to-text contracts (batch/streaming), pure Dart |
+| `flutter_ai_provider_openai` | Provider | OpenAI-compatible streaming provider |
+| `flutter_ai_provider_anthropic` | Provider | Anthropic (Claude) Messages API provider |
+| `flutter_ai_provider_gemini` | Provider | Native Gemini provider with Google Search grounding |
+
+Planned / not yet shipped:
+
+| Package | Purpose |
+|---|---|
+| `flutter_ai_provider_local` | On-device inference (FFI kept out of core) |
+| `flutter_ai_design_system` | Extracted skin, once the default theme earns its own cadence |
 
 See `package-architecture.md` for the dependency graph and the extraction seams.
 
@@ -66,9 +76,12 @@ all visual constants live behind the extension so a future
   `TextRenderer` interface).
 - No `dart:mirrors` / reflection anywhere.
 
-## Open questions
+## Resolved decisions
 
-- Final package names — confirm availability on pub.dev before publish.
-- Whether `flutter_ai_client` should ship reference providers in-package or as
-  separate `flutter_ai_provider_*` packages (current lean: separate).
-- License (MIT vs BSD-3 to match Flutter conventions).
+- Providers ship as separate `flutter_ai_provider_*` packages, not bundled into
+  `flutter_ai_client`.
+- Licensed **BSD-3-Clause**, matching Flutter conventions.
+- Package names are published on pub.dev under the `flutter_ai_*` family.
+
+> This overview is the original design brief; for current, task-oriented docs see
+> the [Recipes](recipes.md) and each package's README.

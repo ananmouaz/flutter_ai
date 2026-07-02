@@ -210,12 +210,17 @@ control of the input UI? Reach for its presentational primitive `AiComposer`
 
 A showcase app lives in [`demo/`](demo/) — a live chat (streams reasoning → tool
 call → answer → citation), real function calling, Live voice mode, and a gallery
-of every element. Run it against a real model:
+of every element. It runs out of the box on a built-in **scripted provider** (no
+API key needed). To talk to a live model, pass a Gemini key:
 
 ```bash
 cd demo
-flutter run --dart-define=GEMINI_API_KEY=your_key   # or OPENAI/ANTHROPIC
+flutter run                                       # scripted provider, no key
+flutter run --dart-define=GEMINI_API_KEY=your_key # live Gemini (with grounding)
 ```
+
+For OpenAI or Anthropic, swap the provider in [`demo/lib/main.dart`](demo/lib/main.dart)
+(`_buildProvider`) — see each provider package's README.
 
 ## Learn more
 

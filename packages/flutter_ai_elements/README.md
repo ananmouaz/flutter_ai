@@ -143,12 +143,18 @@ without breaking the API.
 
 ## Rich text
 
-Text renders through an injectable `AiTextRenderer` (`TextRenderer<Widget>`); the
-default is `PlainTextRenderer`. Provide your own for Markdown, code highlighting,
-or LaTeX:
+Markdown renders **by default** — headings, lists, bold/italic, links, and fenced
+code blocks — via `MarkdownTextRenderer`, so streamed answers format themselves
+out of the box. Text flows through an injectable `AiTextRenderer`
+(`TextRenderer<Widget>`), so you can swap in `PlainTextRenderer` for raw text, or
+your own renderer for LaTeX or custom syntax highlighting:
 
 ```dart
-AiChat(controller: controller, textRenderer: MyMarkdownRenderer());
+// Markdown is the default — this line is optional.
+AiChat(controller: controller, textRenderer: const MarkdownTextRenderer());
+
+// Opt out to plain text, or bring your own.
+AiChat(controller: controller, textRenderer: const PlainTextRenderer());
 ```
 
 ## Status

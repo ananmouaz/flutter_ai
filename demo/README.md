@@ -21,12 +21,15 @@ a dark `ThemeData` (toggle it with the header icon):
 ## Run it
 
 ```bash
-flutter run            # from demo/, on a simulator or device
+flutter run                                       # scripted provider, no key
+flutter run --dart-define=GEMINI_API_KEY=your_key # live Gemini (with grounding)
 ```
 
-The chat uses an in-app scripted provider — **no API key required**. To talk to
-a real model, swap in `OpenAiProvider` (from `flutter_ai_provider_openai`) and
-pass your key via `--dart-define`.
+With no key the chat uses an in-app scripted provider — **no API key required**.
+Passing `GEMINI_API_KEY` switches to the native Gemini provider (with Google
+Search grounding). For OpenAI or Anthropic, swap the provider in `lib/main.dart`
+(`_buildProvider`) — e.g. `OpenAiProvider(apiKey: ...)` — and pass your key via
+`--dart-define`.
 
 ## Regenerate the screenshots
 
