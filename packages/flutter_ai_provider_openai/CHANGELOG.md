@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Fix: `maxOutputTokens` now maps to `max_completion_tokens` instead of the
+  deprecated `max_tokens`, which reasoning models (o-series, gpt-5) reject with a
+  400. A caller targeting an older OpenAI-compatible endpoint can still pass
+  `max_tokens` via `extra`.
+
 ## 0.1.10
 
 - Map `AiRequestOptions.reasoningEffort` to OpenAI's `reasoning_effort`. An

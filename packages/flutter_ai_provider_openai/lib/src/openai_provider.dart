@@ -83,8 +83,13 @@ class OpenAiProvider implements LlmProvider, EmbeddingProvider {
           !(options?.extra.containsKey('reasoning_effort') ?? false))
         'reasoning_effort': options!.reasoningEffort!.openAiValue,
       if (options?.temperature != null) 'temperature': options!.temperature,
-      if (options?.maxOutputTokens != null)
-        'max_tokens': options!.maxOutputTokens,
+      // `max_completion_tokens`, not the deprecated `max_tokens`: reasoning
+      // models (o-series, gpt-5) reject `max_tokens` with a 400, and current
+      // chat models accept `max_completion_tokens`. A caller targeting an older
+      // OpenAI-compatible endpoint can pass `max_tokens` via `extra`.
+      if (options?.maxOutputTokens != null &&
+          !(options?.extra.containsKey('max_completion_tokens') ?? false))
+        'max_completion_tokens': options!.maxOutputTokens,
       if (tools != null && tools.isNotEmpty) 'tools': _buildTools(tools),
       if (options?.responseFormat != null)
         'response_format': {
