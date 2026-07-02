@@ -199,6 +199,9 @@ class MessageProcessor {
         _mutate(
           messageId,
           (m) => m.copyWith(
+            // Freeze any streaming buffer into a plain, detached part so the
+            // settled transcript message never pins a live StringBuffer.
+            parts: _freezeBuffers(m.parts),
             status: reason == FinishReason.error
                 ? AiMessageStatus.error
                 : AiMessageStatus.complete,
@@ -320,6 +323,26 @@ class MessageProcessor {
           ReasoningPart.buffered(StringBuffer()..write(delta), signature: sig));
     }
     return message.copyWith(parts: parts, status: AiMessageStatus.streaming);
+  }
+
+  /// Materializes any still-buffered [TextPart]/[ReasoningPart] into plain,
+  /// detached parts. Called when a message settles so the stored transcript
+  /// holds ordinary value objects rather than references to a live buffer.
+  List<AiPart> _freezeBuffers(List<AiPart> parts) {
+    var changed = false;
+    final frozen = <AiPart>[];
+    for (final part in parts) {
+      if (part is TextPart && part.buffer != null) {
+        frozen.add(TextPart(part.text));
+        changed = true;
+      } else if (part is ReasoningPart && part.buffer != null) {
+        frozen.add(ReasoningPart(part.text, signature: part.signature));
+        changed = true;
+      } else {
+        frozen.add(part);
+      }
+    }
+    return changed ? frozen : parts;
   }
 
   MutationResult _changed(String messageId) => MutationResult(

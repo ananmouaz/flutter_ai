@@ -38,6 +38,56 @@ void main() {
       expect(message.finishReason, FinishReason.stop);
     });
 
+    test('a returned snapshot is frozen — later deltas do not mutate it', () {
+      final processor = MessageProcessor();
+      processor.apply(
+        const MessageStarted(messageId: 'm1', role: AiRole.assistant),
+      );
+      final before =
+          processor.apply(const TextDelta(messageId: 'm1', delta: 'Hello'));
+      final beforeMessage = before.conversation.messageById('m1')!;
+      // Capture the text of the earlier snapshot.
+      expect(beforeMessage.text, 'Hello');
+
+      final after =
+          processor.apply(const TextDelta(messageId: 'm1', delta: ' world'));
+
+      // The earlier snapshot must NOT observe the later append (no retroactive
+      // mutation through the shared buffer).
+      expect(beforeMessage.text, 'Hello');
+      expect(after.conversation.messageById('m1')!.text, 'Hello world');
+    });
+
+    test('consecutive streaming snapshots compare unequal (value semantics)',
+        () {
+      final processor = MessageProcessor();
+      processor.apply(
+        const MessageStarted(messageId: 'm1', role: AiRole.assistant),
+      );
+      final first =
+          processor.apply(const TextDelta(messageId: 'm1', delta: 'Hel'))
+              .conversation;
+      final second =
+          processor.apply(const TextDelta(messageId: 'm1', delta: 'lo'))
+              .conversation;
+
+      // A consumer that dedupes by equality (Bloc/Riverpod/distinct) must see a
+      // change between the two streamed snapshots.
+      expect(first == second, isFalse);
+      expect(first.messageById('m1') == second.messageById('m1'), isFalse);
+    });
+
+    test('finishing freezes the buffer into a plain, detached TextPart', () {
+      final processor = MessageProcessor();
+      processor.apply(const TextDelta(messageId: 'm1', delta: 'done'));
+      processor.apply(
+        const MessageFinished(messageId: 'm1', reason: FinishReason.stop),
+      );
+      final part = processor.conversation.messageById('m1')!.parts.single;
+      expect(part, isA<TextPart>().having((p) => p.buffer, 'buffer', isNull));
+      expect((part as TextPart).text, 'done');
+    });
+
     test('reasoning deltas accumulate in a ReasoningPart', () {
       final processor = MessageProcessor();
       processor.apply(const ReasoningDelta(messageId: 'm1', delta: 'be'));
