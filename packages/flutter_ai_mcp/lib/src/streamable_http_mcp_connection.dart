@@ -12,20 +12,29 @@ import 'package:mcp_client/mcp_client.dart';
 /// final specs = await mcpToolSpecs(mcp); // → flutter_ai ToolSpecs
 /// ```
 class StreamableHttpMcpConnection implements McpConnection {
-  StreamableHttpMcpConnection._(this._client);
+  StreamableHttpMcpConnection._(this._client, this._callTimeout);
 
   final Client _client;
+
+  /// Upper bound on a single [callTool] round-trip. The underlying transport
+  /// only times out receiving response headers, not the (unbounded) SSE body
+  /// read, so without this a server that stalls mid-stream would leave the
+  /// executor future unresolved — wedging the agent turn indefinitely.
+  final Duration _callTimeout;
 
   /// Connects to the MCP server at [baseUrl] and initializes the session.
   ///
   /// [headers] are sent on every request (e.g. an `Authorization` token).
-  /// Throws if the connection or handshake fails.
+  /// [timeout] bounds the connection/handshake; [callTimeout] bounds each
+  /// subsequent [callTool] (a stalled call surfaces as an error result rather
+  /// than hanging the agent loop). Throws if the connection or handshake fails.
   static Future<StreamableHttpMcpConnection> connect({
     required String baseUrl,
     Map<String, String> headers = const {},
     String name = 'flutter_ai',
     String version = '0.1.0',
     Duration timeout = const Duration(seconds: 60),
+    Duration callTimeout = const Duration(seconds: 60),
   }) async {
     final result = await McpClient.createAndConnect(
       config: McpClient.simpleConfig(name: name, version: version),
@@ -39,7 +48,7 @@ class StreamableHttpMcpConnection implements McpConnection {
       (client) => client,
       (error) => throw StateError('MCP connect failed: $error'),
     );
-    return StreamableHttpMcpConnection._(client);
+    return StreamableHttpMcpConnection._(client, callTimeout);
   }
 
   @override
@@ -57,7 +66,13 @@ class StreamableHttpMcpConnection implements McpConnection {
 
   @override
   Future<Object?> callTool(String name, Map<String, Object?> arguments) async {
-    final result = await _client.callTool(name, arguments);
+    final result = await _client.callTool(name, arguments).timeout(
+          _callTimeout,
+          onTimeout: () => throw McpToolException(
+            name,
+            'MCP tool "$name" timed out after ${_callTimeout.inSeconds}s',
+          ),
+        );
     final text =
         result.content.whereType<TextContent>().map((c) => c.text).join();
     // Surface tool failures as an exception so the registry feeds an error
