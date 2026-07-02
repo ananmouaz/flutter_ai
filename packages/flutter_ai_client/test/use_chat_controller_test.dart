@@ -49,6 +49,39 @@ void main() {
   // Run scheduled notifications synchronously for deterministic assertions.
   void syncScheduler(void Function() callback) => callback();
 
+  group('message ids', () {
+    test('default generator does not collide with a rehydrated transcript', () {
+      // A transcript persisted by a previous session, using the old msg-N ids.
+      const rehydrated = AiConversation(
+        id: 'thread-1',
+        messages: [
+          AiMessage(id: 'msg-0', role: AiRole.user, parts: [TextPart('hi')]),
+          AiMessage(
+            id: 'msg-1',
+            role: AiRole.assistant,
+            parts: [TextPart('hello')],
+            status: AiMessageStatus.complete,
+          ),
+        ],
+      );
+      final controller = UseChatController(
+        provider: ManualProvider(),
+        scheduler: syncScheduler,
+        initial: rehydrated,
+        // No idGenerator override: exercise the real default.
+      );
+      addTearDown(controller.dispose);
+
+      unawaited(controller.sendText('second question'));
+
+      final ids = controller.messages.map((m) => m.id).toList();
+      expect(ids.toSet(), hasLength(ids.length), reason: 'ids must be unique');
+      expect(ids, containsAll(<String>['msg-0', 'msg-1']));
+      // The newly appended user message must not reuse a rehydrated id.
+      expect(ids.where((id) => id == 'msg-0' || id == 'msg-1'), hasLength(2));
+    });
+  });
+
   group('sendText / submit', () {
     test('appends the user message optimistically before any response', () {
       final provider = ManualProvider();
@@ -173,6 +206,58 @@ void main() {
     });
   });
 
+  group('interrupting a stream finalizes the trailing message', () {
+    test('submit mid-stream settles the interrupted assistant message',
+        () async {
+      final provider = ManualProvider();
+      var n = 0;
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u${n++}',
+      );
+      addTearDown(controller.dispose);
+
+      unawaited(controller.sendText('Hello'));
+      provider.current
+        ..add(const MessageStarted(messageId: 'a1', role: AiRole.assistant))
+        ..add(const TextDelta(messageId: 'a1', delta: 'partial'));
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.messages.firstWhere((m) => m.id == 'a1').status,
+          AiMessageStatus.streaming);
+
+      // Start a new turn before the first finished.
+      unawaited(controller.sendText('Again'));
+
+      // The interrupted assistant message must not linger as a typing
+      // indicator (which would also be persisted by attachStore).
+      final a1 = controller.messages.firstWhere((m) => m.id == 'a1');
+      expect(a1.status, isNot(AiMessageStatus.streaming));
+    });
+
+    test('an in-band messageId-less error settles the streaming message',
+        () async {
+      final provider = ManualProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: () => 'u1',
+      );
+      addTearDown(controller.dispose);
+
+      final turn = controller.sendText('Hello');
+      provider.current
+        ..add(const MessageStarted(messageId: 'a1', role: AiRole.assistant))
+        ..add(const TextDelta(messageId: 'a1', delta: 'partial'))
+        ..add(const StreamErrorEvent(error: 'boom')); // messageId: null
+      await turn;
+
+      expect(controller.status, ChatStatus.error);
+      final a1 = controller.messages.firstWhere((m) => m.id == 'a1');
+      expect(a1.status, AiMessageStatus.error);
+    });
+  });
+
   group('regenerate', () {
     test('drops the prior assistant turn and re-runs from the user message',
         () async {
@@ -241,6 +326,34 @@ void main() {
       await controller.sendText('hi');
       expect(controller.status, ChatStatus.error);
       expect(controller.error, 'upstream timeout');
+    });
+
+    test('a synchronous throw from provider.send fails the turn cleanly',
+        () async {
+      final controller = UseChatController(
+        provider: _SyncThrowingProvider(),
+        scheduler: syncScheduler,
+      );
+      addTearDown(controller.dispose);
+
+      // Must complete (not hang) and land in error, not stay `submitted`.
+      await controller.sendText('hi');
+      expect(controller.status, ChatStatus.error);
+      expect(controller.error, isA<StateError>());
+    });
+
+    test('a synchronous throw from trimHistory fails the turn cleanly',
+        () async {
+      final controller = UseChatController(
+        provider: ManualProvider(),
+        scheduler: syncScheduler,
+        trimHistory: (_) => throw StateError('trim boom'),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('hi');
+      expect(controller.status, ChatStatus.error);
+      expect(controller.error, isA<StateError>());
     });
 
     test('captures the stack trace alongside a thrown provider error',
@@ -569,6 +682,62 @@ void main() {
         controller.messages.where((m) => m.role == AiRole.tool),
         hasLength(1),
       );
+    });
+
+    test('stays busy (executingTools) while the tool executor runs', () async {
+      final provider = _ToolThenTextProvider();
+      ChatStatus? statusDuringExecutor;
+      late UseChatController controller;
+      controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        onToolCalls: (calls, signal) async {
+          statusDuringExecutor = controller.status;
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: {'temp': 25}),
+          ];
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('weather in Lisbon?');
+
+      // The turn must not appear idle between the model's tool call and the
+      // executor's results — that flicker re-enables input and lets stores
+      // persist a mid-turn transcript.
+      expect(statusDuringExecutor, ChatStatus.executingTools);
+      expect(statusDuringExecutor!.isBusy, isTrue);
+      expect(controller.status, ChatStatus.idle);
+    });
+
+    test('selectBranch is a no-op while the tool executor runs', () async {
+      final provider = _ToolThenTextProvider();
+      var branchAttemptRejected = false;
+      late UseChatController controller;
+      controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        onToolCalls: (calls, signal) async {
+          // Attempting a branch switch mid-loop must be rejected (no _turn is
+          // ever null here), preventing transcript corruption.
+          final before = controller.messages.length;
+          controller.selectBranch(0);
+          branchAttemptRejected = controller.messages.length == before;
+          return [
+            for (final c in calls)
+              ToolResultPart(toolCallId: c.toolCallId, result: {'temp': 25}),
+          ];
+        },
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('weather in Lisbon?');
+
+      expect(branchAttemptRejected, isTrue);
+      expect(controller.status, ChatStatus.idle);
     });
 
     test('stops at maxSteps when tools never resolve', () async {
@@ -1137,6 +1306,19 @@ class _ThrowingProvider implements LlmProvider {
     AiRequestOptions? options,
   }) async* {
     throw StateError('provider exploded');
+  }
+}
+
+/// Throws synchronously from `send` (not via the stream), as the LlmProvider
+/// contract permits for unrecoverable transport faults.
+class _SyncThrowingProvider implements LlmProvider {
+  @override
+  Stream<AiStreamEvent> send(
+    AiConversation conversation, {
+    List<ToolDefinition>? tools,
+    AiRequestOptions? options,
+  }) {
+    throw StateError('sync boom');
   }
 }
 

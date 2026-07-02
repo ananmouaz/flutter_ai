@@ -69,6 +69,29 @@ void main() {
       expect(finished.usage?.cachedInputTokens, 4);
     });
 
+    test('surfaces a mid-stream error object and suppresses finalize', () {
+      final parser = OpenAiChunkParser();
+      final events = [
+        ...parser.parse({
+          'id': 'chatcmpl-1',
+          'choices': [
+            {
+              'delta': {'content': 'partial'},
+            },
+          ],
+        }),
+        ...parser.parse({
+          'error': {'message': 'The server had an error', 'type': 'server_error'},
+        }),
+        ...parser.finalize(),
+      ];
+
+      final err = events.whereType<StreamErrorEvent>().single;
+      expect(err.error, 'The server had an error');
+      // finalize() must not add a MessageFinished(stop) after the error.
+      expect(events.whereType<MessageFinished>(), isEmpty);
+    });
+
     test('threads streamed tool calls by index and readies them', () {
       final parser = OpenAiChunkParser();
       final events = [
@@ -305,6 +328,33 @@ void main() {
       await provider.send(const AiConversation(id: 'c', messages: [])).toList();
 
       expect(payload['model'], 'gpt-4o-mini');
+    });
+
+    test('maps maxOutputTokens to max_completion_tokens, not max_tokens',
+        () async {
+      late Map<String, Object?> payload;
+      final provider = OpenAiProvider(
+        apiKey: 'test',
+        client: MockClient.streaming((request, bodyStream) async {
+          payload = (jsonDecode(await bodyStream.bytesToString()) as Map)
+              .cast<String, Object?>();
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode('data: [DONE]\n')),
+            200,
+          );
+        }),
+      );
+
+      await provider
+          .send(
+            const AiConversation(id: 'c', messages: []),
+            options: const AiRequestOptions(maxOutputTokens: 256),
+          )
+          .toList();
+
+      // Reasoning models (o-series, gpt-5) reject the deprecated max_tokens.
+      expect(payload['max_completion_tokens'], 256);
+      expect(payload.containsKey('max_tokens'), isFalse);
     });
   });
 

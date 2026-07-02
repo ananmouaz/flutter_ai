@@ -205,6 +205,19 @@ void main() {
       expect(events.single, isA<StreamErrorEvent>());
       expect((events.single as StreamErrorEvent).error, 'Overloaded');
     });
+
+    test('an error event suppresses the synthetic finalize (no fake success)',
+        () {
+      final parser = AnthropicEventParser();
+      parser.parse({'type': 'message_start', 'message': {'id': 'a1'}});
+      parser.parse({
+        'type': 'error',
+        'error': {'type': 'overloaded_error', 'message': 'Overloaded'},
+      });
+      // The stream closes after the error; finalize() must not emit a
+      // MessageFinished(stop) that would overwrite the error status.
+      expect(parser.finalize(), isEmpty);
+    });
   });
 
   group('AnthropicProvider.send', () {

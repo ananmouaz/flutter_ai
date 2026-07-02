@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.11
+
+- Fix: `maxOutputTokens` now maps to `max_completion_tokens` instead of the
+  deprecated `max_tokens`, which reasoning models (o-series, gpt-5) reject with a
+  400. A caller targeting an older OpenAI-compatible endpoint can still pass
+  `max_tokens` via `extra`.
+- Fix: a mid-stream `{"error": ...}` chunk is now surfaced as a
+  `StreamErrorEvent` instead of being ignored (which left an empty, apparently
+  successful message).
+
 ## 0.1.10
 
 - Map `AiRequestOptions.reasoningEffort` to OpenAI's `reasoning_effort`. An

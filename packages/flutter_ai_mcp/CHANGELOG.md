@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4
+
+- Fix: `StreamableHttpMcpConnection.callTool` now has a per-call timeout
+  (`callTimeout`, default 60s). The underlying transport only bounds the
+  response headers, not the SSE body read, so a stalled server previously left
+  the tool future unresolved and wedged the agent turn indefinitely; a timed-out
+  call now surfaces as an error result instead.
+
 ## 0.1.3
 
 - Docs: refreshed the README listing with a hero image, screenshot gallery,

@@ -112,6 +112,9 @@ class GeminiProvider implements LlmProvider, EmbeddingProvider, TokenCounter {
       if (options?.reasoningEffort != null)
         'thinkingConfig': {
           'thinkingBudget': options!.reasoningEffort!.budgetTokens,
+          // Without this Gemini never emits `thought: true` parts, so the paid
+          // thinking is invisible (the ReasoningDelta path would be dead code).
+          'includeThoughts': true,
         },
     };
 
@@ -291,13 +294,35 @@ class GeminiProvider implements LlmProvider, EmbeddingProvider, TokenCounter {
     // to the same tool (e.g. search, search) lined up with their own results
     // even though the wire has no ids to disambiguate them.
     var pendingCalls = <({String id, String name})>[];
+    // Results accumulate across consecutive tool messages (a host may deliver
+    // one result per message) and flush as a SINGLE `functionResponse` turn in
+    // call order, so Gemini's name+position matching lines up and no result is
+    // dropped.
+    final collected = <String, ToolResultPart>{};
 
     void add(String role, List<Map<String, Object?>> parts) {
       if (parts.isEmpty) return;
       contents.add({'role': role, 'parts': parts});
     }
 
+    void flushToolResults() {
+      add('user', [
+        for (final call in pendingCalls)
+          if (collected[call.id] case final result?)
+            {
+              'functionResponse': {
+                'name': call.name,
+                'response': _asObject(result.result),
+              },
+            },
+      ]);
+      pendingCalls = const [];
+      collected.clear();
+    }
+
     for (final message in conversation.messages) {
+      // Any pending tool run ends when a non-tool turn begins.
+      if (message.role != AiRole.tool) flushToolResults();
       switch (message.role) {
         case AiRole.system:
           if (message.text.isEmpty) break;
@@ -322,25 +347,13 @@ class GeminiProvider implements LlmProvider, EmbeddingProvider, TokenCounter {
               },
           ]);
         case AiRole.tool:
-          final resultsById = {
-            for (final result in message.parts.whereType<ToolResultPart>())
-              result.toolCallId: result,
-          };
-          // Emit responses in call order (keyed by name), so Gemini's
-          // name+position matching lines up — including duplicate names.
-          add('user', [
-            for (final call in pendingCalls)
-              if (resultsById[call.id] case final result?)
-                {
-                  'functionResponse': {
-                    'name': call.name,
-                    'response': _asObject(result.result),
-                  },
-                },
-          ]);
-          pendingCalls = const [];
+          for (final result in message.parts.whereType<ToolResultPart>()) {
+            collected[result.toolCallId] = result;
+          }
       }
     }
+    // Flush a tool run that ends the conversation.
+    flushToolResults();
 
     final system = systemBuffer.isEmpty ? null : systemBuffer.toString();
     return (system, contents);

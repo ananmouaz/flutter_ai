@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.12
+
+- Fix: `reasoningEffort` now emits adaptive thinking (`{type: adaptive}`) on
+  Claude 4.6+ models — including the default `claude-opus-4-8`, which rejects the
+  legacy `budget_tokens` shape with a 400. Claude 3.7 and 4.0–4.5 continue to use
+  the budgeted shape. An explicit `thinking` block in `extra` still takes
+  precedence.
+- Fix: a mid-stream `error` event (e.g. `overloaded_error`) is no longer
+  overwritten by a synthetic successful finish — the message now settles as
+  errored.
+- Fix: setting both `responseFormat` and `reasoningEffort` no longer sends an
+  invalid forced-tool-choice-plus-thinking request (a guaranteed 400). Thinking
+  is dropped when structured output is requested.
+
 ## 0.1.11
 
 - Map `AiRequestOptions.reasoningEffort` to extended thinking

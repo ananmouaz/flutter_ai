@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_ai_client/src/chat_observer.dart';
@@ -328,12 +329,13 @@ class UseChatController extends ChangeNotifier {
   }
 
   /// Switches the latest turn to regenerated version [index] (0-based). A no-op
-  /// out of range, while streaming, or if already showing it.
+  /// out of range, while a turn is in flight, or if already showing it.
   void selectBranch(int index) {
     if (index < 0 || index >= _branches.length || index == _branchIndex) return;
-    if (_status == ChatStatus.streaming || _status == ChatStatus.submitted) {
-      return;
-    }
+    // Never switch branches while a turn is in flight — including the agent
+    // loop's tool-execution phase, whose live continuation would otherwise
+    // append tool results onto the swapped transcript and corrupt it.
+    if (_turn != null) return;
     final lastUser = _lastUserIndex();
     if (lastUser == -1) return;
     final head = _processor.conversation.messages.sublist(0, lastUser + 1);
@@ -376,13 +378,7 @@ class UseChatController extends ChangeNotifier {
 
   /// Cancels the in-flight turn, finalizing the streaming message as stopped.
   void stop() {
-    _stopActiveStream();
-    final last = _processor.conversation.lastMessage;
-    if (last != null && last.status == AiMessageStatus.streaming) {
-      _processor.apply(
-        MessageFinished(messageId: last.id, reason: FinishReason.stop),
-      );
-    }
+    _stopActiveStream(); // finalizes the trailing streaming message
     _status = ChatStatus.idle;
     _scheduleNotify();
   }
@@ -475,12 +471,23 @@ class UseChatController extends ChangeNotifier {
     // must not mutate the conversation or leak onto the events stream after a
     // new turn started.
     final seq = _turnSeq;
-    // The provider sees the (optionally trimmed) conversation; the stored
-    // transcript is never trimmed.
-    final outgoing =
-        _trimHistory?.call(_processor.conversation) ?? _processor.conversation;
-    _subscription =
-        _provider.send(outgoing, tools: _tools, options: _options).listen(
+    // Building the request can throw synchronously: trimHistory is a
+    // caller-supplied callback, and the LlmProvider contract permits send() to
+    // throw for unrecoverable transport faults. Without this guard the thrown
+    // error escapes (leaving status stuck at `submitted` and the turn future
+    // never completing, or an unhandled zone error inside the agent loop).
+    final Stream<AiStreamEvent> stream;
+    try {
+      // The provider sees the (optionally trimmed) conversation; the stored
+      // transcript is never trimmed.
+      final outgoing = _trimHistory?.call(_processor.conversation) ??
+          _processor.conversation;
+      stream = _provider.send(outgoing, tools: _tools, options: _options);
+    } catch (error, stackTrace) {
+      _failTurn(error, stackTrace);
+      return;
+    }
+    _subscription = stream.listen(
       (event) {
         if (_disposed || seq != _turnSeq) return;
         _processor.apply(event);
@@ -491,14 +498,7 @@ class UseChatController extends ChangeNotifier {
         // conversation past the failure. A tool-scoped error is left to the
         // tool result instead and streaming continues.
         if (event is StreamErrorEvent && event.toolCallId == null) {
-          _error = event.error;
-          _status = ChatStatus.error;
-          _observer?.onError(event.error, null);
-          final sub = _subscription;
-          _subscription = null;
-          if (sub != null) unawaited(sub.cancel());
-          _completeTurn();
-          _scheduleNotify();
+          _failTurn(event.error, null);
           return;
         } else if (_status == ChatStatus.submitted) {
           _status = ChatStatus.streaming;
@@ -507,19 +507,7 @@ class UseChatController extends ChangeNotifier {
       },
       onError: (Object error, StackTrace stackTrace) {
         if (_disposed || seq != _turnSeq) return;
-        _error = error;
-        _stackTrace = stackTrace;
-        _status = ChatStatus.error;
-        _observer?.onError(error, stackTrace);
-        final last = _processor.conversation.lastMessage;
-        if (last != null && last.status == AiMessageStatus.streaming) {
-          _processor.apply(
-            StreamErrorEvent(error: error, messageId: last.id),
-          );
-        }
-        _subscription = null;
-        _completeTurn();
-        _scheduleNotify();
+        _failTurn(error, stackTrace);
       },
       onDone: () {
         if (_disposed || seq != _turnSeq) return;
@@ -538,7 +526,6 @@ class UseChatController extends ChangeNotifier {
       _scheduleNotify();
       return;
     }
-    _status = ChatStatus.idle;
     _captureBranch();
     _observer?.onModelResponse(
       step: _step,
@@ -570,10 +557,15 @@ class UseChatController extends ChangeNotifier {
         pending.isNotEmpty &&
         _step < _maxSteps &&
         !overBudget) {
+      // The turn stays in flight while the tool executor runs; keep the
+      // controller busy so UIs don't re-enable input and stores don't persist a
+      // mid-turn transcript with unanswered tool calls (see selectBranch).
+      _status = ChatStatus.executingTools;
       _scheduleNotify();
       unawaited(_continueWithTools(pending, _turn));
       return;
     }
+    _status = ChatStatus.idle;
     _completeTurn();
     _scheduleNotify();
   }
@@ -625,6 +617,7 @@ class UseChatController extends ChangeNotifier {
     final results = [...validationErrors, ...executed];
     _observer?.onToolResults(results);
     if (results.isEmpty) {
+      _status = ChatStatus.idle;
       _completeTurn();
       _scheduleNotify();
       return;
@@ -718,7 +711,38 @@ class UseChatController extends ChangeNotifier {
     final sub = _subscription;
     _subscription = null;
     if (sub != null) unawaited(sub.cancel());
+    // Finalize a still-streaming message so it doesn't linger in the transcript
+    // as a permanent typing indicator (and get persisted that way). Callers that
+    // discard the message afterwards (clear/regenerate/editMessage) are
+    // unaffected; submit/addToolResults keep it, so it must settle here.
+    final last = _processor.conversation.lastMessage;
+    if (last != null && last.status == AiMessageStatus.streaming) {
+      _processor.apply(
+        MessageFinished(messageId: last.id, reason: FinishReason.stop),
+      );
+    }
     _completeTurn();
+  }
+
+  /// Routes a turn-fatal [error] to the error state: records it, notifies the
+  /// observer, finalizes any trailing streaming message, cancels the active
+  /// stream, and completes the turn. Shared by the async `onError`, a fatal
+  /// in-band `StreamErrorEvent`, and a synchronous throw from
+  /// `provider.send`/`trimHistory`.
+  void _failTurn(Object error, StackTrace? stackTrace) {
+    _error = error;
+    _stackTrace = stackTrace;
+    _status = ChatStatus.error;
+    _observer?.onError(error, stackTrace);
+    final last = _processor.conversation.lastMessage;
+    if (last != null && last.status == AiMessageStatus.streaming) {
+      _processor.apply(StreamErrorEvent(error: error, messageId: last.id));
+    }
+    final sub = _subscription;
+    _subscription = null;
+    if (sub != null) unawaited(sub.cancel());
+    _completeTurn();
+    _scheduleNotify();
   }
 
   void _completeTurn() {
@@ -750,9 +774,20 @@ class UseChatController extends ChangeNotifier {
     super.dispose();
   }
 
+  /// The default message-id generator: a per-controller random prefix plus an
+  /// incrementing counter, e.g. `msg-k3f9a1-0`.
+  ///
+  /// The random prefix is what makes ids collision-resistant. A plain `msg-N`
+  /// counter restarts at 0 for every controller, so seeding a controller with a
+  /// rehydrated transcript (`ChatStore.load`, which already contains `msg-0…N`)
+  /// would make the first new message reuse an existing id — silently corrupting
+  /// `messageById`/`replace`/`editMessage` and producing duplicate widget keys.
+  /// The prefix also keeps two controllers writing to the same store from
+  /// colliding. Pass a custom `idGenerator` to override.
   static String Function() _sequentialIdGenerator() {
+    final prefix = (Random().nextInt(1 << 32)).toRadixString(36);
     var n = 0;
-    return () => 'msg-${n++}';
+    return () => 'msg-$prefix-${n++}';
   }
 }
 

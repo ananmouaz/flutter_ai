@@ -370,7 +370,7 @@ class _GalleryButton extends StatelessWidget {
 }
 
 /// A live chat backed by a [UseChatController] (owned by the parent).
-class ChatScreen extends StatelessWidget {
+class ChatScreen extends StatefulWidget {
   /// Creates the chat screen bound to [controller].
   const ChatScreen({
     super.key,
@@ -385,6 +385,19 @@ class ChatScreen extends StatelessWidget {
   final ToolRunner toolRunner;
 
   @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  UseChatController get controller => widget.controller;
+  ToolRunner get toolRunner => widget.toolRunner;
+
+  /// The error the user dismissed the banner for; the banner stays hidden until
+  /// the error clears (a new turn) or a different error occurs. Dismissing the
+  /// banner must not wipe the transcript.
+  Object? _dismissedError;
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
@@ -393,6 +406,12 @@ class ChatScreen extends StatelessWidget {
           listenable: controller,
           builder: (context, _) {
             final messages = controller.messages.length;
+            // Reset the dismissal once the error clears so the next error shows.
+            if (controller.status != ChatStatus.error) {
+              _dismissedError = null;
+            }
+            final showError = controller.status == ChatStatus.error &&
+                controller.error != _dismissedError;
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 760),
@@ -406,13 +425,16 @@ class ChatScreen extends StatelessWidget {
                           totalTokens: 128000,
                         ),
                       ),
-                    if (controller.status == ChatStatus.error)
+                    if (showError)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                         child: AiErrorBanner(
                           message: '${controller.error}',
                           onRetry: () => unawaited(controller.regenerate()),
-                          onDismiss: controller.clear,
+                          // Hide the banner only — never clear the transcript.
+                          onDismiss: () => setState(
+                            () => _dismissedError = controller.error,
+                          ),
                         ),
                       ),
                   ],

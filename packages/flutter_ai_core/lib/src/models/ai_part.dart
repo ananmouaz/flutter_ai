@@ -46,7 +46,8 @@ final class TextPart extends AiPart {
   /// Creates a text part holding [text].
   const TextPart(String text)
       : _text = text,
-        _buffer = null;
+        _buffer = null,
+        _bufferLength = 0;
 
   /// Reconstructs a [TextPart] from [json].
   factory TextPart.fromJson(Map<String, Object?> json) =>
@@ -59,19 +60,40 @@ final class TextPart extends AiPart {
   /// [StringBuffer] keeps accumulation linear (O(total length)) instead of
   /// reallocating the whole string on every delta. The expensive `toString()`
   /// happens only when a consumer actually reads the text (e.g. at a frame
-  /// boundary), not once per token. Equality, hashing, and JSON all read
-  /// through [text], so this is observably identical to a plain `TextPart`.
+  /// boundary), not once per token.
+  ///
+  /// This wrapper freezes at the buffer's length *at construction time* (see
+  /// [text]): the reducer appends the next delta to the same buffer and wraps it
+  /// in a *new* `TextPart`, so a previously returned conversation snapshot never
+  /// observes the later appends. Value equality therefore holds mid-stream —
+  /// two snapshots taken at different points compare unequal. Do not construct
+  /// or read the [buffer] outside the reducer.
   TextPart.buffered(StringBuffer buffer)
       : _text = null,
-        _buffer = buffer;
+        _buffer = buffer,
+        _bufferLength = buffer.length;
 
   final String? _text;
   final StringBuffer? _buffer;
 
+  /// The buffer's length (in UTF-16 code units) captured when this wrapper was
+  /// created, freezing the prefix this part represents. See [TextPart.buffered].
+  final int _bufferLength;
+
   /// The textual content.
   ///
-  /// For a [TextPart.buffered] this materializes the backing buffer on demand.
-  String get text => _text ?? _buffer!.toString();
+  /// For a [TextPart.buffered] this materializes the backing buffer on demand,
+  /// truncated to the prefix captured at construction so later appends to the
+  /// shared buffer (which belong to newer snapshots) are never observed.
+  String get text {
+    final text = _text;
+    if (text != null) return text;
+    final buffer = _buffer!;
+    final materialized = buffer.toString();
+    return materialized.length == _bufferLength
+        ? materialized
+        : materialized.substring(0, _bufferLength);
+  }
 
   /// The live accumulation buffer backing this part, or `null` for an ordinary
   /// part. Internal to the streaming reducer, which appends the next delta in
@@ -103,7 +125,8 @@ final class ReasoningPart extends AiPart {
   /// Creates a reasoning part holding [text].
   const ReasoningPart(String text, {this.signature})
       : _text = text,
-        _buffer = null;
+        _buffer = null,
+        _bufferLength = 0;
 
   /// Reconstructs a [ReasoningPart] from [json].
   factory ReasoningPart.fromJson(Map<String, Object?> json) => ReasoningPart(
@@ -115,19 +138,34 @@ final class ReasoningPart extends AiPart {
   /// materialized lazily on first read of [text].
   ///
   /// See [TextPart.buffered]: this keeps reasoning-delta accumulation linear
-  /// rather than reallocating the whole string per delta.
+  /// rather than reallocating the whole string per delta, and freezes at the
+  /// buffer length captured here so previously returned snapshots never observe
+  /// later appends.
   ReasoningPart.buffered(StringBuffer buffer, {this.signature})
       : _text = null,
-        _buffer = buffer;
+        _buffer = buffer,
+        _bufferLength = buffer.length;
 
   final String? _text;
   final StringBuffer? _buffer;
 
+  /// The buffer's length (in UTF-16 code units) captured when this wrapper was
+  /// created, freezing the prefix this part represents. See [TextPart.buffered].
+  final int _bufferLength;
+
   /// The reasoning content.
   ///
   /// For a [ReasoningPart.buffered] this materializes the backing buffer on
-  /// demand.
-  String get text => _text ?? _buffer!.toString();
+  /// demand, truncated to the prefix captured at construction.
+  String get text {
+    final text = _text;
+    if (text != null) return text;
+    final buffer = _buffer!;
+    final materialized = buffer.toString();
+    return materialized.length == _bufferLength
+        ? materialized
+        : materialized.substring(0, _bufferLength);
+  }
 
   /// The live accumulation buffer backing this part, or `null` for an ordinary
   /// part. Internal to the streaming reducer.

@@ -90,6 +90,29 @@ void main() {
       expect(events.whereType<ReasoningDelta>().single.delta, 'thinking…');
     });
 
+    test('surfaces a mid-stream error payload and suppresses finalize', () {
+      final parser = GeminiEventParser(messageId: 'a1');
+      final events = parser.parse({
+        'error': {'code': 429, 'message': 'Resource exhausted'},
+      });
+      final err = events.whereType<StreamErrorEvent>().single;
+      expect(err.error, 'Resource exhausted');
+      expect(err.messageId, 'a1');
+      // No synthetic MessageFinished(stop) after the error.
+      expect(parser.finalize(), isEmpty);
+    });
+
+    test('a blocked prompt finishes as content-filtered, not empty success',
+        () {
+      final parser = GeminiEventParser(messageId: 'a1');
+      final events = parser.parse({
+        'promptFeedback': {'blockReason': 'SAFETY'},
+      });
+      final finished = events.whereType<MessageFinished>().single;
+      expect(finished.reason, FinishReason.contentFilter);
+      expect(parser.finalize(), isEmpty);
+    });
+
     test(
         'expands a functionCall into start/delta/ready and finishes as toolCalls',
         () {
@@ -312,6 +335,41 @@ void main() {
       final config = (body['generationConfig'] as Map).cast<String, Object?>();
       expect(config['responseMimeType'], 'application/json');
       expect((config['responseSchema'] as Map)['type'], 'object');
+    });
+
+    test('reasoningEffort sets thinkingBudget and requests thoughts', () async {
+      late http.Request captured;
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, _) async {
+          captured = request as http.Request;
+          const body =
+              'data: {"candidates":[{"content":{},"finishReason":"STOP"}]}\n';
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode(body)),
+            200,
+          );
+        }),
+      );
+
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(id: 'u', role: AiRole.user, parts: [TextPart('Hi')]),
+              ],
+            ),
+            options: const AiRequestOptions(reasoningEffort: ReasoningEffort.low),
+          )
+          .toList();
+
+      final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+      final config = (body['generationConfig'] as Map).cast<String, Object?>();
+      final thinking = (config['thinkingConfig'] as Map).cast<String, Object?>();
+      expect(thinking['thinkingBudget'], ReasoningEffort.low.budgetTokens);
+      // Without includeThoughts the reasoning is billed but never surfaced.
+      expect(thinking['includeThoughts'], true);
     });
 
     test('emits a StreamErrorEvent on a non-200 response', () async {
@@ -605,6 +663,81 @@ void main() {
         (responseParts[1]['response'] as Map)['hits'],
         'dogs-result', // call-1 second
       );
+    });
+
+    test('coalesces tool results split across consecutive tool messages',
+        () async {
+      late http.Request captured;
+      const stop =
+          'data: {"candidates":[{"content":{},"finishReason":"STOP"}]}\n';
+      final provider = GeminiProvider(
+        apiKey: 'k',
+        client: MockClient.streaming((request, _) async {
+          captured = request as http.Request;
+          return http.StreamedResponse(
+            Stream<List<int>>.value(utf8.encode(stop)),
+            200,
+          );
+        }),
+      );
+
+      // Two calls answered by TWO separate tool messages (one result each).
+      // Neither result may be dropped.
+      await provider
+          .send(
+            const AiConversation(
+              id: 'c',
+              messages: [
+                AiMessage(
+                  id: 'u',
+                  role: AiRole.user,
+                  parts: [TextPart('search cats and dogs')],
+                ),
+                AiMessage(
+                  id: 'a',
+                  role: AiRole.assistant,
+                  parts: [
+                    ToolCallPart(
+                      toolCallId: 'call-0',
+                      toolName: 'search',
+                      args: {'q': 'cats'},
+                    ),
+                    ToolCallPart(
+                      toolCallId: 'call-1',
+                      toolName: 'search',
+                      args: {'q': 'dogs'},
+                    ),
+                  ],
+                ),
+                AiMessage(id: 't0', role: AiRole.tool, parts: [
+                  ToolResultPart(
+                    toolCallId: 'call-0',
+                    result: {'hits': 'cats-result'},
+                  ),
+                ]),
+                AiMessage(id: 't1', role: AiRole.tool, parts: [
+                  ToolResultPart(
+                    toolCallId: 'call-1',
+                    result: {'hits': 'dogs-result'},
+                  ),
+                ]),
+              ],
+            ),
+          )
+          .toList();
+
+      final body = (jsonDecode(captured.body) as Map).cast<String, Object?>();
+      final contents = (body['contents']! as List).cast<Map<String, Object?>>();
+      final toolTurn = contents.last;
+      final responseParts = (toolTurn['parts']! as List)
+          .cast<Map<String, Object?>>()
+          .map((p) => (p['functionResponse']! as Map).cast<String, Object?>())
+          .toList();
+
+      // A single coalesced tool turn carrying BOTH results in call order.
+      expect(responseParts, hasLength(2));
+      expect((responseParts[0]['response'] as Map)['hits'], 'cats-result');
+      expect((responseParts[1]['response'] as Map)['hits'], 'dogs-result');
     });
 
     test('finalizes a stream that ends without a finishReason', () async {

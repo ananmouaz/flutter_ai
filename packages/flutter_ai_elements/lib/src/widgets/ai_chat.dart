@@ -245,11 +245,19 @@ class _AiChatState extends State<AiChat> {
     if (show != _showJump) setState(() => _showJump = show);
   }
 
-  // A user-initiated drag releases the top-pin so we stop fighting their scroll,
-  // and frees the reserved space so they can't scroll into empty space below the
-  // last message.
+  // A user-initiated scroll away from the bottom releases the top-pin so we stop
+  // fighting the user, and frees the reserved space so they can't scroll into
+  // empty space below the last message.
+  //
+  // Touch drags surface as a ScrollStartNotification with dragDetails; mouse
+  // wheel, trackpad, and keyboard scrolling surface only as a
+  // UserScrollNotification (programmatic jumpTo never emits one, so this won't
+  // self-trigger). Releasing on an upward user scroll covers all input types.
   bool _onScrollNotification(ScrollNotification n) {
-    if (n is ScrollStartNotification && n.dragDetails != null && _pinned) {
+    final userDrag = n is ScrollStartNotification && n.dragDetails != null;
+    final scrolledUp =
+        n is UserScrollNotification && n.direction == ScrollDirection.forward;
+    if (_pinned && (userDrag || scrolledUp)) {
       _pinned = false;
       if (_trailingSpace != 0) {
         WidgetsBinding.instance.addPostFrameCallback((_) {

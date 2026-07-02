@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.12
+
+- Fix: a mid-stream `error` payload is now surfaced as a `StreamErrorEvent`, and
+  a blocked prompt (`promptFeedback.blockReason`) finishes as content-filtered —
+  instead of both being ignored and rendered as an empty, successful message.
+- Fix: tool results delivered across consecutive tool messages (one result per
+  message) are no longer dropped — they coalesce into a single `functionResponse`
+  turn in call order.
+- Fix: `reasoningEffort` now also sets `thinkingConfig.includeThoughts`, so the
+  paid thinking is actually surfaced as `ReasoningDelta`s instead of being
+  invisible.
+
 ## 0.1.11
 
 - Map `AiRequestOptions.reasoningEffort` to `generationConfig.thinkingConfig.

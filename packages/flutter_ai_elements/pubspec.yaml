@@ -1,6 +1,6 @@
 name: flutter_ai_elements
 description: "Composable, themeable Flutter UI for AI chat: conversation view, message bubbles, a streaming-aware composer, and a loader, styled through a mobile-first theme extension."
-version: 0.1.15
+version: 0.1.16
 homepage: https://github.com/ananmouaz/flutter_ai
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_elements
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues

@@ -827,8 +827,9 @@ void main() {
   });
 
   group('input & more', () {
-    testWidgets('AiComposer shows attach, mic, and live affordances',
-        (tester) async {
+    testWidgets(
+        'AiComposer with a staged attachment shows Send, not Live, as the '
+        'main button', (tester) async {
       await tester.pumpWidget(
         _wrap(
           AiComposer(
@@ -844,10 +845,21 @@ void main() {
         ),
       );
       expect(find.byIcon(Icons.add), findsOneWidget);
-      // Empty field: mic (secondary) + Live (main).
-      expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.graphic_eq), findsOneWidget);
+      expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget); // secondary
+      // An attachment is sendable content, so the main button must be Send —
+      // tapping the prominent button must not launch full-screen voice mode.
+      expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.graphic_eq), findsNothing);
       expect(find.text('a.pdf'), findsOneWidget); // staged attachment preview
+    });
+
+    testWidgets('AiComposer shows Live only when truly empty', (tester) async {
+      await tester.pumpWidget(
+        _wrap(AiComposer(onSend: (_) {}, onLive: () {})),
+      );
+      // No text and no attachments: Live is the main affordance.
+      expect(find.byIcon(Icons.graphic_eq), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_upward_rounded), findsNothing);
     });
 
     testWidgets('AiComposer swaps Live for Send once typing', (tester) async {

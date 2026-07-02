@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.14
+
+- Fix: streamed `TextPart`/`ReasoningPart` now freeze at the buffer prefix
+  captured when each snapshot was produced, so a previously returned
+  conversation no longer mutates retroactively and value equality holds
+  mid-stream. Equality-based state management (Bloc `Equatable`, Riverpod
+  `select`, `distinct()`) now observes streaming updates. Accumulation stays
+  O(delta); a finished message materializes its buffer into a plain part.
+
 ## 0.1.13
 
 - `ReasoningEffort` (minimal/low/medium/high) + `AiRequestOptions.reasoningEffort`:

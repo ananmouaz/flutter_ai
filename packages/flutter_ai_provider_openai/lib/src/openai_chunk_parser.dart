@@ -52,6 +52,17 @@ class OpenAiChunkParser {
       events.add(MessageStarted(messageId: _messageId, role: AiRole.assistant));
     }
 
+    // A mid-stream error object (server error, rate limit) replaces the normal
+    // choices payload; surface it instead of letting finalize() emit a
+    // synthetic success. `_emitted` suppresses that terminal event.
+    final error = chunk['error'];
+    if (error is Map) {
+      _emitted = true;
+      final message = error['message'] as String? ?? 'OpenAI stream error';
+      events.add(StreamErrorEvent(error: message, messageId: _messageId));
+      return events;
+    }
+
     // Usage arrives on its own trailing chunk (empty `choices`); on every other
     // chunk the field is null. Capture it before the empty-choices early return.
     final usage = chunk['usage'];

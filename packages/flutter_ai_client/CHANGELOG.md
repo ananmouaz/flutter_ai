@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.2.5
+
+- Fix: the controller no longer reports `idle` while the agent loop runs its tool
+  executor between model calls. A new `ChatStatus.executingTools` (included in
+  `isBusy`) keeps the turn marked busy, so UIs don't re-enable input mid-turn and
+  `attachStore` doesn't persist a transcript with unanswered tool calls.
+- Fix: `selectBranch` is now a no-op whenever a turn is in flight (including the
+  tool-execution phase), preventing a mid-loop branch switch from corrupting the
+  transcript.
+- Fix: the default message-id generator now uses a per-controller random prefix
+  (`msg-<prefix>-<n>`) instead of restarting at `msg-0`, so seeding a controller
+  with a rehydrated `ChatStore` transcript no longer produces colliding ids. Pass
+  a custom `idGenerator` to override.
+- Fix: interrupting a stream with `submit`/`addToolResults`, and an in-band
+  `StreamErrorEvent` with no `messageId`, no longer leave the interrupted message
+  stuck in the `streaming` state (a permanent typing indicator that also got
+  persisted). The trailing message is now finalized.
+- Fix: a synchronous throw from `provider.send` or a `trimHistory` callback is
+  now caught and surfaced as `ChatStatus.error` (with the turn future
+  completing), instead of escaping — which left the status stuck at `submitted`,
+  or became an unhandled zone error inside the agent loop.
+
 ## 0.2.4
 
 - `keepLastWithSummary`: a context strategy that folds a caller-supplied rolling
