@@ -9,6 +9,10 @@ import 'package:flutter_ai_elements/src/widgets/ai_composer.dart';
 /// Stages attachments (via [onPickAttachment]) to send with the next message,
 /// offers voice dictation ([onVoice]) and a Live entry point ([onLive]). The
 /// model selector lives in the app bar, not here.
+///
+/// Pass a [textController] to read or write the field's text from the host —
+/// e.g. so [onVoice] dictation can *insert* the recognized text for review
+/// (`textController.text = recognized`) instead of dictate-and-send.
 class AiPromptInput extends StatefulWidget {
   /// Creates a prompt input bound to [controller].
   const AiPromptInput({
@@ -18,6 +22,7 @@ class AiPromptInput extends StatefulWidget {
     this.onPickAttachment,
     this.onVoice,
     this.onLive,
+    this.textController,
   });
 
   /// The chat controller to drive.
@@ -30,11 +35,16 @@ class AiPromptInput extends StatefulWidget {
   final Future<List<FilePart>> Function()? onPickAttachment;
 
   /// Voice dictation; when non-null a mic button shows while the field is empty.
+  /// Combine with [textController] to write recognized speech into the field.
   final VoidCallback? onVoice;
 
   /// Live voice mode; when non-null the main button is Live while the field is
   /// empty (and Send once the user types).
   final VoidCallback? onLive;
+
+  /// Optional external controller for the text field. Own its lifecycle (create
+  /// and dispose it in the host). Lets dictation/quick-replies set the text.
+  final TextEditingController? textController;
 
   @override
   State<AiPromptInput> createState() => _AiPromptInputState();
@@ -61,6 +71,7 @@ class _AiPromptInputState extends State<AiPromptInput> {
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) => AiComposer(
+        controller: widget.textController,
         hintText: widget.hintText,
         isBusy: widget.controller.status.isBusy,
         onStop: widget.controller.stop,

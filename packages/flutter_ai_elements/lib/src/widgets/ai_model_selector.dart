@@ -34,6 +34,10 @@ class AiModelSelector extends StatelessWidget {
     required this.models,
     required this.selectedId,
     required this.onSelected,
+    this.labelStyle,
+    this.labelBuilder,
+    this.showBorder = true,
+    this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
   });
 
   /// The available models.
@@ -44,6 +48,23 @@ class AiModelSelector extends StatelessWidget {
 
   /// Called with the chosen model id.
   final ValueChanged<String> onSelected;
+
+  /// Style for the trigger's label text. Merged over the themed default (which
+  /// is `theme.textStyle` at size 13). Ignored when [labelBuilder] is set.
+  final TextStyle? labelStyle;
+
+  /// Fully replaces the trigger's label+chevron with a custom widget (e.g. a
+  /// larger two-tone brand title). The chevron is *not* added automatically —
+  /// include your own. The picker sheet is still opened on tap.
+  final Widget Function(BuildContext context, AiModelOption selected)?
+      labelBuilder;
+
+  /// Whether to draw the rounded border around the trigger. Turn off for a
+  /// borderless brand title.
+  final bool showBorder;
+
+  /// Padding inside the trigger.
+  final EdgeInsets padding;
 
   AiModelOption? get _selected {
     if (models.isEmpty) return null;
@@ -66,22 +87,26 @@ class AiModelSelector extends StatelessWidget {
       child: GestureDetector(
         onTap: () => unawaited(_open(context)),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: padding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.borderColor),
+            border: showBorder ? Border.all(color: theme.borderColor) : null,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                selected.label,
-                style: theme.textStyle.copyWith(fontSize: 13, color: color),
-              ),
-              const SizedBox(width: 2),
-              Icon(Icons.expand_more, size: 16, color: color),
-            ],
-          ),
+          child: labelBuilder != null
+              ? labelBuilder!(context, selected)
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      selected.label,
+                      style: theme.textStyle
+                          .copyWith(fontSize: 13, color: color)
+                          .merge(labelStyle),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(Icons.expand_more, size: 16, color: color),
+                  ],
+                ),
         ),
       ),
     );

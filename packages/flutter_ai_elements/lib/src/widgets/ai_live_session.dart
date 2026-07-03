@@ -45,6 +45,7 @@ class AiLiveSession extends StatefulWidget {
     this.onMute,
     this.onKeyboard,
     this.onEnd,
+    this.backgroundColor = const Color(0xFF000000),
   });
 
   /// The current phase.
@@ -71,6 +72,11 @@ class AiLiveSession extends StatefulWidget {
 
   /// Ends the session. Hidden if `null`.
   final VoidCallback? onEnd;
+
+  /// The immersive backdrop color. Defaults to black. The orb and overlay text
+  /// are tuned for a dark surface — pass a light color only if you also theme
+  /// the content accordingly.
+  final Color backgroundColor;
 
   @override
   State<AiLiveSession> createState() => _AiLiveSessionState();
@@ -133,7 +139,7 @@ class _AiLiveSessionState extends State<AiLiveSession>
 
     // Immersive dark surface (voice mode is a focused, dark experience).
     return ColoredBox(
-      color: const Color(0xFF000000),
+      color: widget.backgroundColor,
       child: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {

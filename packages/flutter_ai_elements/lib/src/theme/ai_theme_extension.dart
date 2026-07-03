@@ -35,6 +35,7 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
     required this.assistantMessageStyle,
     required this.userBubbleColor,
     required this.assistantBubbleColor,
+    this.chipColor,
     required this.userTextColor,
     required this.assistantTextColor,
     required this.accentColor,
@@ -139,6 +140,19 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
   /// [AiMessageStyle.bubble]) and of the composer field.
   final Color assistantBubbleColor;
 
+  /// Fill for small standalone surfaces — suggestion/starter chips, the selected
+  /// conversation-list row, and the scroll-to-latest button.
+  ///
+  /// These reuse [assistantBubbleColor] when this is null. Set it explicitly for
+  /// **bubble-less** themes (a transparent [assistantBubbleColor], e.g. a
+  /// Gemini-style plain assistant) so those chips/rows don't visually vanish.
+  final Color? chipColor;
+
+  /// The resolved chip/selection surface: [chipColor] if set, otherwise
+  /// [assistantBubbleColor]. Widgets should read this rather than
+  /// [assistantBubbleColor] directly.
+  Color get effectiveChipColor => chipColor ?? assistantBubbleColor;
+
   /// Text color inside a user bubble.
   final Color userTextColor;
 
@@ -229,6 +243,7 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
     AiMessageStyle? assistantMessageStyle,
     Color? userBubbleColor,
     Color? assistantBubbleColor,
+    Color? chipColor,
     Color? userTextColor,
     Color? assistantTextColor,
     Color? accentColor,
@@ -260,6 +275,7 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
             assistantMessageStyle ?? this.assistantMessageStyle,
         userBubbleColor: userBubbleColor ?? this.userBubbleColor,
         assistantBubbleColor: assistantBubbleColor ?? this.assistantBubbleColor,
+        chipColor: chipColor ?? this.chipColor,
         userTextColor: userTextColor ?? this.userTextColor,
         assistantTextColor: assistantTextColor ?? this.assistantTextColor,
         accentColor: accentColor ?? this.accentColor,
@@ -297,6 +313,7 @@ class AiThemeExtension extends ThemeExtension<AiThemeExtension> {
       userBubbleColor: Color.lerp(userBubbleColor, other.userBubbleColor, t)!,
       assistantBubbleColor:
           Color.lerp(assistantBubbleColor, other.assistantBubbleColor, t)!,
+      chipColor: Color.lerp(chipColor, other.chipColor, t),
       userTextColor: Color.lerp(userTextColor, other.userTextColor, t)!,
       assistantTextColor:
           Color.lerp(assistantTextColor, other.assistantTextColor, t)!,

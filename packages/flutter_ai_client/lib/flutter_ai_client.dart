@@ -15,4 +15,5 @@ export 'src/chat_observer.dart';
 export 'src/chat_status.dart';
 export 'src/chat_store.dart';
 export 'src/context_strategy.dart';
+export 'src/follow_ups.dart';
 export 'src/use_chat_controller.dart';
