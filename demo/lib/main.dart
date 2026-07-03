@@ -410,7 +410,8 @@ class _ChatScreenState extends State<ChatScreen> {
             if (controller.status != ChatStatus.error) {
               _dismissedError = null;
             }
-            final showError = controller.status == ChatStatus.error &&
+            final showError =
+                controller.status == ChatStatus.error &&
                 controller.error != _dismissedError;
             return Center(
               child: ConstrainedBox(
