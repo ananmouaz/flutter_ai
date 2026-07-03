@@ -416,6 +416,24 @@ class UseChatController extends ChangeNotifier {
     _scheduleNotify();
   }
 
+  /// Swaps the transcript to [conversation] in place, cancelling any in-flight
+  /// turn — the way to switch threads without disposing and recreating the
+  /// controller. Rehydrate a thread with `controller.load(await store.load(id))`
+  /// and, if the target thread differs, re-point `attachStore` to its id.
+  ///
+  /// Branch/regeneration history is reset to the loaded turn.
+  void load(AiConversation conversation) {
+    _stopActiveStream();
+    _processor.reset(conversation);
+    _error = null;
+    _stackTrace = null;
+    _status = ChatStatus.idle;
+    _branches = [];
+    _branchIndex = 0;
+    _capture = _Capture.reset;
+    _scheduleNotify();
+  }
+
   int _lastUserIndex() => _processor.conversation.messages
       .lastIndexWhere((m) => m.role == AiRole.user);
 

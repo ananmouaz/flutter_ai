@@ -18,6 +18,9 @@ class AiEmptyState extends StatelessWidget {
     this.glyph,
     this.suggestions = const [],
     this.onSuggestionTap,
+    this.titleStyle,
+    this.subtitleStyle,
+    this.background,
   });
 
   /// The primary headline.
@@ -39,12 +42,23 @@ class AiEmptyState extends StatelessWidget {
   /// interactive; without it the chips render but don't respond.
   final ValueChanged<String>? onSuggestionTap;
 
+  /// Overrides the title style, merged over the themed default. Use a shader
+  /// `foreground` here for a gradient "hero" greeting.
+  final TextStyle? titleStyle;
+
+  /// Overrides the subtitle style, merged over the themed default.
+  final TextStyle? subtitleStyle;
+
+  /// Optional widget painted behind the content (e.g. an ambient gradient), for
+  /// a branded hero empty state. Sized to fill the available space.
+  final Widget? background;
+
   @override
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
     final color = DefaultTextStyle.of(context).style.color;
     final muted = color?.withValues(alpha: 0.6);
-    return Center(
+    final content = Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -55,18 +69,21 @@ class AiEmptyState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: theme.textStyle.copyWith(
-                color: color,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textStyle
+                  .copyWith(
+                    color: color,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  )
+                  .merge(titleStyle),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: theme.textStyle.copyWith(color: muted),
+                style:
+                    theme.textStyle.copyWith(color: muted).merge(subtitleStyle),
               ),
             ],
             if (suggestions.isNotEmpty) ...[
@@ -94,6 +111,11 @@ class AiEmptyState extends StatelessWidget {
         ),
       ),
     );
+    if (background == null) return content;
+    return Stack(
+      fit: StackFit.expand,
+      children: [background!, content],
+    );
   }
 }
 
@@ -111,7 +133,7 @@ class _SuggestionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: theme.assistantBubbleColor,
+      color: theme.effectiveChipColor,
       borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

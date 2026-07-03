@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_ai_client/src/use_chat_controller.dart';
@@ -148,5 +149,122 @@ class InMemoryChatThreadStore implements ChatThreadStore {
   Future<void> delete(String id) async {
     _conversations.remove(id);
     _threads.remove(id);
+  }
+}
+
+/// A minimal async key→string storage — the seam a [KeyValueChatThreadStore]
+/// persists through. Keeps the package plugin-free: back it with
+/// `shared_preferences`, a file, secure storage, or an HTTP API in a few lines:
+///
+/// ```dart
+/// class PrefsStore implements KeyValueStore {
+///   PrefsStore(this._prefs);
+///   final SharedPreferences _prefs;
+///   @override
+///   Future<String?> read(String key) async => _prefs.getString(key);
+///   @override
+///   Future<void> write(String key, String value) async =>
+///       _prefs.setString(key, value);
+///   @override
+///   Future<void> remove(String key) async => _prefs.remove(key);
+/// }
+/// ```
+abstract interface class KeyValueStore {
+  /// Returns the value for [key], or `null` if unset.
+  Future<String?> read(String key);
+
+  /// Stores [value] under [key], replacing any previous value.
+  Future<void> write(String key, String value);
+
+  /// Removes [key] (no-op if absent).
+  Future<void> remove(String key);
+}
+
+/// A persistent [ChatThreadStore] backed by any [KeyValueStore], so a chat
+/// drawer survives app restarts without pulling a storage plugin into the
+/// package. Each conversation is stored as JSON under `"$prefix$id"`, with a
+/// small index under `"${prefix}index"` for [listThreads]. Titles are derived
+/// via [autoTitle] on save.
+class KeyValueChatThreadStore implements ChatThreadStore {
+  /// Creates a store over [store]. [prefix] namespaces all keys it owns.
+  KeyValueChatThreadStore(this.store, {this.prefix = 'flutter_ai_chat/'});
+
+  /// The backing key→string storage.
+  final KeyValueStore store;
+
+  /// Key namespace for everything this store writes.
+  final String prefix;
+
+  String get _indexKey => '${prefix}index';
+  String _threadKey(String id) => '$prefix$id';
+
+  Future<List<ChatThread>> _readIndex() async {
+    final raw = await store.read(_indexKey);
+    if (raw == null || raw.isEmpty) return [];
+    final list = (jsonDecode(raw) as List).cast<Map<String, Object?>>();
+    return [
+      for (final e in list)
+        ChatThread(
+          id: e['id']! as String,
+          title: e['title']! as String,
+          updatedAt: e['updatedAt'] == null
+              ? null
+              : DateTime.tryParse(e['updatedAt']! as String),
+        ),
+    ];
+  }
+
+  Future<void> _writeIndex(List<ChatThread> threads) => store.write(
+        _indexKey,
+        jsonEncode([
+          for (final t in threads)
+            {
+              'id': t.id,
+              'title': t.title,
+              'updatedAt': t.updatedAt?.toIso8601String(),
+            },
+        ]),
+      );
+
+  @override
+  Future<AiConversation?> load(String id) async {
+    final raw = await store.read(_threadKey(id));
+    if (raw == null) return null;
+    return AiConversation.fromJson(
+      (jsonDecode(raw) as Map).cast<String, Object?>(),
+    );
+  }
+
+  @override
+  Future<void> save(String id, AiConversation conversation) async {
+    await store.write(_threadKey(id), jsonEncode(conversation.toJson()));
+    final thread = ChatThread(
+      id: id,
+      title: autoTitle(conversation),
+      updatedAt: DateTime.now(),
+    );
+    final index = await _readIndex()
+      ..removeWhere((t) => t.id == id)
+      ..insert(0, thread);
+    await _writeIndex(index);
+  }
+
+  @override
+  Future<List<ChatThread>> listThreads() async {
+    final threads = await _readIndex();
+    threads.sort((a, b) {
+      final at = a.updatedAt, bt = b.updatedAt;
+      if (at == null || bt == null) return 0;
+      return bt.compareTo(at); // newest first
+    });
+    return threads;
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    await store.remove(_threadKey(id));
+    final index = await _readIndex()
+      ..removeWhere((t) => t.id == id);
+    await _writeIndex(index);
   }
 }

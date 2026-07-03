@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+- Add `UseChatController.load(AiConversation)` — swaps the transcript in place
+  (cancelling any in-flight turn) so hosts can switch threads without disposing
+  and recreating the controller. (#136)
+- Add `KeyValueChatThreadStore`, a persistent `ChatThreadStore` backed by any
+  `KeyValueStore` you supply (`shared_preferences`, a file, secure storage, …),
+  so chat history survives app restarts without the package depending on a
+  storage plugin. (#137)
+- Add `suggestFollowUps(conversation, provider, {count, options})` — generates
+  contextual follow-up prompts (for the `AiSuggestions` strip) via a one-off
+  model call, so follow-ups can be dynamic instead of a static set. (#140)
+
 ## 0.2.5
 
 - Fix: the controller no longer reports `idle` while the agent loop runs its tool

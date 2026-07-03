@@ -5,12 +5,42 @@ import 'package:flutter/services.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
 import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 
+/// The per-message actions, used to control ordering via
+/// [AiMessageActions.order] and [AiMessageActions.trailing].
+enum AiMessageActionKind {
+  /// Copy the message text.
+  copy,
+
+  /// Read the message aloud.
+  speak,
+
+  /// Thumbs-up feedback.
+  good,
+
+  /// Thumbs-down feedback.
+  bad,
+
+  /// Share the message.
+  share,
+
+  /// Regenerate the response.
+  regenerate,
+
+  /// Edit the message.
+  edit,
+}
+
 /// A compact row of per-message actions: copy, and optionally regenerate and
 /// edit.
 ///
 /// Copy defaults to placing the message's text on the clipboard; override it via
 /// [onCopy]. On mobile, prefer presenting these via [showAiMessageActions] from
 /// a long-press rather than always-visible buttons.
+///
+/// [order] controls the sequence; actions listed in [trailing] are pushed to the
+/// far (end) side after a spacer — e.g. Gemini keeps 👍👎↻⧉⋮ on the left and
+/// read-aloud on the right. Only actions with a non-null callback render (copy
+/// always renders).
 class AiMessageActions extends StatelessWidget {
   /// Creates an actions row for [message].
   const AiMessageActions({
@@ -24,6 +54,16 @@ class AiMessageActions extends StatelessWidget {
     this.onRegenerate,
     this.onEdit,
     this.iconSize = 18,
+    this.order = const [
+      AiMessageActionKind.copy,
+      AiMessageActionKind.speak,
+      AiMessageActionKind.good,
+      AiMessageActionKind.bad,
+      AiMessageActionKind.share,
+      AiMessageActionKind.regenerate,
+      AiMessageActionKind.edit,
+    ],
+    this.trailing = const {},
   });
 
   /// The message these actions apply to.
@@ -42,6 +82,10 @@ class AiMessageActions extends StatelessWidget {
   final VoidCallback? onBad;
 
   /// Shows a share action when non-null.
+  ///
+  /// The package ships no share implementation (it has no platform plugins);
+  /// wire your own, e.g. with `share_plus`:
+  /// `onShare: () => Share.share(message.text)`.
   final VoidCallback? onShare;
 
   /// Shows a Regenerate action when non-null.
@@ -52,6 +96,13 @@ class AiMessageActions extends StatelessWidget {
 
   /// Size of the action icons.
   final double iconSize;
+
+  /// The order actions are rendered in.
+  final List<AiMessageActionKind> order;
+
+  /// Actions pushed to the far (end) side, after a spacer. When non-empty the
+  /// row expands to fill its width so the split is visible.
+  final Set<AiMessageActionKind> trailing;
 
   void _copy() {
     if (onCopy != null) {
@@ -84,22 +135,42 @@ class AiMessageActions extends StatelessWidget {
       );
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        button(Icons.copy_rounded, l.copy, _copy),
-        if (onSpeak != null)
-          button(Icons.volume_up_outlined, l.readAloud, onSpeak!),
-        if (onGood != null)
-          button(Icons.thumb_up_outlined, l.goodResponse, onGood!),
-        if (onBad != null)
-          button(Icons.thumb_down_outlined, l.badResponse, onBad!),
-        if (onShare != null) button(Icons.ios_share_rounded, l.share, onShare!),
-        if (onRegenerate != null)
-          button(Icons.refresh_rounded, l.regenerate, onRegenerate!),
-        if (onEdit != null) button(Icons.edit_outlined, l.edit, onEdit!),
-      ],
-    );
+    // Resolve each kind to a button, or null when its callback is absent (copy
+    // always renders, defaulting to clipboard).
+    Widget? forKind(AiMessageActionKind kind) => switch (kind) {
+          AiMessageActionKind.copy => button(Icons.copy_rounded, l.copy, _copy),
+          AiMessageActionKind.speak => onSpeak == null
+              ? null
+              : button(Icons.volume_up_outlined, l.readAloud, onSpeak!),
+          AiMessageActionKind.good => onGood == null
+              ? null
+              : button(Icons.thumb_up_outlined, l.goodResponse, onGood!),
+          AiMessageActionKind.bad => onBad == null
+              ? null
+              : button(Icons.thumb_down_outlined, l.badResponse, onBad!),
+          AiMessageActionKind.share => onShare == null
+              ? null
+              : button(Icons.ios_share_rounded, l.share, onShare!),
+          AiMessageActionKind.regenerate => onRegenerate == null
+              ? null
+              : button(Icons.refresh_rounded, l.regenerate, onRegenerate!),
+          AiMessageActionKind.edit => onEdit == null
+              ? null
+              : button(Icons.edit_outlined, l.edit, onEdit!),
+        };
+
+    final leading = <Widget>[];
+    final tail = <Widget>[];
+    for (final kind in order) {
+      final w = forKind(kind);
+      if (w == null) continue;
+      (trailing.contains(kind) ? tail : leading).add(w);
+    }
+
+    if (tail.isEmpty) {
+      return Row(mainAxisSize: MainAxisSize.min, children: leading);
+    }
+    return Row(children: [...leading, const Spacer(), ...tail]);
   }
 }
 

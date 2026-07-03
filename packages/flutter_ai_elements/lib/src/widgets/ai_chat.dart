@@ -342,7 +342,7 @@ class _JumpButton extends StatelessWidget {
       button: true,
       label: AiLocalizations.of(context).scrollToLatest,
       child: Material(
-        color: theme.assistantBubbleColor,
+        color: theme.effectiveChipColor,
         shape: const CircleBorder(),
         elevation: 2,
         shadowColor: Colors.black.withValues(alpha: 0.2),

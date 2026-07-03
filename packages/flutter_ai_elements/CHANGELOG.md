@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.2.0
+
+Extensibility release — driven by dogfooding a full Gemini-clone app on the
+packages. All changes are additive; requires `flutter_ai_client ^0.3.0`.
+
+- Add `AiThemeExtension.chipColor` (resolved via `effectiveChipColor`) so
+  **bubble-less** themes (a transparent `assistantBubbleColor`) keep visible
+  suggestion chips, the selected `AiConversationList` row, and the
+  scroll-to-latest button instead of having them vanish. (#135)
+- `AiModelSelector`: add `labelStyle`, `labelBuilder`, `showBorder`, and
+  `padding` so the trigger chip can be brand-styled (e.g. a larger two-tone
+  title) while keeping the package's picker sheet. (#143)
+- `AiConversationList`: add `header`, `footer`, and a per-thread
+  `trailingBuilder` so a real sidebar can have section headers, an account
+  footer, and custom per-thread affordances (pin/overflow). (#144)
+- `AiMessageActions`: add `order` and `trailing` (with the new
+  `AiMessageActionKind` enum) to reorder actions and push some — e.g. read-aloud
+  — to the far side. (#145)
+- `AiEmptyState`: add `titleStyle`, `subtitleStyle`, and a `background` slot for
+  a gradient/hero greeting. (#141)
+- `AiPromptInput`: add `textController` so voice dictation / quick-replies can
+  populate the composer for review instead of dictate-and-send. (#138)
+- Add `AiLiveController` + `AiVoiceEngine`: a drop-in
+  listen → send → speak → re-listen state machine that maps a `UseChatController`
+  and a pluggable audio engine onto `AiLiveSession`, so live-voice plumbing no
+  longer lives entirely in the app. (#139)
+- `AiLiveSession`: add a `backgroundColor` knob for apps that want a non-black
+  live surface. (#146)
+- Docs: document the `share_plus` recipe on `AiMessageActions.onShare` (the
+  package ships no share implementation to stay plugin-free). (#142)
+
 ## 0.1.16
 
 - Fix: `AiChat` auto-scroll no longer fights mouse-wheel, trackpad, or keyboard

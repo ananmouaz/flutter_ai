@@ -38,6 +38,7 @@ export 'src/widgets/ai_empty_state.dart';
 export 'src/widgets/ai_error_banner.dart';
 export 'src/widgets/ai_image.dart';
 export 'src/widgets/ai_inline_citation.dart';
+export 'src/widgets/ai_live_controller.dart';
 export 'src/widgets/ai_live_session.dart';
 export 'src/widgets/ai_loader.dart';
 export 'src/widgets/ai_message_actions.dart';

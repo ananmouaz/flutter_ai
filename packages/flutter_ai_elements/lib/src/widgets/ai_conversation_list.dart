@@ -19,6 +19,9 @@ class AiConversationList extends StatelessWidget {
     this.onNew,
     this.onDelete,
     this.newChatLabel,
+    this.header,
+    this.footer,
+    this.trailingBuilder,
   });
 
   /// The threads to show, in display order (typically newest first).
@@ -39,6 +42,20 @@ class AiConversationList extends StatelessWidget {
   /// Label for the new-chat action. Defaults to the localized "New chat".
   final String? newChatLabel;
 
+  /// Optional content pinned above the new-chat action and thread list — e.g. a
+  /// brand wordmark, a close button, or fixed nav entries (Images/Library/…).
+  final Widget? header;
+
+  /// Optional content pinned below the thread list — e.g. an account footer
+  /// (avatar · name · settings).
+  final Widget? footer;
+
+  /// Per-thread trailing widget (e.g. a pin glyph + overflow menu). When
+  /// provided it replaces the default delete affordance, so wire delete/pin
+  /// yourself. Return null for no trailing on a given thread.
+  final Widget? Function(BuildContext context, ChatThread thread)?
+      trailingBuilder;
+
   @override
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
@@ -46,6 +63,7 @@ class AiConversationList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (header != null) header!,
         if (onNew != null)
           Padding(
             padding: const EdgeInsets.all(8),
@@ -65,8 +83,7 @@ class AiConversationList extends StatelessWidget {
               final thread = threads[i];
               final selected = thread.id == selectedId;
               return Material(
-                color:
-                    selected ? theme.assistantBubbleColor : Colors.transparent,
+                color: selected ? theme.effectiveChipColor : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
                 clipBehavior: Clip.antiAlias,
                 child: ListTile(
@@ -78,19 +95,22 @@ class AiConversationList extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   onTap: onSelect == null ? null : () => onSelect!(thread),
-                  trailing: onDelete == null
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 18),
-                          tooltip: l.delete,
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => onDelete!(thread),
-                        ),
+                  trailing: trailingBuilder != null
+                      ? trailingBuilder!(context, thread)
+                      : onDelete == null
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 18),
+                              tooltip: l.delete,
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () => onDelete!(thread),
+                            ),
                 ),
               );
             },
           ),
         ),
+        if (footer != null) footer!,
       ],
     );
   }
