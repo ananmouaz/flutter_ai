@@ -953,6 +953,104 @@ void main() {
         hasLength(1),
       );
     });
+
+    test('submit settles dangling tool calls with synthesized error results',
+        () async {
+      // Turn 1 ends with an unanswered tool call (manual mode, never
+      // executed). Submitting a new user message must first append error
+      // results for it — providers reject a history containing a tool call
+      // with no following result.
+      final provider = _ToolThenTextProvider();
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('weather?');
+      await controller.sendText('never mind');
+
+      final messages = controller.messages;
+      // user, assistant(tool call), tool(synthesized error), user, assistant.
+      expect(messages.map((m) => m.role).toList(), [
+        AiRole.user,
+        AiRole.assistant,
+        AiRole.tool,
+        AiRole.user,
+        AiRole.assistant,
+      ]);
+      final settled =
+          messages[2].parts.whereType<ToolResultPart>().single;
+      expect(settled.toolCallId, 'c1');
+      expect(settled.isError, isTrue);
+    });
+
+    test('submit settles dangling tool calls buried mid-history', () async {
+      // A rehydrated transcript where an interrupted agent loop left an
+      // unanswered tool call in the MIDDLE of the history (later turns
+      // completed normally). The settle must insert the synthesized result
+      // directly after the affected assistant message — providers require the
+      // result in the immediately-following turn, so appending at the end
+      // would not fix the request.
+      const dirty = AiConversation(
+        id: 'thread-dirty',
+        messages: [
+          AiMessage(id: 'u1', role: AiRole.user, parts: [TextPart('q1')]),
+          AiMessage(
+            id: 'a1',
+            role: AiRole.assistant,
+            parts: [
+              ToolCallPart(
+                toolCallId: 'c9',
+                toolName: 'get_week_schedule',
+                args: {},
+              ),
+            ],
+            status: AiMessageStatus.complete,
+          ),
+          AiMessage(id: 'u2', role: AiRole.user, parts: [TextPart('q2')]),
+          AiMessage(
+            id: 'a2',
+            role: AiRole.assistant,
+            parts: [TextPart('answer 2')],
+            status: AiMessageStatus.complete,
+          ),
+        ],
+      );
+      final provider = ScriptedProvider(const [
+        MessageStarted(messageId: 'a3', role: AiRole.assistant),
+        TextDelta(messageId: 'a3', delta: 'answer 3'),
+        MessageFinished(messageId: 'a3', reason: FinishReason.stop),
+      ]);
+      final controller = UseChatController(
+        provider: provider,
+        scheduler: syncScheduler,
+        idGenerator: seqIds(),
+        initial: dirty,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.sendText('q3');
+
+      final messages = controller.messages;
+      // u1, a1(tool call), tool(synthesized), u2, a2, u3, a3.
+      expect(messages.map((m) => m.role).toList(), [
+        AiRole.user,
+        AiRole.assistant,
+        AiRole.tool,
+        AiRole.user,
+        AiRole.assistant,
+        AiRole.user,
+        AiRole.assistant,
+      ]);
+      final settled = messages[2].parts.whereType<ToolResultPart>().single;
+      expect(settled.toolCallId, 'c9');
+      expect(settled.isError, isTrue);
+      // The provider must have been sent the settled history too.
+      final sent = provider.lastConversation!.messages;
+      expect(sent[2].role, AiRole.tool);
+    });
   });
 
   group('threads', () {

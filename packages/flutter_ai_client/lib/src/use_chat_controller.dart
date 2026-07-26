@@ -244,7 +244,9 @@ class UseChatController extends ChangeNotifier {
     _capture = _Capture.reset; // a new user turn starts a fresh branch set
     _step = 0;
     _toolCallCounts.clear();
-    _processor.reset(_processor.conversation.append(userMessage));
+    _processor.reset(
+      _settleDanglingToolCalls(_processor.conversation).append(userMessage),
+    );
     _status = ChatStatus.submitted;
     _scheduleNotify();
     return _beginTurn();
@@ -263,7 +265,10 @@ class UseChatController extends ChangeNotifier {
     _step = 0;
     _toolCallCounts.clear();
     _processor.reset(
-      _processor.conversation.copyWith(messages: all.sublist(0, lastUser + 1)),
+      _settleDanglingToolCalls(
+        _processor.conversation
+            .copyWith(messages: all.sublist(0, lastUser + 1)),
+      ),
     );
     _status = ChatStatus.submitted;
     _scheduleNotify();
@@ -308,11 +313,13 @@ class UseChatController extends ChangeNotifier {
     _step = 0;
     _toolCallCounts.clear();
     _processor.reset(
-      _processor.conversation.copyWith(
-        messages: [
-          ...all.sublist(0, index),
-          original.copyWith(parts: parts, status: AiMessageStatus.complete),
-        ],
+      _settleDanglingToolCalls(
+        _processor.conversation.copyWith(
+          messages: [
+            ...all.sublist(0, index),
+            original.copyWith(parts: parts, status: AiMessageStatus.complete),
+          ],
+        ),
       ),
     );
     _status = ChatStatus.submitted;
@@ -653,6 +660,52 @@ class UseChatController extends ChangeNotifier {
     _status = ChatStatus.submitted;
     _scheduleNotify();
     _dispatch();
+  }
+
+  /// Settles tool calls left unanswered anywhere in the transcript — a turn
+  /// stopped/replaced mid agent-loop, `maxSteps` cutting a loop short, or a
+  /// dirty transcript rehydrated from storage — by inserting a synthesized
+  /// error [ToolResultPart] message directly after each affected assistant
+  /// message. Providers reject a history containing a tool call with no
+  /// result in the immediately-following turn (so the fix-up must be inserted
+  /// in place, not appended at the end), and without it every subsequent
+  /// [submit] on the conversation fails with a request error.
+  AiConversation _settleDanglingToolCalls(AiConversation conversation) {
+    final msgs = conversation.messages;
+    final answered = <String>{
+      for (final m in msgs)
+        for (final p in m.parts)
+          if (p is ToolResultPart) p.toolCallId,
+    };
+    var changed = false;
+    final out = <AiMessage>[];
+    for (final m in msgs) {
+      out.add(m);
+      if (m.role != AiRole.assistant) continue;
+      final dangling = m.parts
+          .whereType<ToolCallPart>()
+          .where((c) => !answered.contains(c.toolCallId))
+          .toList();
+      if (dangling.isEmpty) continue;
+      changed = true;
+      out.add(
+        AiMessage(
+          id: _newId(),
+          role: AiRole.tool,
+          parts: <AiPart>[
+            for (final call in dangling)
+              ToolResultPart(
+                toolCallId: call.toolCallId,
+                isError: true,
+                result:
+                    'Cancelled: the turn was interrupted before this tool '
+                    'call produced a result.',
+              ),
+          ],
+        ),
+      );
+    }
+    return changed ? conversation.copyWith(messages: out) : conversation;
   }
 
   /// Tool calls in the latest assistant message that have no matching
