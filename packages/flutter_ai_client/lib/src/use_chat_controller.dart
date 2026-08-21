@@ -697,8 +697,7 @@ class UseChatController extends ChangeNotifier {
               ToolResultPart(
                 toolCallId: call.toolCallId,
                 isError: true,
-                result:
-                    'Cancelled: the turn was interrupted before this tool '
+                result: 'Cancelled: the turn was interrupted before this tool '
                     'call produced a result.',
               ),
           ],

@@ -914,6 +914,9 @@ void main() {
         matchesSemantics(
           isButton: true,
           hasTapAction: true,
+          // The trigger is an InkWell, so it is focusable too.
+          hasFocusAction: true,
+          isFocusable: true,
           label: 'Select model, Fast\nFast',
         ),
       );

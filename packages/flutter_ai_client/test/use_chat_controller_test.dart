@@ -980,8 +980,7 @@ void main() {
         AiRole.user,
         AiRole.assistant,
       ]);
-      final settled =
-          messages[2].parts.whereType<ToolResultPart>().single;
+      final settled = messages[2].parts.whereType<ToolResultPart>().single;
       expect(settled.toolCallId, 'c1');
       expect(settled.isError, isTrue);
     });

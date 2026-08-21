@@ -194,10 +194,10 @@ class _AiResponseState extends State<AiResponse> {
         );
       case _BlockType.quote:
         return Container(
-          padding: const EdgeInsets.only(left: 12),
+          padding: const EdgeInsetsDirectional.only(start: 12),
           decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(color: theme.borderColor, width: 3),
+            border: BorderDirectional(
+              start: BorderSide(color: theme.borderColor, width: 3),
             ),
           ),
           child: Text.rich(

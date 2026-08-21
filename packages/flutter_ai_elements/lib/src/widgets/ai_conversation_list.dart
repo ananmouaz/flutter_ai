@@ -71,7 +71,7 @@ class AiConversationList extends StatelessWidget {
               onPressed: onNew,
               icon: const Icon(Icons.add, size: 18),
               label: Align(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerStart,
                 child: Text(newChatLabel ?? l.newChat),
               ),
             ),

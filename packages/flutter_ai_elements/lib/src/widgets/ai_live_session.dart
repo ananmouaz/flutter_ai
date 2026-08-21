@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// The phase of a live voice session.
@@ -123,11 +124,11 @@ class _AiLiveSessionState extends State<AiLiveSession>
     super.dispose();
   }
 
-  String get _label => switch (widget.status) {
-        AiLiveStatus.connecting => 'Connecting…',
-        AiLiveStatus.listening => 'Listening',
-        AiLiveStatus.thinking => 'Thinking…',
-        AiLiveStatus.speaking => 'Speaking',
+  String _statusLabel(AiLocalizations l) => switch (widget.status) {
+        AiLiveStatus.connecting => l.liveConnecting,
+        AiLiveStatus.listening => l.liveListening,
+        AiLiveStatus.thinking => l.liveThinking,
+        AiLiveStatus.speaking => l.liveSpeaking,
         AiLiveStatus.ended => '',
       };
 
@@ -226,7 +227,7 @@ class _AiLiveSessionState extends State<AiLiveSession>
                       child: Opacity(
                         opacity: intro * (1 - dock),
                         child: Text(
-                          _label,
+                          _statusLabel(AiLocalizations.of(context)),
                           textAlign: TextAlign.center,
                           style: theme.textStyle.copyWith(
                             fontSize: 15,

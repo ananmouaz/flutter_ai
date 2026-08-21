@@ -83,14 +83,21 @@ class _Arrow extends StatelessWidget {
       button: true,
       enabled: onTap != null,
       label: label,
-      child: GestureDetector(
+      // InkResponse over a 44px box: the arrow paints at 18px, but branch
+      // navigation needs a platform-minimum touch target — plus focus
+      // traversal and keyboard activation, which a GestureDetector lacks.
+      child: InkResponse(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Icon(
-            icon,
-            size: 18,
-            color: onTap == null ? color?.withValues(alpha: 0.3) : color,
+        radius: 22,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Icon(
+              icon,
+              size: 18,
+              color: onTap == null ? color?.withValues(alpha: 0.3) : color,
+            ),
           ),
         ),
       ),

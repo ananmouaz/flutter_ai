@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// A compact context-window usage meter: a label, a `used / total` token
@@ -9,7 +10,7 @@ class AiContextMeter extends StatelessWidget {
     super.key,
     required this.usedTokens,
     required this.totalTokens,
-    this.label = 'Context',
+    this.label,
   });
 
   /// Tokens used so far.
@@ -18,8 +19,9 @@ class AiContextMeter extends StatelessWidget {
   /// The context-window size.
   final int totalTokens;
 
-  /// Leading label.
-  final String label;
+  /// Leading label. Defaults to `AiLocalizations.contextLabel`, so a translated
+  /// [AiLocalizations] reaches it without passing a label here.
+  final String? label;
 
   double get _fraction =>
       totalTokens <= 0 ? 0 : (usedTokens / totalTokens).clamp(0, 1);
@@ -42,7 +44,7 @@ class AiContextMeter extends StatelessWidget {
         Row(
           children: [
             Text(
-              label,
+              label ?? AiLocalizations.of(context).contextLabel,
               style: theme.textStyle.copyWith(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

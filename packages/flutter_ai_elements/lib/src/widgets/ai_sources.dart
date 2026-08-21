@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_haptics.dart';
 
@@ -77,7 +78,9 @@ class _AiSourcesState extends State<AiSources> {
           ),
         if (collapsible)
           _SourceChip(
-            label: _expanded ? 'Show less' : '+$hiddenCount more',
+            label: _expanded
+                ? AiLocalizations.of(context).showLess
+                : AiLocalizations.of(context).moreSources(hiddenCount),
             icon: _expanded
                 ? Icons.expand_less_rounded
                 : Icons.expand_more_rounded,

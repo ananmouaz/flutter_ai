@@ -881,7 +881,8 @@ class GalleryScreen extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF9893A8),
+                // #9893A8 on white was ~3:1 at 12px; this passes AA (~7:1).
+                color: Color(0xFF5B5570),
                 letterSpacing: 0.2,
               ),
             ),
