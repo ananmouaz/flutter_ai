@@ -13,14 +13,11 @@ import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 /// chatter.
 void aiLightHaptic(AiThemeExtension theme) {
   if (!theme.enableHaptics || kIsWeb) return;
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.iOS:
-    case TargetPlatform.android:
-      unawaited(HapticFeedback.lightImpact());
-    case TargetPlatform.fuchsia:
-    case TargetPlatform.linux:
-    case TargetPlatform.macOS:
-    case TargetPlatform.windows:
-      break;
+  // An allowlist `if` rather than an exhaustive switch: the OHOS Flutter fork
+  // adds TargetPlatform.ohos, so an exhaustive switch can't compile on both
+  // it and upstream Flutter at once.
+  final platform = defaultTargetPlatform;
+  if (platform == TargetPlatform.iOS || platform == TargetPlatform.android) {
+    unawaited(HapticFeedback.lightImpact());
   }
 }

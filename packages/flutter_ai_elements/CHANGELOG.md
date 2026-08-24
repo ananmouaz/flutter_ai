@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.3.0
+
+Accessibility, internationalization, and cross-fork compile fixes.
+
+- Fix: `aiLightHaptic` compiles against both upstream Flutter and the OHOS
+  Flutter fork. The exhaustive `TargetPlatform` switch could not cover both
+  enums at once (the fork adds `TargetPlatform.ohos`), so it is now an
+  iOS/Android allowlist. Thanks to @HeZeBang. (#149)
+- Fix: strings that bypassed `AiLocalizations` are now localizable — tool-call
+  section labels (`toolArguments`/`toolResult`/`toolError`), the context meter
+  (`contextLabel`), source expand/collapse (`moreSources`/`showLess`), live
+  voice statuses (`liveConnecting`/`liveListening`/`liveThinking`/
+  `liveSpeaking`), the empty-state headline (`emptyStateTitle`), the inline
+  citation and model-selector semantics labels (`citation`/`selectModel`), and
+  the attachment remove badge (`removeAttachment`). (#128)
+- Fix: touch targets below the 44px platform minimum — the attachment remove
+  badge and `AiBranch`'s navigation arrows now use `InkResponse` over a 44px
+  box, which also gives them focus traversal and keyboard activation.
+  `AiModelSelector`'s trigger moves from `GestureDetector` to `InkWell` for the
+  same reason. (#128)
+- Fix: the caution-tone confirm button painted white on amber (~2.2:1). The
+  label color is now derived from the fill's brightness, and the buttons use a
+  `minHeight` instead of a fixed 40px height so labels are not clipped at large
+  text scales. (#128)
+- Fix: RTL gaps — the streaming loader alignment, the "New chat" label, and the
+  Markdown blockquote's border/padding are now directional. (#128)
+- **Potentially source-breaking:** `AiChainOfThought.title`,
+  `AiContextMeter.label`, `AiEmptyState.title`, and `AiComposer.hintText` are
+  now `String?` and default to the matching `AiLocalizations` value. Passing a
+  string still works; only reading one of these fields as a non-nullable
+  `String` needs a change.
+
 ## 0.2.0
 
 Extensibility release — driven by dogfooding a full Gemini-clone app on the

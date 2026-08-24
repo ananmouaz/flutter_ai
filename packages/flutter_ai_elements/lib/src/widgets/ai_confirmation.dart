@@ -158,6 +158,15 @@ class _Button extends StatelessWidget {
   final Color fillColor;
   final AiThemeExtension theme;
 
+  /// The label color for a filled button: the theme's pairing when the fill is
+  /// the accent, otherwise black/white chosen by the fill's brightness.
+  Color _onColor(Color fill) {
+    if (fill == theme.accentColor) return theme.onAccentColor;
+    return ThemeData.estimateBrightnessForColor(fill) == Brightness.dark
+        ? Colors.white
+        : Colors.black;
+  }
+
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(12);
@@ -178,15 +187,23 @@ class _Button extends StatelessWidget {
           onTap: onTap,
           borderRadius: radius,
           child: Container(
-            height: 40,
+            // minHeight, not a fixed height: a hard 40 clips the label at
+            // larger text scales.
+            constraints: const BoxConstraints(minHeight: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             alignment: Alignment.center,
             child: Text(
               label,
+              textAlign: TextAlign.center,
               style: theme.textStyle.copyWith(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
+                // The fill follows the tone (amber for caution, red for
+                // danger), so the "on" color has to be derived from it —
+                // painting onAccentColor (white) on amber is ~2.2:1, well
+                // under the 4.5:1 WCAG AA minimum.
                 color: filled
-                    ? theme.onAccentColor
+                    ? _onColor(fillColor)
                     : DefaultTextStyle.of(context).style.color,
               ),
             ),

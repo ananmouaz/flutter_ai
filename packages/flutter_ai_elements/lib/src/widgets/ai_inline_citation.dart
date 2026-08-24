@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// A small numbered citation badge (e.g. `1`) shown inline with text or after a
@@ -24,7 +25,7 @@ class AiInlineCitation extends StatelessWidget {
     // fill bounded parents — so this badge intentionally has none.)
     return Semantics(
       button: onTap != null,
-      label: 'Citation $number',
+      label: AiLocalizations.of(context).citation(number),
       child: GestureDetector(
         onTap: onTap,
         child: Container(

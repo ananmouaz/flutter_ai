@@ -135,7 +135,7 @@ class _AiConversationViewState extends State<AiConversationView> {
         }
         if (index == loaderIndex) {
           return Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: widget.loadingBuilder?.call(context) ?? const AiLoader(),

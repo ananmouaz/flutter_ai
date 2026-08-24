@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// A selectable model option.
@@ -83,8 +84,11 @@ class AiModelSelector extends StatelessWidget {
     final color = DefaultTextStyle.of(context).style.color;
     return Semantics(
       button: true,
-      label: 'Select model, ${selected.label}',
-      child: GestureDetector(
+      label: AiLocalizations.of(context).selectModel(selected.label),
+      // InkWell, not a bare GestureDetector: focus traversal and keyboard
+      // activation for desktop/web.
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
         onTap: () => unawaited(_open(context)),
         child: Container(
           padding: padding,

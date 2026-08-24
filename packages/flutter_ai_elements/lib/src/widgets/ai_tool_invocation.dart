@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// A collapsible card showing a single tool call: its name, lifecycle state,
@@ -37,6 +38,7 @@ class _AiToolInvocationState extends State<AiToolInvocation> {
   @override
   Widget build(BuildContext context) {
     final theme = AiThemeExtension.of(context);
+    final l = AiLocalizations.of(context);
     final baseColor = DefaultTextStyle.of(context).style.color;
     final (icon, iconColor) = _statusVisual(context);
 
@@ -99,14 +101,16 @@ class _AiToolInvocationState extends State<AiToolInvocation> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _Section(
-                          label: 'Arguments',
+                          label: l.toolArguments,
                           body: _pretty(widget.call.args),
                           style: theme.codeStyle.copyWith(color: baseColor),
                         ),
                         if (widget.result != null) ...[
                           const SizedBox(height: 8),
                           _Section(
-                            label: widget.result!.isError ? 'Error' : 'Result',
+                            label: widget.result!.isError
+                                ? l.toolError
+                                : l.toolResult,
                             body: _pretty(widget.result!.result),
                             style: theme.codeStyle.copyWith(color: baseColor),
                           ),

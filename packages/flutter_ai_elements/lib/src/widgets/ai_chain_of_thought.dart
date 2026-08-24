@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 
 /// One step in an [AiChainOfThought].
@@ -30,15 +31,16 @@ class AiChainOfThought extends StatefulWidget {
   const AiChainOfThought({
     super.key,
     required this.steps,
-    this.title = 'Chain of thought',
+    this.title,
     this.initiallyExpanded = false,
   });
 
   /// The ordered steps.
   final List<AiThoughtStep> steps;
 
-  /// The disclosure label.
-  final String title;
+  /// The disclosure label. Defaults to `AiLocalizations.chainOfThought`, so a
+  /// translated [AiLocalizations] reaches it without passing a title here.
+  final String? title;
 
   /// Whether the timeline starts expanded.
   final bool initiallyExpanded;
@@ -71,7 +73,7 @@ class _AiChainOfThoughtState extends State<AiChainOfThought> {
                 Icon(Icons.account_tree_outlined, size: 16, color: subdued),
                 const SizedBox(width: 6),
                 Text(
-                  widget.title,
+                  widget.title ?? AiLocalizations.of(context).chainOfThought,
                   style: TextStyle(
                     color: subdued,
                     fontWeight: FontWeight.w600,

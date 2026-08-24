@@ -20,7 +20,7 @@ class AiComposer extends StatefulWidget {
     required this.onSend,
     this.onStop,
     this.isBusy = false,
-    this.hintText = 'Message',
+    this.hintText,
     this.controller,
     this.enabled = true,
     this.onAttach,
@@ -39,8 +39,8 @@ class AiComposer extends StatefulWidget {
   /// Whether a response is in flight; the main button shows Stop.
   final bool isBusy;
 
-  /// Placeholder text.
-  final String hintText;
+  /// Placeholder text. Defaults to `AiLocalizations.messageHint`.
+  final String? hintText;
 
   /// Optional external text controller.
   final TextEditingController? controller;
@@ -201,7 +201,7 @@ class _AiComposerState extends State<AiComposer> {
                   textInputAction: TextInputAction.send,
                   onSubmitted: widget.enabled ? (_) => _handleSend() : null,
                   decoration: InputDecoration(
-                    hintText: widget.hintText,
+                    hintText: widget.hintText ?? l.messageHint,
                     hintStyle: theme.textStyle.copyWith(
                       color: theme.assistantTextColor.withValues(alpha: 0.45),
                     ),
@@ -419,27 +419,56 @@ class _AttachmentPreview extends StatelessWidget {
     }
 
     if (onRemove == null) return content;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        content,
-        PositionedDirectional(
-          top: -6,
-          end: -6,
-          child: GestureDetector(
-            onTap: onRemove,
-            child: Container(
-              decoration: BoxDecoration(
-                color: theme.accentColor,
-                shape: BoxShape.circle,
-                border: Border.all(color: theme.onAccentColor, width: 1.5),
+    // The remove badge paints at ~20px but needs a 44px touch target. The
+    // padding reserves that room around the thumbnail: a hit area that merely
+    // overhung the Stack would be clipped by the ancestor's bounds check, so
+    // the target has to sit inside the widget's own box to be tappable.
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(top: 12, end: 12),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          content,
+          PositionedDirectional(
+            top: -12,
+            end: -12,
+            child: Semantics(
+              button: true,
+              label: AiLocalizations.of(context).removeAttachment,
+              // InkResponse, not a bare GestureDetector: focus traversal,
+              // keyboard activation (Enter/Space), hover and a ripple.
+              child: InkResponse(
+                onTap: onRemove,
+                radius: 22,
+                containedInkWell: false,
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Align(
+                    alignment: AlignmentDirectional.topEnd,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: theme.accentColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.onAccentColor,
+                          width: 1.5,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.close,
+                        size: 12,
+                        color: theme.onAccentColor,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              padding: const EdgeInsets.all(2),
-              child: Icon(Icons.close, size: 12, color: theme.onAccentColor),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

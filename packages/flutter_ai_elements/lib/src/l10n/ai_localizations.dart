@@ -49,6 +49,20 @@ class AiLocalizations {
     this.loading = 'Loading',
     this.you = 'You',
     this.assistant = 'Assistant',
+    this.toolArguments = 'Arguments',
+    this.toolResult = 'Result',
+    this.toolError = 'Error',
+    this.contextLabel = 'Context',
+    this.showLess = 'Show less',
+    this.moreSources = _defaultMoreSources,
+    this.removeAttachment = 'Remove attachment',
+    this.liveConnecting = 'Connecting…',
+    this.liveListening = 'Listening',
+    this.liveThinking = 'Thinking…',
+    this.liveSpeaking = 'Speaking',
+    this.emptyStateTitle = 'Start the conversation',
+    this.citation = _defaultCitation,
+    this.selectModel = _defaultSelectModel,
   });
 
   /// Copy-to-clipboard action.
@@ -137,6 +151,56 @@ class AiLocalizations {
 
   /// Avatar accessibility label for the assistant.
   final String assistant;
+
+  /// Section title for a tool call's arguments.
+  final String toolArguments;
+
+  /// Section title for a tool call's successful result.
+  final String toolResult;
+
+  /// Section title for a tool call's error result.
+  final String toolError;
+
+  /// Leading label on the context-window meter.
+  final String contextLabel;
+
+  /// Collapse action on a list that was expanded (e.g. sources).
+  final String showLess;
+
+  /// Expand action on a collapsed source list, given the hidden chip count —
+  /// a callback rather than a string so translations can decline the number.
+  final String Function(int hiddenCount) moreSources;
+
+  /// Accessibility label on the remove badge of a staged attachment.
+  final String removeAttachment;
+
+  /// Live-voice status while the session is connecting.
+  final String liveConnecting;
+
+  /// Live-voice status while the mic is open.
+  final String liveListening;
+
+  /// Live-voice status while the model is generating.
+  final String liveThinking;
+
+  /// Live-voice status while the model is talking.
+  final String liveSpeaking;
+
+  /// Default headline on the empty conversation state.
+  final String emptyStateTitle;
+
+  /// Accessibility label for an inline citation badge, given its number.
+  final String Function(int number) citation;
+
+  /// Accessibility label for the model selector, given the current model.
+  final String Function(String modelLabel) selectModel;
+
+  static String _defaultMoreSources(int hiddenCount) => '+$hiddenCount more';
+
+  static String _defaultCitation(int number) => 'Citation $number';
+
+  static String _defaultSelectModel(String modelLabel) =>
+      'Select model, $modelLabel';
 
   /// The nearest [AiLocalizations]. Resolution order: an [AiLocalizationsScope]
   /// in the tree (the simplest way to override — no delegate wiring), then a

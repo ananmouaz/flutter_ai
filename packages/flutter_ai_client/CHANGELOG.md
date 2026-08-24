@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1
+
+- Fix: settle dangling tool calls before `submit`/`regenerate`/`editMessage`. A
+  turn interrupted mid agent-loop (`stop()`, a `maxSteps` cutoff, or a
+  transcript rehydrated from storage) left a `ToolCallPart` with no matching
+  `ToolResultPart`; providers reject such a history, so every later `submit`
+  failed with a request error. The controller now inserts a synthesized error
+  result immediately after each affected assistant message — in place, not
+  appended, since providers require the result in the following turn.
+  Thanks to @HeZeBang for the report and the fix. (#149)
+
 ## 0.3.0
 
 - Add `UseChatController.load(AiConversation)` — swaps the transcript in place

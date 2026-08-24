@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_haptics.dart';
 
@@ -12,7 +13,7 @@ class AiEmptyState extends StatelessWidget {
   /// Creates an empty state.
   const AiEmptyState({
     super.key,
-    this.title = 'Start the conversation',
+    this.title,
     this.subtitle,
     this.icon = Icons.chat_bubble_outline,
     this.glyph,
@@ -23,8 +24,8 @@ class AiEmptyState extends StatelessWidget {
     this.background,
   });
 
-  /// The primary headline.
-  final String title;
+  /// The primary headline. Defaults to `AiLocalizations.emptyStateTitle`.
+  final String? title;
 
   /// Optional supporting line beneath the title.
   final String? subtitle;
@@ -67,7 +68,7 @@ class AiEmptyState extends StatelessWidget {
             glyph ?? Icon(icon, size: 48, color: muted),
             const SizedBox(height: 12),
             Text(
-              title,
+              title ?? AiLocalizations.of(context).emptyStateTitle,
               textAlign: TextAlign.center,
               style: theme.textStyle
                   .copyWith(
