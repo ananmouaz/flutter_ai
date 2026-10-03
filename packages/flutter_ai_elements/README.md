@@ -159,6 +159,76 @@ AiChat(controller: controller, textRenderer: const MarkdownTextRenderer());
 AiChat(controller: controller, textRenderer: const PlainTextRenderer());
 ```
 
+## Interactive parts and questions
+
+Register data widgets directly on the standard transcript. Registry builders
+can read `AiPartScope` to obtain the part's address and its optional action
+callback. No manual message-parts loop is needed:
+
+```dart
+final answers = <AiPartRef, AiQuestionResponse>{}; // host-owned state
+final registry = AiWidgetRegistry()
+  ..register('question', (context, data) {
+    final scope = AiPartScope.maybeOf(context)!;
+    return AiQuestion(
+      prompt: data['prompt']! as String,
+      options: const [
+        AiQuestionOption(value: 'plan', label: 'Plan my day'),
+        AiQuestionOption(value: 'research', label: 'Research a topic'),
+      ],
+      selectionMode: AiQuestionSelectionMode.multiple,
+      allowFreeform: true,
+      answer: answers[scope.ref],
+      onSubmit: scope.onAction,
+    );
+  });
+
+AiChatView(
+  controller: controller,
+  widgetRegistry: registry,
+  onPartAction: (ref, value) {
+    if (value is AiQuestionResponse) {
+      answers.putIfAbsent(ref, () => value);
+      // Persist and route the response to your backend here. Rebuild the host
+      // when host-owned state changes. This callback does not send a message.
+    }
+  },
+);
+```
+
+`AiQuestion` also works standalone. Omit options and set `allowFreeform: true`
+for text-only input. The default is single selection. Submission awaits the
+callback, blocks repeat taps while pending, shows an answered summary on
+success, and retains the draft with a retry action on failure. Override
+`errorMessage` or the question strings in `AiLocalizations` for app-specific
+copy; raw exceptions are never shown to users.
+
+These guards are **per mounted widget**. A lazy transcript can evict off-screen
+questions. Persist answers in the host and pass them back through `answer`;
+track asynchronous requests in the host and set `enabled: false` while one is
+pending. Enforce idempotency at the action/backend boundary. Use a different
+widget key for a different logical question. Unsubmitted drafts are local to
+the widget and are not persisted across eviction.
+
+For other part types, use `partBuilder: (context, part, message) => ...`.
+Return `null` to fall through to the registry and then the package default.
+Builders inherit the bubble's `DefaultTextStyle`, theme, and `AiPartScope`.
+With no host callback, or while a message streams, `scope.onAction` is null:
+bind it to a control's nullable callback to make the control inert. Custom
+widgets remain responsible for their own callbacks and accessibility.
+
+All four surfaces (`AiMessageBubble`, `AiConversationView`, `AiChat`, and
+`AiChatView`) accept the three hooks. An existing `messageBuilder` overrides
+the entire message and must forward hooks to its own `AiMessageBubble`.
+Custom part builders and registries refresh on parent rebuilds; mutating a
+registry alone does not schedule a rebuild.
+
+`AiPartRef` contains a message ID and its **original part index**, including
+parts whose default renderer is hidden. It refers to the displayed snapshot,
+not a durable identifier across replacement or reordering. Validate delayed
+responses against current state. Callbacks do not alter the reducer, message
+JSON, tool execution, or controller behavior unless the host explicitly does so.
+
 ## Status
 
 Published on pub.dev (see the CHANGELOG); depends on the sibling `flutter_ai`

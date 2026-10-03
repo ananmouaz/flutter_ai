@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
+import 'package:flutter_ai_elements/src/generative_ui/ai_part_scope.dart';
+import 'package:flutter_ai_elements/src/generative_ui/ai_widget_registry.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_loader.dart';
@@ -8,8 +10,8 @@ import 'package:flutter_ai_elements/src/widgets/ai_response.dart';
 
 /// A scrolling list of message bubbles.
 ///
-/// Presentational: it renders the [messages] it is given and reports nothing
-/// back. The controller-bound `AiConversation` wraps it with live updates and
+/// Presentational: it renders [messages] and reports explicit part actions without
+/// mutating them. The controller-bound `AiChat` wraps it with live updates and
 /// auto-scroll.
 class AiConversationView extends StatefulWidget {
   /// Creates a conversation view.
@@ -18,6 +20,9 @@ class AiConversationView extends StatefulWidget {
     required this.messages,
     this.scrollController,
     this.textRenderer = const MarkdownTextRenderer(),
+    this.widgetRegistry,
+    this.partBuilder,
+    this.onPartAction,
     this.messageBuilder,
     this.showLoader = false,
     this.loadingBuilder,
@@ -36,6 +41,16 @@ class AiConversationView extends StatefulWidget {
 
   /// Renderer for message text. Defaults to [MarkdownTextRenderer].
   final AiTextRenderer textRenderer;
+
+  /// Maps data parts to widgets. Unknown types retain the default rendering.
+  final AiWidgetRegistry? widgetRegistry;
+
+  /// Overrides individual parts before registry/default rendering.
+  /// A whole-message builder, when supplied, owns its own part rendering.
+  final AiPartBuilder? partBuilder;
+
+  /// Receives addressed values from custom parts without changing history.
+  final AiPartActionCallback? onPartAction;
 
   /// Optional override for how each message is built.
   final Widget Function(BuildContext context, AiMessage message)?
@@ -93,7 +108,10 @@ class _AiConversationViewState extends State<AiConversationView> {
   void didUpdateWidget(AiConversationView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.textRenderer != widget.textRenderer ||
-        oldWidget.messageBuilder != widget.messageBuilder) {
+        oldWidget.messageBuilder != widget.messageBuilder ||
+        oldWidget.widgetRegistry != widget.widgetRegistry ||
+        oldWidget.partBuilder != widget.partBuilder ||
+        oldWidget.onPartAction != widget.onPartAction) {
       _clearCache();
     }
   }
@@ -103,16 +121,26 @@ class _AiConversationViewState extends State<AiConversationView> {
     if (widget.messageBuilder != null) {
       return widget.messageBuilder!(context, message);
     }
-    if (identical(_cachedMessage[message.id], message)) {
+    final customParts = widget.partBuilder != null ||
+        widget.widgetRegistry != null ||
+        widget.onPartAction != null;
+    if (!customParts && identical(_cachedMessage[message.id], message)) {
       return _cachedBubble[message.id]!;
     }
     final bubble = AiMessageBubble(
       key: ValueKey(message.id),
       message: message,
       textRenderer: widget.textRenderer,
+      widgetRegistry: widget.widgetRegistry,
+      partBuilder: widget.partBuilder,
+      onPartAction: widget.onPartAction,
     );
-    _cachedMessage[message.id] = message;
-    _cachedBubble[message.id] = bubble;
+    // Custom builders/registries can capture mutable host state. Rebuild them
+    // on every parent update, preserving element state via the message key.
+    if (!customParts) {
+      _cachedMessage[message.id] = message;
+      _cachedBubble[message.id] = bubble;
+    }
     return bubble;
   }
 

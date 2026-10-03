@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_ai_client/flutter_ai_client.dart';
+import 'package:flutter_ai_elements/src/generative_ui/ai_part_scope.dart';
+import 'package:flutter_ai_elements/src/generative_ui/ai_widget_registry.dart';
 import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
@@ -27,6 +29,9 @@ class AiChat extends StatefulWidget {
     super.key,
     required this.controller,
     this.textRenderer = const MarkdownTextRenderer(),
+    this.widgetRegistry,
+    this.partBuilder,
+    this.onPartAction,
     this.messageBuilder,
     this.padding = const EdgeInsets.all(16),
     this.autoScroll = true,
@@ -43,6 +48,16 @@ class AiChat extends StatefulWidget {
 
   /// Renderer for message text.
   final AiTextRenderer textRenderer;
+
+  /// Maps data parts to widgets. Unknown types retain the default rendering.
+  final AiWidgetRegistry? widgetRegistry;
+
+  /// Overrides individual parts before registry/default rendering.
+  /// A whole-message builder, when supplied, owns its own part rendering.
+  final AiPartBuilder? partBuilder;
+
+  /// Receives addressed values from custom parts without changing history.
+  final AiPartActionCallback? onPartAction;
 
   /// Optional override for how each message is built.
   final Widget Function(BuildContext context, AiMessage message)?
@@ -298,6 +313,9 @@ class _AiChatState extends State<AiChat> {
           messages: widget.controller.messages,
           scrollController: _scrollController,
           textRenderer: widget.textRenderer,
+          widgetRegistry: widget.widgetRegistry,
+          partBuilder: widget.partBuilder,
+          onPartAction: widget.onPartAction,
           messageBuilder: widget.messageBuilder,
           loadingBuilder: widget.loadingBuilder,
           maxContentWidth: widget.maxContentWidth,

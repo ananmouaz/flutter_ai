@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
+import 'package:flutter_ai_elements/src/generative_ui/ai_part_scope.dart';
+import 'package:flutter_ai_elements/src/generative_ui/ai_widget_registry.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/theme/ai_theme_extension.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_attachment.dart';
@@ -29,6 +31,9 @@ class AiMessageBubble extends StatelessWidget {
     super.key,
     required this.message,
     this.textRenderer = const MarkdownTextRenderer(),
+    this.widgetRegistry,
+    this.partBuilder,
+    this.onPartAction,
   });
 
   /// The message to render.
@@ -37,6 +42,16 @@ class AiMessageBubble extends StatelessWidget {
   /// How text and reasoning parts are rendered. Defaults to
   /// [MarkdownTextRenderer].
   final AiTextRenderer textRenderer;
+
+  /// Maps data parts to widgets. Unknown types retain the default rendering.
+  final AiWidgetRegistry? widgetRegistry;
+
+  /// Overrides individual parts before registry/default rendering.
+  /// A whole-message builder, when supplied, owns its own part rendering.
+  final AiPartBuilder? partBuilder;
+
+  /// Receives addressed values from custom parts without changing history.
+  final AiPartActionCallback? onPartAction;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +67,7 @@ class AiMessageBubble extends StatelessWidget {
       style: theme.textStyle.copyWith(
         color: isUser ? theme.userTextColor : theme.assistantTextColor,
       ),
-      child: _content(context, isStreaming),
+      child: Builder(builder: (context) => _content(context, isStreaming)),
     );
 
     final Widget body;
@@ -110,32 +125,30 @@ class AiMessageBubble extends StatelessWidget {
     };
 
     final children = <Widget>[];
-    for (final part in message.parts) {
-      switch (part) {
-        case TextPart(:final text):
-          children.add(
-            _CrossfadeText(
-              text: text,
-              isStreaming: isStreaming,
-              renderer: textRenderer,
-            ),
-          );
-        case ReasoningPart(:final text):
-          children.add(AiReasoning(text: text));
-        case ToolCallPart():
-          children.add(
-            AiToolInvocation(call: part, result: results[part.toolCallId]),
-          );
-        case ToolResultPart():
-          // Rendered within its AiToolInvocation; skip the standalone part.
-          break;
-        case FilePart():
-          children.add(AiAttachment(file: part));
-        case SourcePart(:final url, :final title):
-          children.add(_SourceChip(url: url, title: title));
-        case DataPart(:final dataType):
-          children.add(_DataChip(label: dataType));
-      }
+    for (var index = 0; index < message.parts.length; index++) {
+      final part = message.parts[index];
+      // Preserve the default omission of standalone tool results. A custom
+      // builder can explicitly render one, in its original positional scope.
+      if (part is ToolResultPart && partBuilder == null) continue;
+      final ref = AiPartRef(messageId: message.id, partIndex: index);
+      final action = onPartAction;
+      children.add(
+        AiPartScope(
+          key: ValueKey(ref),
+          ref: ref,
+          onAction: action == null || isStreaming
+              ? null
+              : (value) => action(ref, value),
+          child: Builder(
+            builder: (context) =>
+                partBuilder?.call(context, part, message) ??
+                (part is DataPart
+                    ? widgetRegistry?.build(context, part)
+                    : null) ??
+                _defaultPart(part, isStreaming, results),
+          ),
+        ),
+      );
     }
 
     if (children.isEmpty) return const SizedBox.shrink();
@@ -151,6 +164,24 @@ class AiMessageBubble extends StatelessWidget {
       ],
     );
   }
+
+  Widget _defaultPart(
+    AiPart part,
+    bool isStreaming,
+    Map<String, ToolResultPart> results,
+  ) =>
+      switch (part) {
+        TextPart(:final text) => _CrossfadeText(
+            text: text, isStreaming: isStreaming, renderer: textRenderer),
+        ReasoningPart(:final text) => AiReasoning(text: text),
+        ToolCallPart() =>
+          AiToolInvocation(call: part, result: results[part.toolCallId]),
+        ToolResultPart() => const SizedBox.shrink(),
+        FilePart() => AiAttachment(file: part),
+        SourcePart(:final url, :final title) =>
+          _SourceChip(url: url, title: title),
+        DataPart(:final dataType) => _DataChip(label: dataType),
+      };
 }
 
 /// Crossfades from the streaming text view to the final rendered Markdown when

@@ -396,6 +396,9 @@ class _ChatScreenState extends State<ChatScreen> {
   /// the error clears (a new turn) or a different error occurs. Dismissing the
   /// banner must not wipe the transcript.
   Object? _dismissedError;
+  // Host-owned responses survive lazy transcript eviction. A production host
+  // would persist them with its question data and guard asynchronous requests.
+  final Map<AiPartRef, AiQuestionResponse> _questionAnswers = {};
 
   @override
   Widget build(BuildContext context) {
@@ -536,13 +539,40 @@ class _ChatScreenState extends State<ChatScreen> {
         items: _taskItems(data),
       ),
     )
+    ..register('question', (context, data) {
+      final scope = AiPartScope.maybeOf(context)!;
+      return AiQuestion(
+        prompt: data['prompt'] as String? ?? 'What would you prefer?',
+        options: const [
+          AiQuestionOption(value: 'food', label: 'Local food'),
+          AiQuestionOption(value: 'culture', label: 'Art and culture'),
+          AiQuestionOption(value: 'outdoors', label: 'Time outdoors'),
+        ],
+        selectionMode: AiQuestionSelectionMode.multiple,
+        allowFreeform: true,
+        answer: _questionAnswers[scope.ref],
+        onSubmit: scope.onAction,
+      );
+    })
     ..register(
       'confirmation',
       (context, data) => AiConfirmation(
         title: data['title'] as String? ?? 'Confirm?',
         description: data['description'] as String?,
-        onConfirm: () => _snack(context, 'Done.'),
-        onDeny: () => _snack(context, 'Cancelled.'),
+        onConfirm: AiPartScope.maybeOf(context)?.onAction == null
+            ? null
+            : () => unawaited(
+                Future<void>.sync(
+                  () => AiPartScope.maybeOf(context)!.onAction!(true),
+                ),
+              ),
+        onDeny: AiPartScope.maybeOf(context)?.onAction == null
+            ? null
+            : () => unawaited(
+                Future<void>.sync(
+                  () => AiPartScope.maybeOf(context)!.onAction!(false),
+                ),
+              ),
       ),
     );
 
@@ -559,11 +589,9 @@ class _ChatScreenState extends State<ChatScreen> {
           if (p is ToolResultPart) p.toolCallId: p,
     };
     final sources = message.parts.whereType<SourcePart>().toList();
-    final toolCalls = message.parts.whereType<ToolCallPart>().toList();
     final subdued = DefaultTextStyle.of(
       context,
     ).style.color?.withValues(alpha: 0.6);
-    var toolsRendered = false;
 
     final children = <Widget>[];
     void add(Widget w) {
@@ -590,73 +618,61 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
 
-    for (final part in message.parts) {
-      switch (part) {
-        case ReasoningPart(:final text):
-          add(AiReasoning(text: text));
-        case TextPart(:final text):
-          // Smoothly reveal the streaming answer; show completed text as-is,
-          // with syntax-highlighted code blocks.
-          add(
-            message.status == AiMessageStatus.streaming
-                ? AiAnimatedResponse(text: text)
-                : AiResponse(text: text, codeHighlighter: demoCodeHighlighter),
-          );
-        case ToolCallPart():
-          // Render all tool calls once: a group when parallel, else a card.
-          if (!toolsRendered) {
-            toolsRendered = true;
-            add(
-              toolCalls.length > 1
-                  ? AiToolGroup(calls: toolCalls, results: results)
-                  : AiToolInvocation(
-                      call: part,
-                      result: results[part.toolCallId],
-                    ),
-            );
+    // Keep the package's parts loop, styling and registry integration. Only
+    // demo-specific presentation overrides live here.
+    add(
+      AiMessageBubble(
+        message: message,
+        widgetRegistry: _genUi,
+        onPartAction: _onPartAction,
+        partBuilder: (context, part, message) {
+          if (part is TextPart) {
+            return message.status == AiMessageStatus.streaming
+                ? AiAnimatedResponse(text: part.text)
+                : AiResponse(
+                    text: part.text,
+                    codeHighlighter: demoCodeHighlighter,
+                  );
           }
-        case ToolResultPart():
-          break;
-        case FilePart():
-          if (part.mediaType.startsWith('image/')) {
-            add(
-              SizedBox(
-                width: 260,
-                child: AiImage(
-                  url: part.url,
-                  bytes: part.bytes,
-                  aspectRatio: 16 / 9,
-                ),
+          if (part is FilePart && part.mediaType.startsWith('image/')) {
+            return SizedBox(
+              width: 260,
+              child: AiImage(
+                url: part.url,
+                bytes: part.bytes,
+                aspectRatio: 16 / 9,
               ),
             );
-          } else {
-            add(AiAttachment(file: part));
           }
-        case SourcePart():
-          break; // rendered below
-        case DataPart():
-          // Generative UI via an allowlist registry: the model emits a DataPart
-          // and the registered builder renders the matching widget.
-          add(AiDataView(part: part, registry: _genUi));
-      }
-    }
-
-    // Real tool calls awaiting approval (e.g. book_hotel) get a confirm card.
-    for (final call in toolCalls) {
-      final pending = toolRunner.pending[call.toolCallId];
-      if (pending == null) continue;
-      final info = toolRunner.confirmationFor(pending);
-      add(
-        AiConfirmation(
-          title: info.title,
-          description: info.description,
-          onConfirm: () =>
-              toolRunner.resolveConfirmation(call.toolCallId, approved: true),
-          onDeny: () =>
-              toolRunner.resolveConfirmation(call.toolCallId, approved: false),
-        ),
-      );
-    }
+          if (part is SourcePart) return const SizedBox.shrink();
+          if (part is! ToolCallPart) return null;
+          final pending = toolRunner.pending[part.toolCallId];
+          final action = AiPartScope.maybeOf(context)?.onAction;
+          final info = pending == null
+              ? null
+              : toolRunner.confirmationFor(pending);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AiToolInvocation(call: part, result: results[part.toolCallId]),
+              if (info != null) ...[
+                const SizedBox(height: 8),
+                AiConfirmation(
+                  title: info.title,
+                  description: info.description,
+                  onConfirm: action == null
+                      ? null
+                      : () => unawaited(Future<void>.sync(() => action(true))),
+                  onDeny: action == null
+                      ? null
+                      : () => unawaited(Future<void>.sync(() => action(false))),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
 
     if (sources.isNotEmpty) {
       // A compact, collapsible strip of where the answer came from. (Grounded
@@ -711,6 +727,24 @@ class _ChatScreenState extends State<ChatScreen> {
         children: children,
       ),
     );
+  }
+
+  void _onPartAction(AiPartRef ref, Object? value) {
+    final message = controller.conversation.messageById(ref.messageId);
+    if (message == null || ref.partIndex >= message.parts.length) return;
+    final part = message.parts[ref.partIndex];
+    if (part is ToolCallPart && value is bool) {
+      toolRunner.resolveConfirmation(part.toolCallId, approved: value);
+    } else if (part is DataPart &&
+        part.dataType == 'question' &&
+        value is AiQuestionResponse) {
+      if (_questionAnswers.containsKey(ref)) return;
+      setState(() => _questionAnswers[ref] = value);
+    } else if (part is DataPart &&
+        part.dataType == 'confirmation' &&
+        value is bool) {
+      _snack(context, value ? 'Done.' : 'Cancelled.');
+    }
   }
 
   List<AiThoughtStep> _steps(Map<String, Object?> data) {

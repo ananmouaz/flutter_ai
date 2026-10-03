@@ -81,6 +81,21 @@ List<GalleryItem> galleryItems() => [
     title: 'AiMessageBubble — assistant (rich)',
     child: AiMessageBubble(message: richAssistantMessage),
   ),
+  (
+    name: 'question',
+    title: 'AiQuestion — choices and freeform',
+    child: AiQuestion(
+      prompt: 'What should your agent help with?',
+      description: 'Choose any options and add details.',
+      options: const [
+        AiQuestionOption(value: 'plan', label: 'Plan my day'),
+        AiQuestionOption(value: 'research', label: 'Research a topic'),
+      ],
+      selectionMode: AiQuestionSelectionMode.multiple,
+      allowFreeform: true,
+      onSubmit: (_) {},
+    ),
+  ),
   (name: 'loader', title: 'AiLoader', child: const AiLoader()),
   (
     name: 'reasoning',

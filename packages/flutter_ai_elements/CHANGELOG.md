@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0
+
+- Add `widgetRegistry`, `partBuilder`, and `onPartAction` to `AiMessageBubble`,
+  `AiConversationView`, `AiChat`, and `AiChatView`. Registered data widgets now
+  render inside the standard transcript; unknown types keep their fallback.
+- Add `AiPartScope` and positional `AiPartRef` for explicitly reporting embedded
+  actions without mutating the conversation or changing core serialization.
+- Add `AiQuestion`: single/multiple choices, optional freeform text, asynchronous
+  submission, retry, and restored answered state, with localized labels and
+  keyboard/checked semantics. Hosts own durable answers and request guards.
+- Custom transcript parts rebuild on parent updates so registry changes and
+  captured host state are not hidden by message-identity caching.
+
 ## 0.3.0
 
 Accessibility, internationalization, and cross-fork compile fixes.
