@@ -20,6 +20,11 @@ import 'package:flutter/widgets.dart';
 class AiLocalizations {
   /// Creates a set of strings (English by default).
   const AiLocalizations({
+    this.questionAnswer = 'Answer',
+    this.questionAnswered = 'Answered',
+    this.questionSubmitting = 'Submitting…',
+    this.questionInputLabel = 'Your answer',
+    this.questionError = 'Could not submit your answer. Please try again.',
     this.copy = 'Copy',
     this.regenerate = 'Regenerate',
     this.edit = 'Edit',
@@ -64,6 +69,21 @@ class AiLocalizations {
     this.citation = _defaultCitation,
     this.selectModel = _defaultSelectModel,
   });
+
+  /// Submit a structured question response.
+  final String questionAnswer;
+
+  /// Prefix for a settled question response.
+  final String questionAnswered;
+
+  /// Status while a question response is being submitted.
+  final String questionSubmitting;
+
+  /// Label for a question's freeform input.
+  final String questionInputLabel;
+
+  /// Generic question submission failure, without raw exception details.
+  final String questionError;
 
   /// Copy-to-clipboard action.
   final String copy;

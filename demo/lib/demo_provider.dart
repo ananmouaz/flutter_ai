@@ -3,7 +3,7 @@ import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 /// A scripted [LlmProvider] with everyday mobile-chat scenarios (trip planning,
 /// a recipe, summarizing an article) so the elements appear in realistic use.
 ///
-/// Structured widgets ride along as `DataPart`s; the demo's `messageBuilder`
+/// Structured widgets ride along as `DataPart`s; the demo's widget registry
 /// maps them to elements (a tiny generative-UI catalog). A prompt containing
 /// "error" streams a failure to demo the error path.
 class DemoChatProvider implements LlmProvider {
@@ -124,6 +124,15 @@ class DemoChatProvider implements LlmProvider {
             'title': 'Reserve Hotel Lisboa for €420?',
             'description': '2 nights · breakfast included · free cancellation',
           },
+        ),
+      ),
+    );
+    yield await _step(
+      PartReceived(
+        messageId: id,
+        part: const DataPart(
+          dataType: 'question',
+          data: {'prompt': 'What should we focus on during your trip?'},
         ),
       ),
     );

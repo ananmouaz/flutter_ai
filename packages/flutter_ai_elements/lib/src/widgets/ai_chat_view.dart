@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_ai_client/flutter_ai_client.dart';
+import 'package:flutter_ai_elements/src/generative_ui/ai_part_scope.dart';
+import 'package:flutter_ai_elements/src/generative_ui/ai_widget_registry.dart';
 import 'package:flutter_ai_elements/src/l10n/ai_localizations.dart';
 import 'package:flutter_ai_elements/src/rendering/ai_text_renderer.dart';
 import 'package:flutter_ai_elements/src/widgets/ai_chat.dart';
@@ -23,6 +25,9 @@ class AiChatView extends StatelessWidget {
     super.key,
     required this.controller,
     this.textRenderer = const MarkdownTextRenderer(),
+    this.widgetRegistry,
+    this.partBuilder,
+    this.onPartAction,
     this.emptyState,
     this.hintText,
     this.maxContentWidth,
@@ -37,6 +42,16 @@ class AiChatView extends StatelessWidget {
 
   /// Renderer for message text. Defaults to [MarkdownTextRenderer].
   final AiTextRenderer textRenderer;
+
+  /// Maps data parts to widgets. Unknown types retain the default rendering.
+  final AiWidgetRegistry? widgetRegistry;
+
+  /// Overrides individual parts before registry/default rendering.
+  /// A whole-message builder, when supplied, owns its own part rendering.
+  final AiPartBuilder? partBuilder;
+
+  /// Receives addressed values from custom parts without changing history.
+  final AiPartActionCallback? onPartAction;
 
   /// Shown when the conversation is empty.
   final Widget? emptyState;
@@ -69,6 +84,9 @@ class AiChatView extends StatelessWidget {
             child: AiChat(
               controller: controller,
               textRenderer: textRenderer,
+              widgetRegistry: widgetRegistry,
+              partBuilder: partBuilder,
+              onPartAction: onPartAction,
               emptyState: emptyState,
               maxContentWidth: maxContentWidth,
               messageBuilder: messageBuilder,

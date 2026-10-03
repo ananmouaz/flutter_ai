@@ -17,6 +17,7 @@ library;
 
 export 'package:flutter_ai_client/flutter_ai_client.dart';
 
+export 'src/generative_ui/ai_part_scope.dart';
 export 'src/generative_ui/ai_widget_registry.dart';
 export 'src/l10n/ai_localizations.dart';
 export 'src/rendering/ai_text_renderer.dart';
@@ -46,6 +47,7 @@ export 'src/widgets/ai_message_bubble.dart';
 export 'src/widgets/ai_model_selector.dart';
 export 'src/widgets/ai_orb.dart';
 export 'src/widgets/ai_prompt_input.dart';
+export 'src/widgets/ai_question.dart';
 export 'src/widgets/ai_reasoning.dart';
 export 'src/widgets/ai_response.dart';
 export 'src/widgets/ai_shimmer.dart';
