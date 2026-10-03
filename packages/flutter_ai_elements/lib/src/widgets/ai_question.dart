@@ -297,6 +297,9 @@ class _AiQuestionState extends State<AiQuestion> {
                 backgroundColor: theme.accentColor,
                 foregroundColor: theme.onAccentColor,
                 minimumSize: const Size(48, 48),
+                // The background switches instantly; without this the label
+                // fades in over 200 ms and is unreadable on the accent color.
+                animationDuration: Duration.zero,
               ),
               onPressed: _enabled && _hasResponse ? _submit : null,
               child: Text(_pending

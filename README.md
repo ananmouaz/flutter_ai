@@ -3,7 +3,7 @@
 <p align="center"><b>The complete AI chat toolkit for Flutter</b> — streaming, tools, generative UI, voice, and a batteries-included UI kit. Zero state-management lock-in.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.gif" width="300" alt="flutter_ai: a streaming answer with chain-of-thought and a generative-UI task card"/>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.gif" width="300" alt="flutter_ai: an agent run that streams its steps, then answers with sources and follow-ups"/>
 </p>
 
 <p align="center">
@@ -32,26 +32,26 @@ state-manager-agnostic, mobile-first.
 <table>
   <tr>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-streaming.png" width="220" alt="Streaming chat"/><br/>
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-streaming.png" width="220" alt="Streaming chat with live agent steps"/><br/>
       <b>Streaming chat</b><br/>
-      <sub>Tokens stream in, batched to the frame so high token rates never drop a frame.</sub>
+      <sub>Tokens and agent steps stream in, batched to the frame so high token rates never drop a frame.</sub>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-generative-ui.png" width="220" alt="Generative UI"/><br/>
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-generative-ui.png" width="220" alt="Generative UI result card"/><br/>
       <b>Generative UI</b><br/>
-      <sub>Tool results render as live Flutter widgets — task cards, not just JSON.</sub>
+      <sub>Tool results render as live Flutter widgets — actionable cards, not just JSON.</sub>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-tools.png" width="220" alt="Tools and function calling"/><br/>
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-tools.png" width="220" alt="An approval gate before a tool runs"/><br/>
       <b>Tools &amp; agents</b><br/>
-      <sub>Function calling and MCP servers flow through the agent loop with no glue code.</sub>
+      <sub>Function calling and MCP servers flow through the agent loop, with approval gates where it matters.</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-citations.png" width="220" alt="Grounded citations"/><br/>
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-citations.png" width="220" alt="Grounded answer with its sources sheet"/><br/>
       <b>Citations</b><br/>
-      <sub>Grounded answers stream their web sources as inline citations.</sub>
+      <sub>Grounded answers carry their web sources, one tap from the answer.</sub>
     </td>
     <td align="center" width="33%">
       <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-voice.png" width="220" alt="Live voice mode"/><br/>

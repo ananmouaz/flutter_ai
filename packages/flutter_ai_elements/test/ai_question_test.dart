@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' show CheckedState;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,21 @@ void main() {
     expect(() => result!.selectedValues.add('c'), throwsUnsupportedError);
     expect(find.text('Answered: Beta'), findsOneWidget);
     expect(find.byType(FilledButton), findsNothing);
+  });
+
+  testWidgets('enabling the submit button shows its label at once',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(extensions: [AiThemeExtension.fallback()]),
+        home: Scaffold(
+            body: AiQuestion(
+                prompt: 'Choose', options: _options, onSubmit: (_) {}))));
+    await tester.tap(find.text('Alpha'));
+    await tester.pump();
+    // The background switches to the accent color in this frame, so the label
+    // must too; a fading label is unreadable on the new background.
+    final label = tester.renderObject<RenderParagraph>(find.text('Answer'));
+    expect(label.text.style?.color, AiThemeExtension.fallback().onAccentColor);
   });
 
   testWidgets('multiple choices toggle independently and text is trimmed',

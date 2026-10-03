@@ -76,9 +76,35 @@ ffmpeg -y -framerate 8 -i test/shots/chat_%03d.png \
   screenshots/chat.gif
 ```
 
-A few of these are also mirrored into `packages/flutter_ai_elements/screenshots/`
-for the pub.dev listing (referenced by that package's `screenshots:` field); copy
-the updated files over after regenerating.
+Copy the `element_*.png` files from `test/shots/` into `screenshots/`.
+
+The README media in `docs/media/` and the pub.dev carousel in
+`packages/flutter_ai_elements/screenshots/` come from the production recipe:
+
+```bash
+flutter test test/production_marketing_shots.dart --update-goldens
+cd test/shots
+cp prod_answer_light.png   ../../../docs/media/hero-streaming.png
+cp prod_answer_dark.png    ../../../docs/media/hero-dark.png
+cp prod_empty_light.png    ../../../docs/media/hero-empty.png
+cp prod_streaming.png      ../../../docs/media/section-streaming.png
+cp prod_result_card.png    ../../../docs/media/section-generative-ui.png
+cp prod_approval.png       ../../../docs/media/section-tools.png
+cp prod_sources_sheet.png  ../../../docs/media/section-citations.png
+cp prod_voice.png          ../../../docs/media/section-voice.png
+ffmpeg -y -i prod_answer_light.png -i prod_answer_dark.png \
+  -filter_complex "[0]pad=iw+36:ih:0:0:white[a];[a][1]hstack=2,scale=1600:-1:flags=lanczos" \
+  ../../../docs/media/section-theming.png
+ffmpeg -y -framerate 10 -i prod_run_%03d.png \
+  -vf "tpad=stop_mode=clone:stop_duration=2.5,scale=380:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse" \
+  ../../../docs/media/hero-streaming.gif
+# pub.dev carousel (804 px wide)
+P=../../../packages/flutter_ai_elements/screenshots
+for p in answer:answer_light question:question approval:approval \
+         sources:sources_sheet dark:answer_dark; do
+  sips --resampleWidth 804 "prod_${p#*:}.png" --out "$P/${p%%:*}.png"
+done
+```
 
 ## Elements
 
@@ -93,3 +119,4 @@ the updated files over after regenerating.
 | <img src="screenshots/element_task.png" width="220"/><br/>**AiTask** | <img src="screenshots/element_inline_citation.png" width="220"/><br/>**AiInlineCitation** | <img src="screenshots/element_branch.png" width="220"/><br/>**AiBranch** |
 | <img src="screenshots/element_image.png" width="220"/><br/>**AiImage** | <img src="screenshots/element_model_selector.png" width="220"/><br/>**AiModelSelector** | <img src="screenshots/element_confirmation.png" width="220"/><br/>**AiConfirmation** |
 | <img src="screenshots/element_context_meter.png" width="220"/><br/>**AiContextMeter** | <img src="screenshots/element_shimmer.png" width="220"/><br/>**AiShimmer** | <img src="screenshots/element_live_session.png" width="220"/><br/>**AiLiveSession** (voice) |
+| <img src="screenshots/element_question.png" width="220"/><br/>**AiQuestion** | | |

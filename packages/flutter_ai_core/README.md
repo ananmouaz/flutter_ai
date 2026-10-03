@@ -3,7 +3,7 @@
 <p align="center"><b>The dependency-free Dart engine under flutter_ai</b> — immutable conversation models, a streaming-event reducer, and the <code>LlmProvider</code> contract every provider speaks.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.gif" width="300" alt="flutter_ai: a streaming answer with chain-of-thought and a generative-UI task card"/>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.gif" width="300" alt="flutter_ai: an agent run that streams its steps, then answers with sources and follow-ups"/>
 </p>
 
 <p align="center">

@@ -3,7 +3,7 @@
 <p align="center"><b>Provider-neutral tool calling for flutter_ai</b> — declare a <code>ToolSpec</code>, register it, and let the agent loop run it. Pure Dart, with a web-search adapter included.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-tools.png" width="300" alt="Tool calls flowing through the agent loop"/>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-tools.png" width="300" alt="An approval gate before the agent runs a tool"/>
 </p>
 
 <p align="center">

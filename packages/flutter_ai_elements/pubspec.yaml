@@ -1,6 +1,6 @@
 name: flutter_ai_elements
 description: "Composable, themeable Flutter UI for AI chat: conversation view, message bubbles, a streaming-aware composer, and a loader, styled through a mobile-first theme extension."
-version: 0.5.0
+version: 0.5.1
 homepage: https://github.com/ananmouaz/flutter_ai
 repository: https://github.com/ananmouaz/flutter_ai/tree/main/packages/flutter_ai_elements
 issue_tracker: https://github.com/ananmouaz/flutter_ai/issues
@@ -14,16 +14,16 @@ topics:
 
 # Rendered on the pub.dev listing (up to 5).
 screenshots:
-  - description: "A streamed assistant message with Markdown formatting."
-    path: screenshots/element_message_assistant.png
-  - description: "Collapsible chain-of-thought reasoning disclosure."
-    path: screenshots/element_reasoning.png
-  - description: "A tool invocation card with arguments and result."
-    path: screenshots/element_tool_invocation.png
-  - description: "Syntax-highlighted code block with a copy action."
-    path: screenshots/element_code_block.png
-  - description: "Grounded answer with source citations."
-    path: screenshots/element_sources.png
+  - description: "An agent answer with a run summary, sources, and follow-ups."
+    path: screenshots/answer.png
+  - description: "An interactive agent question with choices and a free-text answer."
+    path: screenshots/question.png
+  - description: "An approval gate that pauses the agent before it acts."
+    path: screenshots/approval.png
+  - description: "A source-details sheet for a grounded answer."
+    path: screenshots/sources.png
+  - description: "The same conversation in the dark theme."
+    path: screenshots/dark.png
 
 environment:
   sdk: ^3.6.0
