@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/main.dart';
+import 'package:flutter_ai_demo/production/production_app.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -238,16 +239,13 @@ void main() {
 }
 
 /// Renders a single element inside a content-tight white card so the captured
-/// PNG hugs the element instead of spanning the whole screen.
+/// PNG hugs the element instead of spanning the whole screen. Uses the
+/// production recipe theme so the gallery matches the current design.
 Widget _card(Widget child, Key key) => MaterialApp(
   debugShowCheckedModeBanner: false,
-  theme: ThemeData(
-    useMaterial3: true,
-    fontFamily: 'Roboto',
-    colorSchemeSeed: const Color(0xFF6D28D9),
-    scaffoldBackgroundColor: const Color(0xFFEDEBF3),
+  theme: productionLightTheme().copyWith(
+    scaffoldBackgroundColor: const Color(0xFFF4F4F5),
     splashFactory: NoSplash.splashFactory,
-    extensions: [demoTheme],
   ),
   home: Scaffold(
     body: Center(
@@ -255,7 +253,11 @@ Widget _card(Widget child, Key key) => MaterialApp(
         key: key,
         child: Container(
           width: 360,
-          color: Colors.white,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE4E4E7)),
+          ),
           padding: const EdgeInsets.all(20),
           child: child,
         ),

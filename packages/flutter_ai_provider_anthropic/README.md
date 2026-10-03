@@ -3,7 +3,7 @@
 <p align="center"><b>Anthropic (Claude) provider for flutter_ai</b> — streams the Messages API with extended thinking and tool use, mapped to <code>AiStreamEvent</code>s so the rest of the family works against Claude unchanged.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.png" width="300" alt="A streamed answer with reasoning, a tool call, and the final answer"/>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.png" width="300" alt="An agent answer with its completed steps, sources, and follow-ups"/>
 </p>
 
 <p align="center">

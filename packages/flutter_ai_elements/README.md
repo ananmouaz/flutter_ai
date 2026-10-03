@@ -3,7 +3,7 @@
 <p align="center"><b>The batteries-included AI chat UI kit for Flutter</b> — drop in a polished, streaming chat in one widget, or compose 30+ themeable pieces yourself.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.gif" width="300" alt="flutter_ai_elements: a streaming answer with chain-of-thought and a generative-UI task card"/>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/hero-streaming.gif" width="300" alt="flutter_ai_elements: an agent run that streams its steps, then answers with sources and follow-ups"/>
 </p>
 
 <p align="center">
@@ -27,26 +27,26 @@
 <table>
   <tr>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-streaming.png" width="220" alt="Streaming response"/><br/>
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-streaming.png" width="220" alt="Streaming response with live agent steps"/><br/>
       <b>Streaming response</b><br/>
-      <sub><code>AiChat</code> · <code>AiResponse</code> · <code>AiLoader</code></sub>
+      <sub><code>AiChat</code> · <code>AiTask</code> · <code>AiPromptInput</code></sub>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-generative-ui.png" width="220" alt="Generative UI task card"/><br/>
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-generative-ui.png" width="220" alt="Generative UI result card"/><br/>
       <b>Generative UI</b><br/>
-      <sub><code>AiMessageBubble</code> (custom <code>DataPart</code> renderers)</sub>
+      <sub><code>AiWidgetRegistry</code> · <code>AiQuestion</code> (custom <code>DataPart</code> renderers)</sub>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-tools.png" width="220" alt="Tool calls"/><br/>
-      <b>Tool calls</b><br/>
-      <sub><code>AiToolGroup</code> · <code>AiReasoning</code></sub>
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-tools.png" width="220" alt="Tool approval"/><br/>
+      <b>Tool approval</b><br/>
+      <sub><code>AiConfirmation</code> · <code>AiTask</code></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-citations.png" width="220" alt="Source citations"/><br/>
+      <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-citations.png" width="220" alt="Sources sheet"/><br/>
       <b>Citations</b><br/>
-      <sub><code>AiSources</code> · <code>AiInlineCitation</code></sub>
+      <sub><code>SourcePart</code> · <code>AiMessageActions</code> · <code>AiSuggestions</code></sub>
     </td>
     <td align="center" width="33%">
       <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-theming.png" width="220" alt="Theming"/><br/>

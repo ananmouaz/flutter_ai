@@ -3,7 +3,7 @@
 <p align="center"><b>Native Google Gemini provider for flutter_ai</b> — streaming, function calling, and <b>Google Search grounding → web citations</b> rendered inline.</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-citations.png" width="300" alt="A grounded answer streaming its web source citations"/>
+  <img src="https://raw.githubusercontent.com/ananmouaz/flutter_ai/main/docs/media/section-citations.png" width="300" alt="A grounded answer with its web sources sheet"/>
 </p>
 
 <p align="center">
