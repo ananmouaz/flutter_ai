@@ -23,6 +23,7 @@ class AiPromptInput extends StatefulWidget {
     this.onVoice,
     this.onLive,
     this.textController,
+    this.focusNode,
   });
 
   /// The chat controller to drive.
@@ -45,6 +46,10 @@ class AiPromptInput extends StatefulWidget {
   /// Optional external controller for the text field. Own its lifecycle (create
   /// and dispose it in the host). Lets dictation/quick-replies set the text.
   final TextEditingController? textController;
+
+  /// Optional focus node for the text field. Own its lifecycle in the host;
+  /// request focus to open the keyboard after prefilling [textController].
+  final FocusNode? focusNode;
 
   @override
   State<AiPromptInput> createState() => _AiPromptInputState();
@@ -72,6 +77,7 @@ class _AiPromptInputState extends State<AiPromptInput> {
       listenable: widget.controller,
       builder: (context, _) => AiComposer(
         controller: widget.textController,
+        focusNode: widget.focusNode,
         hintText: widget.hintText,
         isBusy: widget.controller.status.isBusy,
         onStop: widget.controller.stop,

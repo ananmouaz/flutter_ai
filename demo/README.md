@@ -18,6 +18,39 @@ a dark `ThemeData` (toggle it with the header icon):
 
 <img src="screenshots/dark_preview.png" width="300" alt="flutter_ai dark mode" />
 
+## Production recipe
+
+A minimal, production-style conversation built only from existing elements:
+starter grid, a compact run summary from real tool state, the answer, a
+source-details sheet, full-width follow-ups, a question that leads to an
+actionable result card, an approval gate and a failed run with Retry. Open it
+from **Production recipe** on the home screen, or run it alone:
+
+```bash
+flutter run -t lib/main_production.dart
+flutter run -t lib/main_production.dart --dart-define=RTL=true
+```
+
+<img src="screenshots/production_empty_light.png" width="200" alt="Starter grid" />
+<img src="screenshots/production_answer_light.png" width="200" alt="Settled answer" />
+<img src="screenshots/production_answer_dark.png" width="200" alt="Dark theme" />
+<img src="screenshots/production_sources_sheet.png" width="200" alt="Sources sheet" />
+
+<img src="screenshots/production_approval_awaiting.png" width="200" alt="Approval" />
+<img src="screenshots/production_result_card.png" width="200" alt="Result card" />
+<img src="screenshots/production_failed.png" width="200" alt="Failed run" />
+<img src="screenshots/production_answer_large_text_narrow.png" width="200" alt="Large text on a narrow phone" />
+
+These are rendered by the golden checks in `test/production_golden_test.dart`.
+Interaction checks are in `test/production_recipe_test.dart`. Design notes and
+Mobbin references are in
+[recipe 13](../docs/recipes.md#13-production-mobile-agent-conversation).
+
+```bash
+flutter test test/production_recipe_test.dart
+flutter test test/production_golden_test.dart   # --update-goldens to refresh
+```
+
 ## Run it
 
 ```bash

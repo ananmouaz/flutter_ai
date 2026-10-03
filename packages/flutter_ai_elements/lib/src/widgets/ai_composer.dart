@@ -22,6 +22,7 @@ class AiComposer extends StatefulWidget {
     this.isBusy = false,
     this.hintText,
     this.controller,
+    this.focusNode,
     this.enabled = true,
     this.onAttach,
     this.onVoice,
@@ -44,6 +45,10 @@ class AiComposer extends StatefulWidget {
 
   /// Optional external text controller.
   final TextEditingController? controller;
+
+  /// Optional focus node, so the host can open the keyboard on the field —
+  /// e.g. after prefilling [controller] from an "Edit" action.
+  final FocusNode? focusNode;
 
   /// Whether the input accepts text.
   final bool enabled;
@@ -191,6 +196,7 @@ class _AiComposerState extends State<AiComposer> {
                 final field = TextField(
                   key: _fieldKey,
                   controller: _controller,
+                  focusNode: widget.focusNode,
                   enabled: widget.enabled,
                   minLines: 1,
                   maxLines: 6,
@@ -198,6 +204,7 @@ class _AiComposerState extends State<AiComposer> {
                   style: theme.textStyle.copyWith(
                     color: theme.assistantTextColor,
                   ),
+                  textCapitalization: TextCapitalization.sentences,
                   textInputAction: TextInputAction.send,
                   onSubmitted: widget.enabled ? (_) => _handleSend() : null,
                   decoration: InputDecoration(

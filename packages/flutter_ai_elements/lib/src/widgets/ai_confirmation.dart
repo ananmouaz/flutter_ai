@@ -15,8 +15,31 @@ enum AiConfirmationTone {
   danger,
 }
 
+/// Where an [AiConfirmation] is in its host-owned lifecycle.
+enum AiConfirmationStatus {
+  /// Waiting for the user to decide; the buttons are shown.
+  awaiting,
+
+  /// The host is delivering a decision; the buttons are replaced by progress.
+  submitting,
+
+  /// The host accepted an approval.
+  approved,
+
+  /// The host accepted a denial.
+  denied,
+
+  /// The request can no longer be answered (superseded, timed out, revoked).
+  expired,
+}
+
 /// An approve/deny card for actions an agent wants to take (running a tool,
 /// sending an email, making a purchase) — the human-in-the-loop gate.
+///
+/// The card only reports intent through [onConfirm]/[onDeny]. The host (or the
+/// agent engine) executes and persists the decision and reflects it back
+/// through [status], so a settled card survives rebuilds, list eviction and
+/// restarts without offering the buttons again.
 class AiConfirmation extends StatelessWidget {
   /// Creates a confirmation card.
   const AiConfirmation({
@@ -29,6 +52,7 @@ class AiConfirmation extends StatelessWidget {
     this.onDeny,
     this.icon = Icons.shield_outlined,
     this.tone = AiConfirmationTone.neutral,
+    this.status = AiConfirmationStatus.awaiting,
   });
 
   /// The action being confirmed.
@@ -55,6 +79,10 @@ class AiConfirmation extends StatelessWidget {
   /// The action's weight, which restyles the confirm button. Defaults to
   /// [AiConfirmationTone.neutral] (the original accent look).
   final AiConfirmationTone tone;
+
+  /// The host-owned lifecycle state. Only [AiConfirmationStatus.awaiting]
+  /// shows the buttons; other states show a status line instead.
+  final AiConfirmationStatus status;
 
   @override
   Widget build(BuildContext context) {
@@ -104,40 +132,125 @@ class AiConfirmation extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _Button(
-                  label: denyLabel ?? l.deny,
-                  onTap: onDeny == null
-                      ? null
-                      : () {
-                          aiLightHaptic(theme);
-                          onDeny!();
-                        },
-                  filled: false,
-                  fillColor: confirmColor,
-                  theme: theme,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _Button(
-                  label: confirmLabel ?? l.allow,
-                  onTap: onConfirm == null
-                      ? null
-                      : () {
-                          aiLightHaptic(theme);
-                          onConfirm!();
-                        },
-                  filled: true,
-                  fillColor: confirmColor,
-                  theme: theme,
-                ),
-              ),
-            ],
+          if (status == AiConfirmationStatus.awaiting)
+            _buttons(theme, l, confirmColor)
+          else
+            _Status(status: status, theme: theme, strings: l),
+        ],
+      ),
+    );
+  }
+}
+
+extension on AiConfirmation {
+  Widget _buttons(
+    AiThemeExtension theme,
+    AiLocalizations l,
+    Color confirmColor,
+  ) =>
+      Row(
+        children: [
+          Expanded(
+            child: _Button(
+              label: denyLabel ?? l.deny,
+              onTap: onDeny == null
+                  ? null
+                  : () {
+                      aiLightHaptic(theme);
+                      onDeny!();
+                    },
+              filled: false,
+              fillColor: confirmColor,
+              theme: theme,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _Button(
+              label: confirmLabel ?? l.allow,
+              onTap: onConfirm == null
+                  ? null
+                  : () {
+                      aiLightHaptic(theme);
+                      onConfirm!();
+                    },
+              filled: true,
+              fillColor: confirmColor,
+              theme: theme,
+            ),
           ),
         ],
+      );
+}
+
+/// The non-interactive line shown once a decision is in flight or settled.
+class _Status extends StatelessWidget {
+  const _Status({
+    required this.status,
+    required this.theme,
+    required this.strings,
+  });
+
+  final AiConfirmationStatus status;
+  final AiThemeExtension theme;
+  final AiLocalizations strings;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted =
+        DefaultTextStyle.of(context).style.color?.withValues(alpha: 0.65);
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final (Widget icon, String label, Color? color) = switch (status) {
+      AiConfirmationStatus.submitting => (
+          reduceMotion
+              ? Icon(Icons.hourglass_top_rounded, size: 18, color: muted)
+              : SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: theme.accentColor,
+                  ),
+                ),
+          strings.confirmationSubmitting,
+          muted,
+        ),
+      AiConfirmationStatus.approved => (
+          Icon(Icons.check_circle_rounded, size: 18, color: theme.successColor),
+          strings.confirmationApproved,
+          DefaultTextStyle.of(context).style.color,
+        ),
+      AiConfirmationStatus.denied => (
+          Icon(Icons.block_rounded, size: 18, color: muted),
+          strings.confirmationDenied,
+          muted,
+        ),
+      AiConfirmationStatus.expired || AiConfirmationStatus.awaiting => (
+          Icon(Icons.schedule_rounded, size: 18, color: muted),
+          strings.confirmationExpired,
+          muted,
+        ),
+    };
+    return Semantics(
+      liveRegion: true,
+      child: ConstrainedBox(
+        // Matches the button row's height so settling doesn't jump the list.
+        constraints: const BoxConstraints(minHeight: 40),
+        child: Row(
+          children: [
+            ExcludeSemantics(child: icon),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textStyle.copyWith(
+                  color: color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -38,6 +38,7 @@ class AiChat extends StatefulWidget {
     this.emptyState,
     this.loadingBuilder,
     this.maxContentWidth,
+    this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
   });
 
   /// The chat controller to observe.
@@ -76,6 +77,9 @@ class AiChat extends StatefulWidget {
   /// falls back to [AiThemeExtension.maxContentWidth]; pass [double.infinity]
   /// for full-width.
   final double? maxContentWidth;
+
+  /// Whether dragging the transcript hides the on-screen keyboard.
+  final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
 
   @override
   State<AiChat> createState() => _AiChatState();
@@ -325,6 +329,7 @@ class _AiChatState extends State<AiChat> {
           trailingSpace: widget.autoScroll ? _trailingSpace : 0,
           anchorKey: _anchorKey,
           anchorId: _anchorId,
+          keyboardDismissBehavior: widget.keyboardDismissBehavior,
         );
         return NotificationListener<ScrollNotification>(
           onNotification: _onScrollNotification,

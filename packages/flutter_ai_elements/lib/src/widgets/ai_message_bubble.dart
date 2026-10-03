@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_ai_core/flutter_ai_core.dart';
 import 'package:flutter_ai_elements/src/generative_ui/ai_part_scope.dart';
 import 'package:flutter_ai_elements/src/generative_ui/ai_widget_registry.dart';
@@ -157,10 +158,9 @@ class AiMessageBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (var i = 0; i < children.length; i++) ...[
-          if (i > 0) const SizedBox(height: 8),
-          children[i],
-        ],
+        for (var i = 0; i < children.length; i++)
+          // Parts a builder hides (an empty box) must not leave a gap behind.
+          i == 0 ? children[i] : _PartGap(gap: 8, child: children[i]),
       ],
     );
   }
@@ -285,5 +285,72 @@ class _DataChip extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Adds [gap] above its child only when the child has a height, so hidden
+/// parts collapse instead of stacking empty spacing.
+class _PartGap extends SingleChildRenderObjectWidget {
+  const _PartGap({required this.gap, super.child});
+
+  final double gap;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderPartGap(gap);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderPartGap renderObject) {
+    renderObject.gap = gap;
+  }
+}
+
+class _RenderPartGap extends RenderShiftedBox {
+  _RenderPartGap(this._gap) : super(null);
+
+  double _gap;
+  set gap(double value) {
+    if (value == _gap) return;
+    _gap = value;
+    markNeedsLayout();
+  }
+
+  double _gapFor(double childHeight) => childHeight > 0 ? _gap : 0;
+
+  @override
+  double computeMinIntrinsicHeight(double width) {
+    final h = child?.getMinIntrinsicHeight(width) ?? 0;
+    return h + _gapFor(h);
+  }
+
+  @override
+  double computeMaxIntrinsicHeight(double width) {
+    final h = child?.getMaxIntrinsicHeight(width) ?? 0;
+    return h + _gapFor(h);
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) {
+    final c = child;
+    if (c == null) return constraints.smallest;
+    final inner = constraints.deflate(EdgeInsets.only(top: _gap));
+    final size = c.getDryLayout(inner);
+    return constraints
+        .constrain(Size(size.width, size.height + _gapFor(size.height)));
+  }
+
+  @override
+  void performLayout() {
+    final c = child;
+    if (c == null) {
+      size = constraints.smallest;
+      return;
+    }
+    c.layout(
+      constraints.deflate(EdgeInsets.only(top: _gap)),
+      parentUsesSize: true,
+    );
+    final gap = _gapFor(c.size.height);
+    (c.parentData! as BoxParentData).offset = Offset(0, gap);
+    size = constraints.constrain(Size(c.size.width, c.size.height + gap));
   }
 }

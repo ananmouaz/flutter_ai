@@ -194,7 +194,23 @@ class _AiQuestionState extends State<AiQuestion> {
           if (answer != null)
             Semantics(
               liveRegion: true,
-              child: Text('${strings.questionAnswered}: ${_summary(answer)}'),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Icon(Icons.check_circle_rounded,
+                          size: 18, color: theme.successColor),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                        '${strings.questionAnswered}: ${_summary(answer)}'),
+                  ),
+                ],
+              ),
             )
           else ...[
             for (final option in widget.options)
@@ -260,6 +276,7 @@ class _AiQuestionState extends State<AiQuestion> {
                 enabled: _enabled,
                 minLines: 2,
                 maxLines: 5,
+                textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
                   labelText: widget.inputLabel ?? strings.questionInputLabel,
                   border: const OutlineInputBorder(),
