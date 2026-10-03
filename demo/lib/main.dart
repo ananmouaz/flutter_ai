@@ -7,6 +7,7 @@ import 'package:flutter_ai_demo/demo_provider.dart';
 import 'package:flutter_ai_demo/demo_tools.dart';
 import 'package:flutter_ai_demo/feature_sections.dart';
 import 'package:flutter_ai_demo/live_demo.dart';
+import 'package:flutter_ai_demo/production/production_chat.dart';
 import 'package:flutter_ai_elements/flutter_ai_elements.dart';
 import 'package:flutter_ai_provider_gemini/flutter_ai_provider_gemini.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -138,6 +139,12 @@ class _HomePageState extends State<_HomePage> {
     ),
   );
 
+  void _openRecipe() => unawaited(
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ProductionChatScreen()),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     // The whole page is one scroll: a hero (header + live chat) followed by the
@@ -161,6 +168,7 @@ class _HomePageState extends State<_HomePage> {
                   onToggleTheme: widget.onToggleTheme,
                   onNewChat: _controller.clear,
                   onOpenGallery: _openGallery,
+                  onOpenRecipe: _openRecipe,
                 ),
               ),
             ),
@@ -218,6 +226,7 @@ class _HeroHeader extends StatelessWidget {
     required this.onToggleTheme,
     required this.onNewChat,
     required this.onOpenGallery,
+    required this.onOpenRecipe,
   });
 
   final bool isDark;
@@ -226,6 +235,7 @@ class _HeroHeader extends StatelessWidget {
   final VoidCallback onToggleTheme;
   final VoidCallback onNewChat;
   final VoidCallback onOpenGallery;
+  final VoidCallback onOpenRecipe;
 
   @override
   Widget build(BuildContext context) {
@@ -290,6 +300,12 @@ class _HeroHeader extends StatelessWidget {
               const _Badge(label: 'pub.dev'),
               const _Badge(label: 'zero lock-in'),
               _GalleryButton(theme: theme, onTap: onOpenGallery),
+              _GalleryButton(
+                theme: theme,
+                onTap: onOpenRecipe,
+                icon: Icons.phone_iphone_rounded,
+                label: 'Production recipe',
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -329,10 +345,17 @@ class _Badge extends StatelessWidget {
 
 /// A pill button that opens the full element gallery.
 class _GalleryButton extends StatelessWidget {
-  const _GalleryButton({required this.theme, required this.onTap});
+  const _GalleryButton({
+    required this.theme,
+    required this.onTap,
+    this.icon = Icons.grid_view_rounded,
+    this.label = 'Every element',
+  });
 
   final AiThemeExtension theme;
   final VoidCallback onTap;
+  final IconData icon;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -347,14 +370,10 @@ class _GalleryButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.grid_view_rounded,
-                size: 14,
-                color: theme.onAccentColor,
-              ),
+              Icon(icon, size: 14, color: theme.onAccentColor),
               const SizedBox(width: 6),
               Text(
-                'Every element',
+                label,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,

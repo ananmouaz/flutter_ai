@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_demo/demo_data.dart';
 import 'package:flutter_ai_demo/main.dart';
+import 'package:flutter_ai_demo/production/production_app.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
@@ -36,6 +37,24 @@ void main() {
       await tester.pump();
       await binding.takeScreenshot('chat_${i.toString().padLeft(3, '0')}');
     }
+  });
+
+  testWidgets('production recipe frames', (tester) async {
+    await tester.pumpWidget(const ProductionAgentApp());
+    await tester.pump(const Duration(milliseconds: 350));
+    await binding.takeScreenshot('production_empty');
+
+    await tester.tap(find.text('Compare weekend trains to Porto'));
+    for (var i = 0; i < 40; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      await tester.pump();
+      if (i % 8 == 0) {
+        await binding.takeScreenshot(
+          'production_run_${i.toString().padLeft(3, '0')}',
+        );
+      }
+    }
+    await binding.takeScreenshot('production_answer');
   });
 }
 

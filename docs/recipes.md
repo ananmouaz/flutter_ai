@@ -19,6 +19,7 @@ For a full, runnable app that wires many of these together, see [`demo/`](../dem
 - [10. Generative UI](#10-generative-ui)
 - [11. MCP tools](#11-mcp-tools)
 - [12. Prompt caching & error handling](#12-prompt-caching--error-handling)
+- [13. Production mobile agent conversation](#13-production-mobile-agent-conversation)
 
 ---
 
@@ -495,3 +496,103 @@ switch (controller.error) {
 The same typing is available on a raw `StreamErrorEvent.error` if you consume
 `controller.events` directly. `AiErrorBanner` is a ready widget for surfacing
 `controller.error` in the UI.
+
+---
+
+## 13. Production mobile agent conversation
+
+The demo gallery shows every widget. A shipped app needs less: the answer, the
+current task state and the next action. The runnable recipe lives in
+[`demo/lib/production/`](../demo/lib/production/) — run it with
+`flutter run -t lib/main_production.dart` from `demo/`, or open
+**Production recipe** on the demo home screen.
+
+<img src="../demo/screenshots/production_empty_light.png" width="200" alt="Starter grid" />
+<img src="../demo/screenshots/production_answer_light.png" width="200" alt="Settled answer" />
+<img src="../demo/screenshots/production_approval_awaiting.png" width="200" alt="Approval" />
+<img src="../demo/screenshots/production_failed.png" width="200" alt="Failed run with retry" />
+
+*Rendered by `demo/test/production_golden_test.dart` (Flutter test renderer,
+390×844 logical pixels). They are not device captures.*
+
+It is built only from existing pieces:
+
+| Need | Built from |
+|---|---|
+| Starter prompts | `AiSuggestions(layout: AiSuggestionsLayout.grid)` inside `AiChat.emptyState` |
+| Run progress | `AiTask`, collapsed, with one item per `ToolCallPart` and its `ToolResultPart` |
+| Inspect tool calls | `AiToolGroup`, behind an overflow-menu toggle |
+| Answer | `AiMessageBubble` with `partBuilder` to hide parts shown elsewhere |
+| Sources | a "4 sources" control that opens a bottom sheet of `SourcePart`s |
+| Follow-ups | `AiSuggestions(layout: AiSuggestionsLayout.list)`, latest settled answer only |
+| Question → result card | `AiWidgetRegistry` + `AiPartScope.onAction` → `onPartAction` |
+| Approval | `AiConfirmation(status: …)` driven by the controller's `onToolCalls` |
+| Failure | `AiErrorBanner` above the composer, with `regenerate()` as Retry |
+
+**Progress is tool state, not reasoning.** Each step's status comes from the
+tool call and its result. A step with no result is active only while its turn
+is still running. After an error it shows as failed, and after Stop it shows as
+not done. The summary never shows the model's private reasoning text.
+
+```dart
+AiTaskItem stepFor(ToolCallPart call, ToolResultPart? result, {required bool running}) =>
+    AiTaskItem(
+      label: labelFor(call), // your own, human-readable tool labels
+      status: result != null
+          ? (result.isError ? AiTaskStatus.error : AiTaskStatus.complete)
+          : running ? AiTaskStatus.active : AiTaskStatus.pending,
+    );
+```
+
+**Approval stays with the host.** `AiConfirmation` only reports a tap. The
+recipe's `onToolCalls` executor waits for that tap, races it against
+`AiToolCallSignal.whenCancelled`, and then runs or declines the tool. The card
+reads its `status` from host state while the decision is in flight. Then it
+reads the transcript's `ToolResultPart`: success is `approved`, an error is
+`denied`, and the controller's "Cancelled: …" settlement is `expired`. A real
+app also persists the pending request and sends an idempotency key, so a resumed
+or repeated decision cannot book twice.
+
+```dart
+final controller = UseChatController(
+  provider: provider,
+  onToolCalls: (calls, signal) async {
+    final approved = await Future.any<bool?>([
+      approvals.waitFor(calls.single.toolCallId), // completed by the card
+      signal.whenCancelled.then((_) => null),     // Stop / new message
+    ]);
+    if (approved == null) return const [];
+    return [await backend.book(calls.single, approved: approved)];
+  },
+);
+```
+
+**Keyboard.** The recipe passes a `FocusNode` and `TextEditingController` to
+`AiPromptInput`. A result card's **Edit** action can then prefill the composer
+and open the keyboard. `AiChat(keyboardDismissBehavior: onDrag)` lets a drag on
+the transcript hide the keyboard. Hardware-keyboard Shift+Enter and copy
+feedback are tracked in [#127](https://github.com/ananmouaz/flutter_ai/issues/127).
+Streaming Markdown polish is tracked in
+[#129](https://github.com/ananmouaz/flutter_ai/issues/129).
+
+### Mobbin references
+
+All references are iOS screens on Mobbin. Mobbin gives no capture dates, so
+they may not show the apps' current versions. They also say nothing about
+Android. The "Observed" column describes the static screenshots only. The
+"Adopted" column is our design choice, not a claim about how those apps behave.
+
+| Reference | Observed in the screenshot | Adopted in the recipe |
+|---|---|---|
+| [Perplexity answer](https://mobbin.com/screens/fe1aa2bb-e46b-45b2-ac6f-e2cb4916cbf1) | Inline source labels, a row of compact answer actions with a "10 sources" count, full-width follow-up rows with a return-arrow glyph, and a bottom "Ask a follow up…" field | Copy/regenerate row plus a source-count control that opens a sheet; `AiSuggestionsLayout.list` follow-ups; "Ask a follow-up" hint |
+| [Perplexity follow-up flow](https://mobbin.com/flows/51085b26-5fac-4cd8-a5f0-603d0987bbd9) | The review's sampled screens: an answer, a collapsible research checklist with source cards, then related questions | The ask → progress → sources → follow-up order. We did not infer transitions from screens that were not sampled. |
+| [Comet assistant](https://mobbin.com/screens/2faad092-c040-40a9-af66-d7426930b2b2) | Assistant sheet with a compact "2 steps completed" row, inline source labels and a bottom follow-up input | Collapsed `AiTask` run summary ("3 steps completed") that expands to the steps |
+| [Mindvalley starter prompts](https://mobbin.com/screens/1086af93-5300-41b7-8339-90c8aab9d1cc) | Four contextual starter cards above the bottom composer | `AiSuggestionsLayout.grid`: two columns, or one column on narrow screens and at large text sizes |
+| [DeepSeek new chat](https://mobbin.com/screens/6ed73bb9-6aae-4140-86ee-0d44f6cfe551), [v0 chat](https://mobbin.com/screens/7dd544cc-2273-4ab6-8bf2-038a1125b957) | A header on the page background, with a small centered chat title and plain icon actions | `ChatHeader`: no tinted app bar, a centered title named after the first question |
+| [Linktree assistant](https://mobbin.com/screens/e9c6c041-97b2-4850-92ca-d8a1f5131588), [Claude chat](https://mobbin.com/screens/70406cbc-cb17-4db8-8176-057a65dc5f56) | Soft, filled circular buttons for new chat and more; content scrolls under the top edge | 40 pt filled circular actions; the transcript fades under the header |
+| [Structured action card](https://mobbin.com/screens/ba8c306d-b55c-4b77-8103-13ef9d9378ce) | A generated task with date and time and Add, Edit and Discard controls | `ResultCard` in the recipe: explicit actions, then a settled "Added"/"Discarded" line owned by the host |
+
+We re-checked the Perplexity answer screen and viewed the four header screens
+on Mobbin on 3 October 2026. The other observations come from the
+[October 3 library review](agent-library-review-2026-10-03.md).
+
