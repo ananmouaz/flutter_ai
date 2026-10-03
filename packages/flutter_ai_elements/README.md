@@ -87,6 +87,12 @@ restyle everything via theme tokens.
 - `AiPromptInput` — the drop-in composer: wraps `AiComposer` and wires it to
   `sendText` / `stop`. Prefer this over `AiComposer`.
 
+**Mobile agent presentation** — `AiSuggestions(layout: list | grid)` for
+follow-ups and starter prompts, `AiConfirmation(status: …)` for pending and
+settled approvals, and `focusNode`/`keyboardDismissBehavior` for keyboard
+handling. See the
+[production conversation recipe](../../docs/recipes.md#13-production-mobile-agent-conversation).
+
 ## Quick start
 
 ```dart

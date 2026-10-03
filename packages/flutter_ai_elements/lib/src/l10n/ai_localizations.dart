@@ -50,6 +50,10 @@ class AiLocalizations {
     this.chainOfThought = 'Chain of thought',
     this.allow = 'Allow',
     this.deny = 'Deny',
+    this.confirmationSubmitting = 'Sending your decision…',
+    this.confirmationApproved = 'Approved',
+    this.confirmationDenied = 'Denied',
+    this.confirmationExpired = 'Expired · no action was taken',
     this.thinking = 'Assistant is thinking',
     this.loading = 'Loading',
     this.you = 'You',
@@ -159,6 +163,18 @@ class AiLocalizations {
 
   /// Deny action on a confirmation card.
   final String deny;
+
+  /// Status while a confirmation decision is being delivered.
+  final String confirmationSubmitting;
+
+  /// Settled status of an approved confirmation.
+  final String confirmationApproved;
+
+  /// Settled status of a denied confirmation.
+  final String confirmationDenied;
+
+  /// Settled status of a confirmation that can no longer be answered.
+  final String confirmationExpired;
 
   /// Accessibility label while the assistant is generating.
   final String thinking;

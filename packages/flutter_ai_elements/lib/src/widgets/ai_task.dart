@@ -92,7 +92,6 @@ class _AiTaskState extends State<AiTask> {
                           fontSize: 14.5,
                           fontWeight: FontWeight.w600,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(

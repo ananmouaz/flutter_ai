@@ -31,6 +31,7 @@ class AiConversationView extends StatefulWidget {
     this.trailingSpace = 0,
     this.anchorKey,
     this.anchorId,
+    this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
   });
 
   /// The messages to display, oldest first.
@@ -81,6 +82,11 @@ class AiConversationView extends StatefulWidget {
 
   /// The id of the message to attach [anchorKey] to.
   final Object? anchorId;
+
+  /// Whether dragging the transcript hides the on-screen keyboard. Use
+  /// [ScrollViewKeyboardDismissBehavior.onDrag] on phones so reading back
+  /// through an answer frees the space the keyboard occupies.
+  final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
 
   @override
   State<AiConversationView> createState() => _AiConversationViewState();
@@ -156,6 +162,7 @@ class _AiConversationViewState extends State<AiConversationView> {
     final list = ListView.builder(
       controller: widget.scrollController,
       padding: widget.padding,
+      keyboardDismissBehavior: widget.keyboardDismissBehavior,
       itemCount: itemCount,
       itemBuilder: (context, index) {
         if (index == spacerIndex) {

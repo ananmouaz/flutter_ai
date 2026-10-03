@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.5.0
+
+Mobile presentation hooks for a production agent conversation (#155). A
+runnable recipe lives in `demo/lib/production/`; see recipe 13 in
+`docs/recipes.md`.
+
+- Add `AiSuggestions.layout`: `row` (default, unchanged), `list` (full-width
+  follow-up rows that wrap) and `grid` (starter cards; one column on narrow
+  screens or at large text sizes). `onSelected` may be null to disable the
+  suggestions while a response streams. Every suggestion is now a semantic
+  button.
+- Add `AiConfirmationStatus` and `AiConfirmation.status`. Only `awaiting` shows
+  the buttons. `submitting`, `approved`, `denied` and `expired` show a status
+  line instead, so a decision the host has accepted cannot be submitted again.
+  New localizable strings: `confirmationSubmitting`, `confirmationApproved`,
+  `confirmationDenied`, `confirmationExpired`. The host still executes and
+  persists the decision.
+- Add `focusNode` to `AiComposer` and `AiPromptInput`, so a host can prefill the
+  field and open the keyboard (for example from an "Edit" action).
+- Add `keyboardDismissBehavior` to `AiChat` and `AiConversationView` (default
+  `manual`, unchanged). Use `onDrag` on phones.
+- `AiComposer` and the `AiQuestion` freeform field capitalize sentences on soft
+  keyboards.
+- `AiQuestion`'s answered summary shows a check icon.
+- `AiMessageBubble` no longer leaves an 8 px gap for each part that a
+  `partBuilder` hides with an empty box.
+- `AiTask` titles wrap instead of being cut off at large text sizes.
+
 ## 0.4.0
 
 - Add `widgetRegistry`, `partBuilder`, and `onPartAction` to `AiMessageBubble`,
