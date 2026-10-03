@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 - Add `widgetRegistry`, `partBuilder`, and `onPartAction` to `AiMessageBubble`,
   `AiConversationView`, `AiChat`, and `AiChatView`. Registered data widgets now
