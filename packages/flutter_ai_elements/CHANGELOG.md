@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+- Fix: the `AiQuestion` submit button no longer shows an unreadable label for
+  ~200 ms after it becomes enabled. The label now switches with the
+  background.
+- pub.dev screenshots now show the production agent recipe.
+
 ## 0.5.0
 
 Mobile presentation hooks for a production agent conversation (#155). A
